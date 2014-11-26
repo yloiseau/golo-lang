@@ -48,4 +48,13 @@ public class StringUnescaping {
     return result;
     // TODO: this is a rather inefficient algorithm...
   }
+
+  public static String escape(String str) {
+    String result = str;
+    for (int i = ESCAPE_STRINGS.length - 1; i >= 0; i--) {
+      result = result.replace(ESCAPE_STRINGS[i], SEQS[i]);
+    }
+    return result;
+    // TODO: this is a rather inefficient algorithm...
+  }
 }

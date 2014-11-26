@@ -56,4 +56,6 @@ public final class ModuleImport extends GoloElement {
     return result;
   }
 
+  @Override
+  public void accept(GoloIrVisitor visitor) { }
 }

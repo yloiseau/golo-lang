@@ -21,6 +21,7 @@ import com.beust.jcommander.*;
 import fr.insalyon.citi.golo.compiler.GoloClassLoader;
 import fr.insalyon.citi.golo.compiler.GoloCompilationException;
 import fr.insalyon.citi.golo.compiler.GoloCompiler;
+import fr.insalyon.citi.golo.compiler.GoloPrettyPrinter;
 import fr.insalyon.citi.golo.compiler.ir.GoloModule;
 import fr.insalyon.citi.golo.compiler.ir.IrTreeDumper;
 import fr.insalyon.citi.golo.compiler.parser.ASTCompilationUnit;
@@ -112,7 +113,7 @@ public class Main {
   @Parameters(commandDescription = "Diagnosis for the Golo compiler internals")
   static class DiagnoseCommand {
 
-    @Parameter(names = "--tool", description = "The diagnosis tool to use: {ast, ir}", validateWith = DiagnoseModeValidator.class)
+    @Parameter(names = "--tool", description = "The diagnosis tool to use: {ast, ir, pp, ppe}", validateWith = DiagnoseModeValidator.class)
     String mode = "ir";
 
     @Parameter(description = "Golo source files (*.golo and directories)")
@@ -139,9 +140,11 @@ public class Main {
       switch (value) {
         case "ast":
         case "ir":
+        case "pp":
+        case "ppe":
           return;
         default:
-          throw new ParameterException("Diagnosis tool must be in: {ast, ir}");
+          throw new ParameterException("Diagnosis tool must be in: {ast, ir, pp, ppe}");
       }
     }
   }
@@ -247,6 +250,12 @@ public class Main {
           break;
         case "ir":
           dumpIRs(diagnose.files);
+          break;
+        case "pp":
+          dumpPPs(diagnose.files, false);
+          break;
+        case "ppe":
+          dumpPPs(diagnose.files, true);
           break;
         default:
           throw new AssertionError("WTF?");
@@ -356,6 +365,36 @@ public class Main {
   private static void mkdirs(File directory) throws IOException {
     if (!directory.mkdirs()) {
       throw new IOException("[error] Unable to create directory " + directory + ".");
+    }
+  }
+
+  private static void dumpPPs(List<String> files, boolean expanded) {
+    GoloCompiler compiler = new GoloCompiler();
+    GoloPrettyPrinter printer = new GoloPrettyPrinter(expanded);
+    for (String file : files) {
+      dumpPP(file, compiler, printer);
+    }
+  }
+
+  private static void dumpPP(String goloFile, GoloCompiler compiler, GoloPrettyPrinter printer) {
+    File file = new File(goloFile);
+    if (file.isDirectory()) {
+      File[] directoryFiles = file.listFiles();
+      if (directoryFiles != null) {
+        for (File directoryFile : directoryFiles) {
+          dumpPP(directoryFile.getAbsolutePath(), compiler, printer);
+        }
+      }
+    } else if (file.getName().endsWith(".golo")) {
+      System.err.println(">>> Pretty print " + file);
+      try (FileInputStream in = new FileInputStream(goloFile)) {
+        ASTCompilationUnit ast = compiler.parse(goloFile, new GoloOffsetParser(in));
+        GoloModule module = compiler.check(ast);
+        printer.visitModule(module);
+        System.out.println();
+      } catch (IOException e) {
+        System.out.println("[error] " + goloFile + " does not exist or could not be opened.");
+      }
     }
   }
 
