@@ -43,4 +43,9 @@ public class ReturnStatement extends GoloStatement {
   public void accept(GoloIrVisitor visitor) {
     visitor.visitReturnStatement(this);
   }
+
+  @Override
+  public String toString() {
+    return "return " + ((returningVoid || expressionStatement == null) ? "" : expressionStatement.toString());
+  }
 }

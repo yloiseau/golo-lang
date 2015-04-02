@@ -37,4 +37,9 @@ public class ReferenceLookup extends ExpressionStatement {
   public void accept(GoloIrVisitor visitor) {
     visitor.visitReferenceLookup(this);
   }
+
+  @Override
+  public String toString() {
+    return String.format("Ref{name=%s}", getName());
+  }
 }

@@ -172,6 +172,10 @@ TOKEN :
   < STRUCT: "struct" >
   |
   < UNION: "union" >
+  |
+  < QUOTE: "quote" >
+  |
+  < UNQUOTE: "unquote" >
 }
 
 // Operators
@@ -1019,6 +1023,8 @@ void TryCatchFinally():
 void ExpressionStatement() #void: {}
 {
   CommutativeExpression()
+  |
+  QuotedBlock()
 }
 
 void TerminalExpression() #void: {}
@@ -1123,6 +1129,16 @@ void Block(): {}
   catch (ParseException e) {
     skipto(NEWLINE, e, jjtThis);
   }
+}
+
+void QuotedBlock(): {}
+{
+    <QUOTE> Block()
+}
+
+void UnquotedExpression(): {}
+{
+    <UNQUOTE> Expression()
 }
 
 void Function():

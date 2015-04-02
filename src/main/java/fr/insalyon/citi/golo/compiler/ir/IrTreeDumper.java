@@ -144,6 +144,16 @@ public class IrTreeDumper implements GoloIrVisitor {
   }
 
   @Override
+  public void visitQuotedBlock(QuotedBlock qblock) {
+    incr();
+    space();
+    System.out.println("QuotedBlock");
+    incr();
+    qblock.getBlock().accept(this);
+    decr();
+  }
+
+  @Override
   public void visitConstantStatement(ConstantStatement constantStatement) {
     incr();
     space();

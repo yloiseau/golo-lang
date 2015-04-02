@@ -175,6 +175,11 @@ class ClosureCaptureGoloIrVisitor implements GoloIrVisitor {
   }
 
   @Override
+  public void visitQuotedBlock(QuotedBlock qblock) {
+    qblock.getBlock().accept(this);  
+  }
+
+  @Override
   public void visitConstantStatement(ConstantStatement constantStatement) {
 
   }

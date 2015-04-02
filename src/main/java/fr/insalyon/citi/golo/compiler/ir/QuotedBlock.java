@@ -16,26 +16,28 @@
 
 package fr.insalyon.citi.golo.compiler.ir;
 
-public class ConstantStatement extends ExpressionStatement {
+public final class QuotedBlock extends ExpressionStatement {
+  private final Block block;
 
-  private final Object value;
-
-  public ConstantStatement(Object value) {
+  public QuotedBlock(Block block) {
     super();
-    this.value = value;
+    this.block = block;
   }
 
-  public Object getValue() {
-    return value;
+  public Block getBlock() {
+    return block;
   }
 
-  @Override
   public void accept(GoloIrVisitor visitor) {
-    visitor.visitConstantStatement(this);
+    visitor.visitQuotedBlock(this);
   }
 
   @Override
   public String toString() {
-    return value.toString();
+    return "quote " + (block == null ? "{}" : block.toString());
+  }
+
+  public void prettyPrint() {
+    this.accept(new IrTreeDumper());
   }
 }

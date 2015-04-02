@@ -144,6 +144,11 @@ class LocalReferenceAssignmentAndVerificationVisitor implements GoloIrVisitor {
     assignmentStack.pop();
   }
 
+  @Override
+  public void visitQuotedBlock(QuotedBlock qblock) {
+    qblock.getBlock().accept(this);
+  }
+
   private boolean isModuleState(LocalReference reference) {
     return (reference.getKind().equals(LocalReference.Kind.MODULE_VARIABLE)) ||
         (reference.getKind().equals(LocalReference.Kind.MODULE_CONSTANT));

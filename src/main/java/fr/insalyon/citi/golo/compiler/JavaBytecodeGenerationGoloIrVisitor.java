@@ -371,6 +371,12 @@ class JavaBytecodeGenerationGoloIrVisitor implements GoloIrVisitor {
   }
 
   @Override
+  public void visitQuotedBlock(QuotedBlock qblock) {
+    GoloIrVisitor quotedVisitor = new QuotedGoloIrVisitor(this, methodVisitor);
+    qblock.accept(quotedVisitor);
+  }
+
+  @Override
   public void visitConstantStatement(ConstantStatement constantStatement) {
     Object value = constantStatement.getValue();
     if (value == null) {

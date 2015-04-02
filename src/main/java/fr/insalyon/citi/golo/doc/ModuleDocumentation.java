@@ -371,5 +371,10 @@ class ModuleDocumentation implements DocumentationElement {
     public Object visit(ASTerror node, Object data) {
       return data;
     }
+
+    @Override
+    public Object visit(ASTQuotedBlock node, Object data) {
+      return data;
+    }
   }
 }

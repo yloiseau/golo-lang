@@ -70,4 +70,9 @@ public final class Block extends ExpressionStatement {
   public void accept(GoloIrVisitor visitor) {
     visitor.visitBlock(this);
   }
+
+  @Override
+  public String toString() {
+    return "{" + statements.toString() + "}";
+  }
 }

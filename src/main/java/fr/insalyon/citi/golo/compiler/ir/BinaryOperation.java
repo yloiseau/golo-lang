@@ -47,4 +47,9 @@ public class BinaryOperation extends ExpressionStatement {
   public void accept(GoloIrVisitor visitor) {
     visitor.visitBinaryOperation(this);
   }
+
+  @Override
+  public String toString() {
+    return String.format("%s %s %s", leftExpression, type, rightExpression);
+  }
 }

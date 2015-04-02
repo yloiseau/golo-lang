@@ -26,6 +26,8 @@ public interface GoloIrVisitor {
 
   void visitBlock(Block block);
 
+  void visitQuotedBlock(QuotedBlock qblock);
+
   void visitConstantStatement(ConstantStatement constantStatement);
 
   void visitReturnStatement(ReturnStatement returnStatement);

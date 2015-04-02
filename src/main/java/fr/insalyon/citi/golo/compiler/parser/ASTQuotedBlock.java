@@ -14,28 +14,25 @@
  * limitations under the License.
  */
 
-package fr.insalyon.citi.golo.compiler.ir;
+package fr.insalyon.citi.golo.compiler.parser;
 
-public class ConstantStatement extends ExpressionStatement {
+public class ASTQuotedBlock extends GoloASTNode {
 
-  private final Object value;
-
-  public ConstantStatement(Object value) {
-    super();
-    this.value = value;
+  public ASTQuotedBlock(int id) {
+    super(id);
   }
 
-  public Object getValue() {
-    return value;
-  }
-
-  @Override
-  public void accept(GoloIrVisitor visitor) {
-    visitor.visitConstantStatement(this);
+  public ASTQuotedBlock(GoloParser p, int id) {
+    super(p, id);
   }
 
   @Override
   public String toString() {
-    return value.toString();
+    return "ASTQuotedBlock{}";
+  }
+
+  @Override
+  public Object jjtAccept(GoloParserVisitor visitor, Object data) {
+    return visitor.visit(this, data);
   }
 }

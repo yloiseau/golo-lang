@@ -77,4 +77,12 @@ public final class ConditionalBranching extends GoloStatement {
   public void accept(GoloIrVisitor visitor) {
     visitor.visitConditionalBranching(this);
   }
+
+  @Override
+  public String toString() {
+    return String.format("if %s %s%s", condition, trueBlock,
+        hasFalseBlock() ? " else " + falseBlock.toString()
+        : hasElseConditionalBranching() ? " else " + elseConditionalBranching.toString()
+        : "");
+  }
 }

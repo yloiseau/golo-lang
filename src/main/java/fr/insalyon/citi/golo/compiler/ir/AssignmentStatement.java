@@ -52,4 +52,9 @@ public class AssignmentStatement extends GoloStatement {
   public void accept(GoloIrVisitor visitor) {
     visitor.visitAssignmentStatement(this);
   }
+
+  @Override
+  public String toString() {
+    return String.format("%s = %s", localReference, expressionStatement);
+  }
 }
