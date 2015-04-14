@@ -14,22 +14,26 @@
  * limitations under the License.
  */
 
-package fr.insalyon.citi.golo.compiler.ir;
+package fr.insalyon.citi.golo.compiler.parser;
 
-public abstract class ExpressionStatement extends GoloStatement {
-
-  private boolean unquoted = false;
-
-  public ExpressionStatement() {
-    super();
+public class ASTUnquotedExpression extends GoloASTNode {
+  public ASTUnquotedExpression(int id) {
+    super(id);
   }
 
-  public boolean isUnquoted() {
-    return unquoted;
+  public ASTUnquotedExpression(GoloParser p, int id) {
+    super(p, id);
   }
 
-  public ExpressionStatement unquote() {
-    unquoted = true;
-    return this;
+  @Override
+  public String toString() {
+    return "ASTUnquotedExpression{}";
   }
+  
+  @Override
+  public Object jjtAccept(GoloParserVisitor visitor, Object data) {
+    return visitor.visit(this, data);
+  }
+
 }
+

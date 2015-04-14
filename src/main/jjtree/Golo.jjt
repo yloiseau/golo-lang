@@ -175,7 +175,7 @@ TOKEN :
   |
   < QUOTE: "quote" >
   |
-  < UNQUOTE: "unquote" >
+  < UNQUOTE: "unquote(" >
 }
 
 // Operators
@@ -1024,6 +1024,8 @@ void ExpressionStatement() #void: {}
 {
   CommutativeExpression()
   |
+  UnquotedExpression()
+  |
   QuotedBlock()
 }
 
@@ -1138,7 +1140,7 @@ void QuotedBlock(): {}
 
 void UnquotedExpression(): {}
 {
-    <UNQUOTE> Expression()
+    <UNQUOTE> CommutativeExpression() ")"
 }
 
 void Function():

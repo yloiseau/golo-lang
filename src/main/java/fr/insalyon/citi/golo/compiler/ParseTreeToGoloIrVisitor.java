@@ -968,12 +968,20 @@ class ParseTreeToGoloIrVisitor implements GoloParserVisitor {
 
   @Override
   public Object visit(ASTQuotedBlock node, Object data) {
-    // XXX: Here we must make the IR of the block accessible
     Context context = (Context) data;
     node.jjtGetChild(0).jjtAccept(this, data);
     Block block = (Block) context.objectStack.pop();
     QuotedBlock qblock = new QuotedBlock(block);
     context.objectStack.push(qblock);
+    return data;
+  }
+
+  @Override
+  public Object visit(ASTUnquotedExpression node, Object data) {
+    Context context = (Context) data;
+    node.jjtGetChild(0).jjtAccept(this, data);
+    ExpressionStatement expression = (ExpressionStatement) context.objectStack.peek();
+    expression.unquote();
     return data;
   }
 }
