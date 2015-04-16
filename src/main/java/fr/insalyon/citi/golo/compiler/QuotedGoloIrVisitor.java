@@ -145,7 +145,7 @@ class QuotedGoloIrVisitor implements GoloIrVisitor {
 
   @Override
   public void visitQuotedBlock(QuotedBlock qblock) {
-    qblock.getBlock().accept(this);
+    qblock.getExpression().accept(this);
     callStaticBuildMethod("quoted", signature(irType("QuotedBlock"), builderType("BlockBuilder")));
   }
 

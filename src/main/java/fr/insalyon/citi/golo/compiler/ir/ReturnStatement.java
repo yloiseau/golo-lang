@@ -18,7 +18,7 @@ package fr.insalyon.citi.golo.compiler.ir;
 
 public class ReturnStatement extends GoloStatement {
 
-  private final GoloStatement expressionStatement;
+  private ExpressionStatement expressionStatement;
   private boolean returningVoid;
 
   public ReturnStatement(ExpressionStatement expressionStatement) {
@@ -27,8 +27,12 @@ public class ReturnStatement extends GoloStatement {
     this.returningVoid = false;
   }
 
-  public GoloStatement getExpressionStatement() {
+  public ExpressionStatement getExpressionStatement() {
     return expressionStatement;
+  }
+
+  public void setExpressionStatement(ExpressionStatement expr) {
+    expressionStatement = expr;
   }
 
   public boolean isReturningVoid() {

@@ -21,7 +21,7 @@ import fr.insalyon.citi.golo.runtime.OperatorType;
 public class UnaryOperation extends ExpressionStatement {
 
   private final OperatorType type;
-  private final ExpressionStatement expressionStatement;
+  private ExpressionStatement expressionStatement;
 
   public UnaryOperation(OperatorType type, ExpressionStatement expressionStatement) {
     super();
@@ -31,6 +31,10 @@ public class UnaryOperation extends ExpressionStatement {
 
   public ExpressionStatement getExpressionStatement() {
     return expressionStatement;
+  }
+
+  public void setExpressionStatement(ExpressionStatement expr) {
+    expressionStatement = expr;
   }
 
   public OperatorType getType() {

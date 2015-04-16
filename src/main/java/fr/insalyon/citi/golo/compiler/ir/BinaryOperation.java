@@ -21,8 +21,8 @@ import fr.insalyon.citi.golo.runtime.OperatorType;
 public class BinaryOperation extends ExpressionStatement {
 
   private final OperatorType type;
-  private final ExpressionStatement leftExpression;
-  private final ExpressionStatement rightExpression;
+  private ExpressionStatement leftExpression;
+  private ExpressionStatement rightExpression;
 
   public BinaryOperation(OperatorType type, ExpressionStatement leftExpression, ExpressionStatement rightExpression) {
     super();
@@ -39,8 +39,16 @@ public class BinaryOperation extends ExpressionStatement {
     return leftExpression;
   }
 
+  public void setLeftExpression(ExpressionStatement expr) {
+    leftExpression = expr;
+  }
+
   public ExpressionStatement getRightExpression() {
     return rightExpression;
+  }
+
+  public void setRightExpression(ExpressionStatement expr) {
+    rightExpression = expr;
   }
 
   @Override

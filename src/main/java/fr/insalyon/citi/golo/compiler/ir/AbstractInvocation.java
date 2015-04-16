@@ -43,6 +43,10 @@ public abstract class AbstractInvocation extends ExpressionStatement {
     return Collections.unmodifiableList(arguments);
   }
 
+  public void setArgument(int index, ExpressionStatement argument) {
+    arguments.set(index, argument);
+  }
+
   public int getArity() {
     return arguments.size();
   }
@@ -53,5 +57,9 @@ public abstract class AbstractInvocation extends ExpressionStatement {
 
   public List<FunctionInvocation> getAnonymousFunctionInvocations() {
     return Collections.unmodifiableList(anonymousFunctionInvocations);
+  }
+
+  public void setAnonymousFunctionInvocations(int index, FunctionInvocation invocation) {
+    anonymousFunctionInvocations.set(index, invocation);
   }
 }

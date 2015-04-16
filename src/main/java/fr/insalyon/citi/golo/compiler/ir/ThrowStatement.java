@@ -18,9 +18,9 @@ package fr.insalyon.citi.golo.compiler.ir;
 
 public class ThrowStatement extends GoloStatement {
 
-  private final GoloStatement expressionStatement;
+  private ExpressionStatement expressionStatement;
 
-  public ThrowStatement(GoloStatement expressionStatement) {
+  public ThrowStatement(ExpressionStatement expressionStatement) {
     super();
     this.expressionStatement = expressionStatement;
   }
@@ -30,7 +30,11 @@ public class ThrowStatement extends GoloStatement {
     visitor.visitThrowStatement(this);
   }
 
-  public GoloStatement getExpressionStatement() {
+  public ExpressionStatement getExpressionStatement() {
     return expressionStatement;
+  }
+
+  public void setExpressionStatement(ExpressionStatement expr) {
+    expressionStatement = expr;
   }
 }

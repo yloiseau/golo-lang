@@ -19,7 +19,7 @@ package fr.insalyon.citi.golo.compiler.ir;
 public class AssignmentStatement extends GoloStatement {
 
   private LocalReference localReference;
-  private final ExpressionStatement expressionStatement;
+  private ExpressionStatement expressionStatement;
   private boolean declaring = false;
 
   public AssignmentStatement(LocalReference localReference, ExpressionStatement expressionStatement) {
@@ -46,6 +46,10 @@ public class AssignmentStatement extends GoloStatement {
 
   public ExpressionStatement getExpressionStatement() {
     return expressionStatement;
+  }
+
+  public void setExpressionStatement(ExpressionStatement expr) {
+    expressionStatement = expr;
   }
 
   @Override

@@ -1049,7 +1049,7 @@ void UnaryExpression():
   Token token;
 }
 {
-  token=<UNARY_OPERATOR> CommutativeExpression()
+  token=<UNARY_OPERATOR> ExpressionStatement()
   {
     jjtThis.setOperator(token.image);
   }
@@ -1075,7 +1075,7 @@ void AssociativeExpression():
 }
 {
   (
-    "(" (BlankLine())? CommutativeExpression() (BlankLine())? ")"
+    "(" (BlankLine())? ExpressionStatement() (BlankLine())? ")"
     |
     TerminalExpression()
     |

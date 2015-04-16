@@ -17,15 +17,15 @@
 package fr.insalyon.citi.golo.compiler.ir;
 
 public final class QuotedBlock extends ExpressionStatement {
-  private final Block block;
+  private final ExpressionStatement expression;
 
-  public QuotedBlock(Block block) {
+  public QuotedBlock(ExpressionStatement expr) {
     super();
-    this.block = block;
+    this.expression = expr;
   }
 
-  public Block getBlock() {
-    return block;
+  public ExpressionStatement getExpression() {
+    return this.expression;
   }
 
   public void accept(GoloIrVisitor visitor) {
@@ -34,7 +34,7 @@ public final class QuotedBlock extends ExpressionStatement {
 
   @Override
   public String toString() {
-    return "quote " + (block == null ? "{}" : block.toString());
+    return "quote " + (expression == null ? "{}" : expression.toString());
   }
 
   public void prettyPrint() {

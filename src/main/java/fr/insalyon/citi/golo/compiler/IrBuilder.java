@@ -25,15 +25,45 @@ import java.util.Deque;
 
 import static java.util.Arrays.asList;
 
-
-// TODO: clean the builder to be simpler and consistant
-// TODO: change the visitor accordingly
-// TODO: create the ir-building DSL in pure golo (augmentations) to have a more flexible DSL syntax
+// TODO: move this in gololang.metaprog
 
 public final class IrBuilder {
 
-  interface IrNodeBuilder<T> {
+  public static interface IrNodeBuilder<T> {
     T build();
+  }
+
+  public static ExpressionStatement toExpression(Object expression) {
+    if (expression == null) { return null; }
+    if (expression instanceof GoloStatement) {
+      return (ExpressionStatement) expression;
+    } 
+    if (expression instanceof IrNodeBuilder) {
+      return (ExpressionStatement) ((IrNodeBuilder) expression).build();
+    }
+    throw new IllegalArgumentException(expression + " is not a ExpressionStatement nor a IrNodeBuilder");
+  }
+
+  public static GoloStatement toGoloStatement(Object statement) {
+    if (statement == null) { return null; }
+    if (statement instanceof GoloStatement) {
+      return (GoloStatement) statement;
+    } 
+    if (statement instanceof IrNodeBuilder) {
+      return (GoloStatement) ((IrNodeBuilder) statement).build();
+    }
+    throw new IllegalArgumentException(statement + " is not a GoloStatement nor a IrNodeBuilder");
+  }
+
+  public static Block toBlock(Object block) {
+    if (block == null) { return null; }
+    if (block instanceof Block) {
+      return (Block) block;
+    } 
+    if (block instanceof IrNodeBuilder) {
+      return (Block) ((IrNodeBuilder) block).build();
+    }
+    throw new IllegalArgumentException(block + " is not a Block nor a IrNodeBuilder");
   }
 
   public static final class BlockBuilder implements IrNodeBuilder<Block> {
@@ -46,13 +76,7 @@ public final class IrBuilder {
     }
 
     public BlockBuilder add(Object statement) {
-      if (statement instanceof GoloStatement) {
-        statements.add((GoloStatement) statement);
-      } else if (statement instanceof IrNodeBuilder) {
-        statements.add((GoloStatement) ((IrNodeBuilder) statement).build());
-      } else {
-        throw new IllegalStateException();
-      }
+      statements.add(toGoloStatement(statement));
       return this;
     }
 
@@ -117,8 +141,8 @@ public final class IrBuilder {
       return this;
     }
 
-    public MethodInvocationBuilder arg(ExpressionStatement exp) {
-      args.add(exp);
+    public MethodInvocationBuilder arg(Object expression) {
+      args.add(toExpression(expression));
       return this;
     }
 
@@ -142,6 +166,10 @@ public final class IrBuilder {
 
   public static MethodInvocationBuilder methodInvocation(String name) {
     return new MethodInvocationBuilder().name(name);
+  }
+
+  public static MethodInvocationBuilder methodInvocation(String name, boolean safe) {
+    return new MethodInvocationBuilder().name(name).nullSafe(safe);
   }
 
   public static final class FunctionInvocationBuilder implements IrNodeBuilder<FunctionInvocation> {
@@ -173,12 +201,8 @@ public final class IrBuilder {
       return this;
     }
 
-    public FunctionInvocationBuilder arg(Object exp) {
-      if (exp instanceof ExpressionStatement) {
-        args.add((ExpressionStatement) exp);
-      } else if (exp instanceof IrNodeBuilder) {
-        args.add((ExpressionStatement) ((IrNodeBuilder) exp).build());
-      }
+    public FunctionInvocationBuilder arg(Object expression) {
+      args.add(toExpression(expression));
       return this;
     }
 
@@ -214,23 +238,39 @@ public final class IrBuilder {
     private ConditionalBranching elseConditionalBranching;
     private Block falseBlock;
 
-    public ConditionalBranchingBuilder condition(ExpressionStatement cond) {
-      condition = cond;
+    public ConditionalBranchingBuilder condition(Object cond) {
+      if (cond == null) {
+        condition = constant(false);
+      } else {
+        condition = toExpression(cond);
+      }
       return this;
     }
 
     public ConditionalBranchingBuilder whenTrue(BlockBuilder block) {
-      trueBlock = block.build();
+      if (block == null) {
+        trueBlock = new Block(new ReferenceTable());
+      } else {
+        trueBlock = block.build();
+      }
       return this;
     }
 
     public ConditionalBranchingBuilder whenFalse(BlockBuilder block) {
-      falseBlock = block.build();
+      if (block == null) {
+        falseBlock = null;
+      } else {
+        falseBlock = block.build();
+      }
       return this;
     }
 
     public ConditionalBranchingBuilder elseBranch(ConditionalBranchingBuilder branch) {
-      elseConditionalBranching = branch.build();
+      if (branch == null) {
+        elseConditionalBranching = null;
+      } else {
+        elseConditionalBranching = branch.build();
+      }
       return this;
     }
 
@@ -243,10 +283,15 @@ public final class IrBuilder {
   }
 
   public static final class LoopBuilder implements IrNodeBuilder<LoopStatement> {
-    private ExpressionStatement cond = constant(false);
-    private Block block = new Block(new ReferenceTable());
+    private ExpressionStatement cond;
+    private Block block;
     private AssignmentStatement init;
     private GoloStatement post;
+
+    LoopBuilder() {
+      this.condition(null);
+      this.block((BlockBuilder) null);
+    }
 
     private static final Deque<LoopBuilder> currentLoop = new LinkedList<>();;
 
@@ -259,28 +304,37 @@ public final class IrBuilder {
     }
 
     public LoopBuilder init(AssignmentStatementBuilder s) {
-      init = s.build();
+      if (s == null) { 
+        init = null;
+      } else {
+        init = s.build();
+      }
       return this;
     }
 
-    public LoopBuilder condition(ExpressionStatement s) {
-      cond = s;
+    public LoopBuilder condition(Object s) {
+      if (s == null) { 
+        cond = constant(false);
+      } else 
+        cond = toExpression(s);
       return this;
     }
 
     public LoopBuilder post(Object s) {
-      if (s instanceof GoloStatement) {
-        post = (GoloStatement) s;
-      } else if (s instanceof IrNodeBuilder) {
-        post = (GoloStatement) ((IrNodeBuilder) s).build();
+      if (s == null) {
+        post = null; 
       } else {
-        throw new IllegalArgumentException();
+        post = toGoloStatement(s);
       }
       return this;
     }
 
     public LoopBuilder block(BlockBuilder b) {
-      block = b.build();
+      if (b == null) {
+        block = new Block(new ReferenceTable());
+      } else {
+        block = b.build();
+      }
       return this;
     }
 
@@ -302,6 +356,13 @@ public final class IrBuilder {
     return new LoopBuilder();
   }
 
+  public static LoopBuilder loop(AssignmentStatementBuilder init, 
+                                 Object condition, 
+                                 Object post, 
+                                 BlockBuilder block) {
+    return loop().init(init).condition(condition).post(post).block(block);
+  }
+
   public static final class AssignmentStatementBuilder implements IrNodeBuilder<AssignmentStatement> {
     private LocalReference ref;
     private ExpressionStatement expr;
@@ -312,8 +373,8 @@ public final class IrBuilder {
       return this;
     }
 
-    public AssignmentStatementBuilder expression(ExpressionStatement e) {
-      expr = e;
+    public AssignmentStatementBuilder expression(Object e) {
+      expr = toExpression(e);
       return this;
     }
 
@@ -329,29 +390,56 @@ public final class IrBuilder {
     }
   }
 
-  public static  AssignmentStatementBuilder assignment() {
+  public static AssignmentStatementBuilder assignment() {
     return new AssignmentStatementBuilder();
   }
 
-  // TODO: a builder with left and right ?
+  public static AssignmentStatementBuilder assignment(boolean declaring, LocalReferenceBuilder ref, Object expr) {
+    return assignment().declaring(declaring).expression(expr).localRef(ref);
+  }
+
+  public static final class BinaryOperationBuilder implements IrNodeBuilder<BinaryOperation> {
+    private OperatorType type;
+    private ExpressionStatement left;
+    private ExpressionStatement right;
+
+    public BinaryOperationBuilder type(OperatorType type) {
+      this.type = type;
+      return this;
+    }
+
+    public BinaryOperationBuilder left(Object left) {
+      this.left = toExpression(left);
+      return this;
+    }
+
+    public ExpressionStatement left() {
+      return left;
+    }
+
+    public BinaryOperationBuilder right(Object right) {
+      this.right = toExpression(right);
+      return this;
+    }
+
+    public ExpressionStatement right() {
+      return right;
+    }
+
+    public BinaryOperation build() {
+      if (type == null || left == null || right == null) {
+        throw new IllegalStateException("builder not initialized");
+      }
+      return new BinaryOperation(type, left, right);
+    }
+  }
+
   public static BinaryOperation binaryOperation(OperatorType type, Object left, Object right) {
-    ExpressionStatement leftExpr = null;
-    if (left instanceof ExpressionStatement) {
-      leftExpr = (ExpressionStatement) left;
-    } else if (left instanceof IrNodeBuilder) {
-      leftExpr = (ExpressionStatement) ((IrNodeBuilder) left).build();
-    } else {
-      throw new IllegalArgumentException();
-    }
-    ExpressionStatement rightExpr = null;
-    if (right instanceof ExpressionStatement) {
-      rightExpr = (ExpressionStatement) right;
-    } else if (right instanceof IrNodeBuilder) {
-      rightExpr = (ExpressionStatement) ((IrNodeBuilder) right).build();
-    } else {
-      throw new IllegalArgumentException();
-    }
-    return new BinaryOperation(type, leftExpr, rightExpr);
+    return new BinaryOperationBuilder().type(type).left(left).right(right).build();
+  }
+
+  public static BinaryOperationBuilder binaryOperation(OperatorType type) {
+    return new BinaryOperationBuilder().type(type);
   }
 
   public static BlockBuilder block() {
@@ -366,20 +454,16 @@ public final class IrBuilder {
     return block;
   }
 
-  public static QuotedBlock quoted(Block b) {
-    return new QuotedBlock(b);
-  }
-
-  public static QuotedBlock quoted(BlockBuilder b) {
-    return new QuotedBlock(b.build());
+  public static QuotedBlock quoted(Object expr) {
+    return new QuotedBlock(toExpression(expr));
   }
 
   public static ConstantStatement constant(Object value) {
     return new ConstantStatement(value);
   }
 
-  public static ReturnStatement returns(ExpressionStatement expr) {
-    return new ReturnStatement(expr);
+  public static ReturnStatement returns(Object expr) {
+    return new ReturnStatement(toExpression(expr));
   }
 
   public static LocalReferenceBuilder localRef(LocalReference.Kind kind, String name) {
@@ -388,6 +472,10 @@ public final class IrBuilder {
 
   public static LocalReferenceBuilder localRef() {
     return new LocalReferenceBuilder();
+  }
+
+  public static LocalReferenceBuilder localRef(LocalReference.Kind kind, String name, int index, boolean synthetic) {
+    return localRef(kind, name).index(index).synthetic(synthetic);
   }
 
 
@@ -405,8 +493,18 @@ public final class IrBuilder {
     return new FunctionInvocationBuilder();
   }
 
+  public static FunctionInvocationBuilder functionInvocation(String name, boolean onRef, boolean onModule, boolean constant) {
+    return functionInvocation().name(name).onReference(onRef).onModuleState(onModule).constant(constant);
+  }
+
   public static ConditionalBranchingBuilder branch() {
     return new ConditionalBranchingBuilder();
+  }
+
+  public static ConditionalBranchingBuilder branch(Object condition, 
+                                                   BlockBuilder trueBlock, BlockBuilder falseBlock,
+                                                   ConditionalBranchingBuilder elseBranch) {
+    return branch().condition(condition).whenTrue(trueBlock).whenFalse(falseBlock).elseBranch(elseBranch);
   }
 
   public static UnaryOperation unaryOperation(OperatorType type, ExpressionStatement expr) {
@@ -417,8 +515,8 @@ public final class IrBuilder {
     return new CollectionLiteral(type, asList(values));
   }
 
-  public static ThrowStatement throwException(GoloStatement expr) {
-    return new ThrowStatement(expr);
+  public static ThrowStatement throwException(Object expr) {
+    return new ThrowStatement(toExpression(expr));
   }
 
   public static final class LoopBreakBuilder implements IrNodeBuilder<LoopBreakFlowStatement> {
@@ -476,39 +574,47 @@ public final class IrBuilder {
 
   public static final class TryCatchBuilder implements IrNodeBuilder<TryCatchFinally> {
     private String exceptionId;
-    private BlockBuilder tryBlock;
-    private BlockBuilder catchBlock;
-    private BlockBuilder finallyBlock;
+    private Object tryBlock;
+    private Object catchBlock;
+    private Object finallyBlock;
 
     public TryCatchBuilder exception(String id) {
       this.exceptionId = id;
       return this;
     }
 
-    public TryCatchBuilder tryBlock(BlockBuilder b) {
+    public TryCatchBuilder tryBlock(Object b) {
       this.tryBlock = b;
       return this;
     }
 
-    public TryCatchBuilder catchBlock(BlockBuilder b) {
+    public TryCatchBuilder catchBlock(Object b) {
       this.catchBlock = b;
       return this;
     }
 
-    public TryCatchBuilder finallyBlock(BlockBuilder b) {
+    public TryCatchBuilder finallyBlock(Object b) {
       this.finallyBlock = b;
       return this;
     }
 
     public TryCatchFinally build() {
       return new TryCatchFinally(exceptionId, 
-          tryBlock.build(), 
-          catchBlock.build(),
-          finallyBlock.build());
+          toBlock(tryBlock), 
+          toBlock(catchBlock),
+          toBlock(finallyBlock));
     }
   }
 
   public static TryCatchBuilder tryCatchFinally() {
     return new TryCatchBuilder();
+  }
+
+  public static TryCatchBuilder tryCatchFinally(String exception, Object tryBlock, Object catchBlock, Object finallyBlock) {
+    return tryCatchFinally()
+      .exception(exception)
+      .tryBlock(tryBlock)
+      .catchBlock(catchBlock)
+      .finallyBlock(finallyBlock);
   }
 }

@@ -149,7 +149,7 @@ public class IrTreeDumper implements GoloIrVisitor {
     space();
     System.out.println("QuotedBlock");
     incr();
-    qblock.getBlock().accept(this);
+    qblock.getExpression().accept(this);
     decr();
   }
 

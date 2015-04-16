@@ -189,12 +189,24 @@ public class GoloCompiler {
     ParseTreeToGoloIrVisitor parseTreeToIR = new ParseTreeToGoloIrVisitor();
     parseTreeToIR.setExceptionBuilder(exceptionBuilder);
     GoloModule goloModule = parseTreeToIR.transform(compilationUnit);
+    expand(goloModule);
     ClosureCaptureGoloIrVisitor closureCaptureVisitor = new ClosureCaptureGoloIrVisitor();
     closureCaptureVisitor.visitModule(goloModule);
     LocalReferenceAssignmentAndVerificationVisitor localReferenceVisitor = new LocalReferenceAssignmentAndVerificationVisitor();
     localReferenceVisitor.setExceptionBuilder(exceptionBuilder);
     localReferenceVisitor.visitModule(goloModule);
     return goloModule;
+  }
+
+  /**
+   * Walk the intermediate representation tree and expand macros.
+   * <p>
+   * Transforms the IR in place.
+   * Currently only do the quote/unquote magic
+   */
+  public final void expand(GoloModule module) {
+    QuotedIrExpander expander = new QuotedIrExpander();
+    expander.visitModule(module);
   }
 
   /**

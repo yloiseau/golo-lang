@@ -64,4 +64,9 @@ public class FunctionInvocation extends AbstractInvocation {
   public void accept(GoloIrVisitor visitor) {
     visitor.visitFunctionInvocation(this);
   }
+  
+  @Override
+  public String toString() {
+    return String.format("FunctionInvocation{name=%s}", getName());
+  }
 }

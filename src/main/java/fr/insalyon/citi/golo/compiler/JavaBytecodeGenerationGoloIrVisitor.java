@@ -372,8 +372,7 @@ class JavaBytecodeGenerationGoloIrVisitor implements GoloIrVisitor {
 
   @Override
   public void visitQuotedBlock(QuotedBlock qblock) {
-    GoloIrVisitor quotedVisitor = new QuotedGoloIrVisitor(this, methodVisitor);
-    qblock.accept(quotedVisitor);
+    throw new IllegalStateException("No quoted block should remains at this stage");
   }
 
   @Override
