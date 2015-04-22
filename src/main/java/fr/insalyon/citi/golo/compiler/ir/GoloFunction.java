@@ -34,6 +34,7 @@ public final class GoloFunction extends GoloElement {
   private final String name;
   private final Visibility visibility;
   private final Scope scope;
+  private final boolean macro;
 
   private List<String> parameterNames = new LinkedList<>();
   private List<String> syntheticParameterNames = new LinkedList<>();
@@ -45,9 +46,18 @@ public final class GoloFunction extends GoloElement {
   private LinkedList<Decorator> decorators = new LinkedList<>();
 
   public GoloFunction(String name, Visibility visibility, Scope scope) {
+    this(name, visibility, scope, false);
+  }
+
+  public GoloFunction(String name, Visibility visibility, Scope scope, boolean isMacro) {
     this.name = name;
     this.visibility = visibility;
     this.scope = scope;
+    this.macro = isMacro;
+  }
+
+  public boolean isMacro() {
+    return macro;
   }
 
   public Scope getScope() {

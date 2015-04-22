@@ -91,7 +91,8 @@ public class IrTreeDumper implements GoloIrVisitor {
     }
     incr();
     space();
-    System.out.print("Function " + function.getName());
+    System.out.print(function.isMacro() ? "Macro " : "Function ");
+    System.out.print(function.getName());
     System.out.print(" = |");
     boolean first = true;
     for (String param : function.getParameterNames()) {

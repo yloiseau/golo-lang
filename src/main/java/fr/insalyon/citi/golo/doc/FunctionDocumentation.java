@@ -29,6 +29,19 @@ class FunctionDocumentation implements Comparable<FunctionDocumentation>, Docume
   private boolean augmentation = false;
   private boolean varargs = false;
   private boolean local = false;
+  private boolean isMacro = false;
+
+  public FunctionDocumentation() {
+    this(false);
+  }
+
+  public FunctionDocumentation(boolean isMacro) {
+    this.isMacro = isMacro;
+  }
+
+  public boolean isMacro() {
+    return isMacro;
+  }
 
   public String name() {
     return name;

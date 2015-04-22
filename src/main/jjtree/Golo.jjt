@@ -172,10 +172,6 @@ TOKEN :
   < STRUCT: "struct" >
   |
   < UNION: "union" >
-  |
-  < QUOTE: "quote" >
-  |
-  < UNQUOTE: "unquote(" >
 }
 
 // Operators
@@ -200,7 +196,21 @@ TOKEN :
 // Specials
 TOKEN :
 {
- < DECORATOR: "@" >
+  < DECORATOR: "@" >
+}
+
+// Macros
+TOKEN :
+{
+  < QUOTE: "quote" >
+  |
+  < UNQUOTE: "unquote(" >
+  |
+  < MACRO_INVOCATION: "&" >
+  |
+  < UNQUOTE_LITERAL: "~" >
+  |
+  < MACRO: "macro" >
 }
 
 // References
@@ -890,7 +900,15 @@ ASTFunctionDeclaration FunctionDeclaration():
   Token name;
 }
 {
-  <FUNCTION> name=<IDENTIFIER> "=" Function()
+  (
+    <FUNCTION>
+    |
+    <MACRO>
+    {
+      jjtThis.setMacro(true);
+    }
+  )
+  name=<IDENTIFIER> "=" Function()
   {
     jjtThis.setName(name.image);
     return jjtThis;
@@ -949,6 +967,8 @@ void Statement() #void:{}
   Continue()
   |
   Break()
+  |
+  MacroInvocation()
 }
 
 void Continue(): {}
@@ -1141,6 +1161,21 @@ void QuotedBlock(): {}
 void UnquotedExpression(): {}
 {
     <UNQUOTE> CommutativeExpression() ")"
+    |
+    <UNQUOTE_LITERAL> Reference()
+}
+
+void MacroInvocation(): 
+{
+  String name;
+}
+{
+    <MACRO_INVOCATION> name=QualifiedName()
+    "(" (BlankLine())? (Expressions())? ")"
+    "{" Block() "}"
+    {
+      jjtThis.setName(name);
+    }
 }
 
 void Function():

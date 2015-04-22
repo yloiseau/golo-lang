@@ -22,6 +22,8 @@ public class ASTFunctionInvocation extends GoloASTNode implements NamedNode {
 
   private boolean constant;
 
+  private boolean macro = false;
+
   public ASTFunctionInvocation(int id) {
     super(id);
   }
@@ -48,11 +50,21 @@ public class ASTFunctionInvocation extends GoloASTNode implements NamedNode {
     return constant;
   }
 
+  public void setMacro(boolean constant) {
+    this.macro = macro;
+  }
+
+  public boolean isMacro() {
+    return this.macro;
+  }
+
+
   @Override
   public String toString() {
     return "ASTFunctionInvocation{" +
         "name='" + name + "', " +
-        "constant='" + constant + '\'' +
+        "constant='" + constant + "', " +
+        "macro='" + macro + '\'' +
         '}';
   }
 

@@ -381,5 +381,10 @@ class ModuleDocumentation implements DocumentationElement {
     public Object visit(ASTUnquotedExpression node, Object data) {
       return data;
     }
+
+    @Override
+    public Object visit(ASTMacroInvocation node, Object data) {
+      return data;
+    }
   }
 }

@@ -220,7 +220,8 @@ class ParseTreeToGoloIrVisitor implements GoloParserVisitor {
     GoloFunction function = new GoloFunction(
         node.getName(),
         node.isLocal() ? LOCAL : PUBLIC,
-        node.isAugmentation() ? AUGMENT : MODULE);
+        node.isAugmentation() ? AUGMENT : MODULE,
+        node.isMacro());
     node.setIrElement(function);
     while (context.objectStack.peek() instanceof Decorator) {
       function.addDecorator((Decorator)context.objectStack.pop());
@@ -982,6 +983,11 @@ class ParseTreeToGoloIrVisitor implements GoloParserVisitor {
     node.jjtGetChild(0).jjtAccept(this, data);
     ExpressionStatement expression = (ExpressionStatement) context.objectStack.peek();
     expression.unquote();
+    return data;
+  }
+
+  @Override
+  public Object visit(ASTMacroInvocation node, Object data) {
     return data;
   }
 }

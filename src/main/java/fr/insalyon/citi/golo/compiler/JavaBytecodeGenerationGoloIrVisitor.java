@@ -312,6 +312,9 @@ class JavaBytecodeGenerationGoloIrVisitor implements GoloIrVisitor {
     if (function.isModuleInit()) {
       methodVisitor.visitInsn(RETURN);
     }
+    if (function.isMacro()) {
+      methodVisitor.visitAnnotation("Lfr/insalyon/citi/golo/compiler/Macro;", true).visitEnd();
+    }
     methodVisitor.visitMaxs(0, 0);
     methodVisitor.visitEnd();
   }

@@ -28,7 +28,7 @@ import static fr.insalyon.citi.golo.runtime.OperatorType.*;
 /**
  * Visitor to expand {@code quote} expressions.
  * <p>
- * This visitor walk the IR tree and replace {@code QuotedBlock}s with calls to the 
+ * This visitor walk the IR tree and replace {@code QuotedBlock}s with calls to the
  * {@code IrBuilder} methods that build the equivalent IR when evaluated.
  */
 class QuotedIrExpander extends DummyIrVisitor {
@@ -46,7 +46,7 @@ class QuotedIrExpander extends DummyIrVisitor {
     if (toReplace instanceof QuotedBlock && !expandedBlocks.isEmpty()) {
       if (expandedBlocks.peek() instanceof ExpressionStatement) {
         return (ExpressionStatement) expandedBlocks.pop();
-      } 
+      }
       if (expandedBlocks.peek() instanceof IrNodeBuilder) {
         return (ExpressionStatement) ((IrNodeBuilder) expandedBlocks.pop()).build();
       }
@@ -72,7 +72,7 @@ class QuotedIrExpander extends DummyIrVisitor {
 
   private boolean isSingleExpressionQuote(Block block) {
     return (
-        nestedBlockDepth == 1 
+        nestedBlockDepth == 1
         && !block.isUnquoted()
         && block.getStatements().size() == 1
         && block.getStatements().get(0) instanceof ExpressionStatement
@@ -130,7 +130,7 @@ class QuotedIrExpander extends DummyIrVisitor {
 
   @Override
   public void visitConstantStatement(ConstantStatement constantStatement) {
-    if (!inQuotedBlock) { 
+    if (!inQuotedBlock) {
       super.visitConstantStatement(constantStatement);
     } else if (constantStatement.isUnquoted()) {
       expandedBlocks.push(constantStatement);
@@ -155,7 +155,6 @@ class QuotedIrExpander extends DummyIrVisitor {
       );
     }
   }
-
 
   @Override
   public void visitAssignmentStatement(AssignmentStatement assignmentStatement) {
@@ -248,11 +247,11 @@ class QuotedIrExpander extends DummyIrVisitor {
             ));
     }
     return finalObject.left();
-  } 
+  }
 
   @Override
   public void visitFunctionInvocation(FunctionInvocation functionInvocation) {
-    if (!inQuotedBlock) { 
+    if (!inQuotedBlock) {
       super.visitFunctionInvocation(functionInvocation);
     } else {
       expandedBlocks.push(buildInvocation(
@@ -261,7 +260,7 @@ class QuotedIrExpander extends DummyIrVisitor {
           .arg(constant(functionInvocation.getName()))
           .arg(constant(functionInvocation.isOnReference()))
           .arg(constant(functionInvocation.isOnModuleState()))
-          .arg(constant(functionInvocation.isConstant())), 
+          .arg(constant(functionInvocation.isConstant())),
         functionInvocation
       ));
     }
@@ -336,7 +335,7 @@ class QuotedIrExpander extends DummyIrVisitor {
       unaryOperation.setExpressionStatement(replaceExpression(unaryOperation.getExpressionStatement()));
     }
   }
-  
+
   @Override
   public void visitClosureReference(ClosureReference closureReference) {
     super.visitClosureReference(closureReference);
