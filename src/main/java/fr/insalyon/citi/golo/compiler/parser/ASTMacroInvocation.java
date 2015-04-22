@@ -16,17 +16,15 @@
 
 package fr.insalyon.citi.golo.compiler.parser;
 
-public class ASTFunctionInvocation extends GoloASTNode implements NamedNode {
+public class ASTMacroInvocation extends GoloASTNode implements NamedNode {
 
   private String name;
 
-  private boolean constant;
-
-  public ASTFunctionInvocation(int id) {
+  public ASTMacroInvocation(int id) {
     super(id);
   }
 
-  public ASTFunctionInvocation(GoloParser p, int id) {
+  public ASTMacroInvocation(GoloParser p, int id) {
     super(p, id);
   }
 
@@ -39,20 +37,11 @@ public class ASTFunctionInvocation extends GoloASTNode implements NamedNode {
   public void setName(String name) {
     this.name = name;
   }
-
-  public void setConstant(boolean constant) {
-    this.constant = constant;
-  }
-
-  public boolean isConstant() {
-    return constant;
-  }
-
+  
   @Override
   public String toString() {
-    return "ASTFunctionInvocation{" +
-        "name='" + name + "', " +
-        "constant='" + constant + '\'' +
+    return "ASTMacroInvocation{" +
+        "name='" + name + "'" +
         '}';
   }
 
@@ -60,4 +49,5 @@ public class ASTFunctionInvocation extends GoloASTNode implements NamedNode {
   public Object jjtAccept(GoloParserVisitor visitor, Object data) {
     return visitor.visit(this, data);
   }
+
 }

@@ -1171,8 +1171,8 @@ void MacroInvocation():
 }
 {
     <MACRO_INVOCATION> name=QualifiedName()
-    "(" (BlankLine())? (Expressions())? ")"
-    "{" Block() "}"
+    ("(" (BlankLine())? (Expressions())? ")")?
+    Block()
     {
       jjtThis.setName(name);
     }
