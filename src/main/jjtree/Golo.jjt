@@ -655,7 +655,10 @@ String Documentation() #void:
 
 // ............................................................................................. //
 
-ASTCompilationUnit CompilationUnit(): {}
+ASTCompilationUnit CompilationUnit(): 
+{
+  ASTMacroInvocation macro;
+}
 {
   try {
     (
@@ -665,7 +668,12 @@ ASTCompilationUnit CompilationUnit(): {}
         ( ImportDeclaration() BlankLines() )*
         (
           try {
-            ToplevelDeclaration() BlankLines()
+            (ToplevelDeclaration() BlankLines())
+            |
+            (macro=MacroInvocation() BlankLines())
+            {
+              macro.setTopLevel(true);    
+            }
           }
           catch (ParseException e) {
             skipto(NEWLINE, e, jjtThis);
@@ -967,8 +975,6 @@ void Statement() #void:{}
   Continue()
   |
   Break()
-  |
-  MacroInvocation()
 }
 
 void Continue(): {}
@@ -1047,6 +1053,8 @@ void ExpressionStatement() #void: {}
   UnquotedExpression()
   |
   QuotedBlock()
+  |
+  MacroInvocation()
 }
 
 void TerminalExpression() #void: {}
@@ -1165,17 +1173,18 @@ void UnquotedExpression(): {}
     <UNQUOTE_LITERAL> Reference()
 }
 
-void MacroInvocation(): 
+ASTMacroInvocation MacroInvocation():
 {
   String name;
 }
 {
-    <MACRO_INVOCATION> name=QualifiedName()
-    ("(" (BlankLine())? (Expressions())? ")")?
-    Block()
-    {
-      jjtThis.setName(name);
-    }
+  <MACRO_INVOCATION> name=QualifiedName()
+  ("(" (BlankLine())? (Expressions())? ")")?
+  (Block())?
+  {
+    jjtThis.setName(name);
+    return jjtThis;
+  }
 }
 
 void Function():

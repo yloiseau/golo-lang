@@ -56,6 +56,10 @@ public final class LocalReference {
     return kind == Kind.MODULE_CONSTANT || kind == Kind.MODULE_VARIABLE;
   }
 
+  public boolean isConstant() {
+    return kind == Kind.CONSTANT || kind == Kind.MODULE_CONSTANT;
+  }
+
   public int getIndex() {
     return index;
   }

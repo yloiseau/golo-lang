@@ -61,4 +61,10 @@ public class AssignmentStatement extends GoloStatement {
   public String toString() {
     return String.format("%s = %s", localReference, expressionStatement);
   }
+
+  @Override
+  public void replaceElement(GoloElement original, GoloElement newStatement) {
+    this.expressionStatement = (ExpressionStatement) newStatement;
+  }
+  
 }

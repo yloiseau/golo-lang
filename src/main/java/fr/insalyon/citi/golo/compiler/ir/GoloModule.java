@@ -58,12 +58,14 @@ public final class GoloModule extends GoloElement {
   private final PackageAndClass packageAndClass;
   private final Set<ModuleImport> imports = new LinkedHashSet<>();
   private final Set<GoloFunction> functions = new LinkedHashSet<>();
+  private final Set<GoloFunction> macros = new LinkedHashSet<>();
   private final FunctionRegister augmentations = new FunctionRegister();
   private final ApplicationRegister augmentationApplications = new ApplicationRegister();
   private final FunctionRegister namedAugmentations = new FunctionRegister();
   private final Set<Struct> structs = new LinkedHashSet<>();
   private final Set<Union> unions = new LinkedHashSet<>();
   private final Set<LocalReference> moduleState = new LinkedHashSet<>();
+  private final Set<MacroInvocation> topLevelMacroInvocations = new LinkedHashSet<>();
   private GoloFunction moduleStateInitializer = null;
 
   public static final ModuleImport PREDEF = new ModuleImport(
@@ -134,9 +136,16 @@ public final class GoloModule extends GoloElement {
   }
 
   public void addFunction(GoloFunction function) {
-    functions.add(function);
+    if (function.isMacro()) {
+      macros.add(function);
+    } else {
+      functions.add(function);
+    }
   }
 
+  public void addMacroInvocation(MacroInvocation macroCall) {
+    topLevelMacroInvocations.add(macroCall);
+  }
 
   public void addNamedAugmentation(String name, GoloFunction function) {
     namedAugmentations.add(name, function);
@@ -165,6 +174,30 @@ public final class GoloModule extends GoloElement {
 
   public Set<GoloFunction> getFunctions() {
     return unmodifiableSet(functions);
+  }
+
+  public Set<MacroInvocation> getMacroInvocations() {
+    return unmodifiableSet(topLevelMacroInvocations);
+  }
+
+  @Override
+  public void replaceElement(GoloElement origin, GoloElement result) {
+    if (result instanceof Block) {
+      for (GoloStatement statement : ((Block) result).getStatements()) {
+        replaceElement(origin, statement);
+      }
+    } else if (result instanceof GoloFunction) {
+      addFunction((GoloFunction) result);
+    } else {
+      // struct
+      // augments
+      // states
+      throw new IllegalArgumentException("invalid return type for a top level macro");
+    }
+  }
+
+  public Set<GoloFunction> getMacros() {
+    return unmodifiableSet(macros);
   }
 
   public void accept(GoloIrVisitor visitor) {

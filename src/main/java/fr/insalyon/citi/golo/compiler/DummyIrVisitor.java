@@ -20,7 +20,14 @@ import java.util.Collection;
 
 import fr.insalyon.citi.golo.compiler.ir.*;
 
-class DummyIrVisitor implements GoloIrVisitor {
+/**
+ * Dummy IR Visitor.
+ * <p>
+ * This visitor walk the IR tree, but do nothing. It can be used to implement specific IR
+ * visitors by overriding only the specific methods, like for example the ones used in the
+ * compilation check and transformation step.
+ */
+abstract class DummyIrVisitor implements GoloIrVisitor {
 
   @Override
   public void visitModule(GoloModule module) {
@@ -29,8 +36,14 @@ class DummyIrVisitor implements GoloIrVisitor {
     // module state
     // unions
     // augmentations / augmentations applications
+    for (MacroInvocation macroCall : module.getMacroInvocations()) {
+      macroCall.accept(this);
+    }
     for (GoloFunction function : module.getFunctions()) {
       function.accept(this);
+    }
+    for (GoloFunction macro : module.getMacros()) {
+      macro.accept(this);
     }
     for (Collection<GoloFunction> functions : module.getAugmentations().values()) {
       for (GoloFunction function : functions) {
@@ -63,7 +76,7 @@ class DummyIrVisitor implements GoloIrVisitor {
 
   @Override
   public void visitQuotedBlock(QuotedBlock qblock) {
-    qblock.getExpression().accept(this);
+    qblock.getStatement().accept(this);
   }
 
   @Override
@@ -92,6 +105,11 @@ class DummyIrVisitor implements GoloIrVisitor {
   @Override
   public void visitMethodInvocation(MethodInvocation methodInvocation) {
     visitAbstractInvocation(methodInvocation);
+  }
+
+  @Override
+  public void visitMacroInvocation(MacroInvocation macroInvocation) {
+    visitAbstractInvocation(macroInvocation);
   }
 
   @Override
@@ -128,11 +146,11 @@ class DummyIrVisitor implements GoloIrVisitor {
 
   @Override
   public void visitLoopStatement(LoopStatement loopStatement) {
-    loopStatement.getBlock().accept(this);
-    loopStatement.getConditionStatement().accept(this);
     if (loopStatement.hasInitStatement()) {
       loopStatement.getInitStatement().accept(this);
     }
+    loopStatement.getConditionStatement().accept(this);
+    loopStatement.getBlock().accept(this);
     if (loopStatement.hasPostStatement()) {
       loopStatement.getPostStatement().accept(this);
     }

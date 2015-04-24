@@ -62,4 +62,9 @@ public abstract class AbstractInvocation extends ExpressionStatement {
   public void setAnonymousFunctionInvocations(int index, FunctionInvocation invocation) {
     anonymousFunctionInvocations.set(index, invocation);
   }
+
+  @Override
+  public void replaceElement(GoloElement original, GoloElement newStatement) {
+    arguments.set(arguments.indexOf(original), (ExpressionStatement) newStatement);
+  }
 }

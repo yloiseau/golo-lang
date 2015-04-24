@@ -26,7 +26,7 @@ import java.util.Collection;
 
 import static fr.insalyon.citi.golo.compiler.GoloCompilationException.Problem.Type.*;
 
-class LocalReferenceAssignmentAndVerificationVisitor implements GoloIrVisitor {
+class LocalReferenceAssignmentAndVerificationVisitor extends DummyIrVisitor {
 
   private GoloModule module = null;
   private AssignmentCounter assignmentCounter = new AssignmentCounter();
@@ -35,20 +35,27 @@ class LocalReferenceAssignmentAndVerificationVisitor implements GoloIrVisitor {
   private Deque<Set<LocalReference>> assignmentStack = new LinkedList<>();
   private Deque<LoopStatement> loopStack = new LinkedList<>();
   private GoloCompilationException.Builder exceptionBuilder;
+  private final HashSet<LocalReference> uninitializedReferences = new HashSet<>();
+
 
   private static class AssignmentCounter {
 
     private int counter = 0;
 
     public int next() {
-      int value = counter;
-      counter = counter + 1;
-      return value;
+      return counter++;
     }
 
     public void reset() {
       counter = 0;
     }
+  }
+
+  public LocalReferenceAssignmentAndVerificationVisitor() { }
+
+  public LocalReferenceAssignmentAndVerificationVisitor(GoloCompilationException.Builder builder) {
+    this();
+    setExceptionBuilder(builder);
   }
 
   public void setExceptionBuilder(GoloCompilationException.Builder builder) {
@@ -65,19 +72,7 @@ class LocalReferenceAssignmentAndVerificationVisitor implements GoloIrVisitor {
   @Override
   public void visitModule(GoloModule module) {
     this.module = module;
-    for (GoloFunction function : module.getFunctions()) {
-      function.accept(this);
-    }
-    for (Collection<GoloFunction> functions : module.getAugmentations().values()) {
-      for (GoloFunction function : functions) {
-        function.accept(this);
-      }
-    }
-    for (Collection<GoloFunction> functions : module.getNamedAugmentations().values()) {
-      for (GoloFunction function : functions) {
-        function.accept(this);
-      }
-    }
+    super.visitModule(module);
   }
 
   @Override
@@ -111,17 +106,10 @@ class LocalReferenceAssignmentAndVerificationVisitor implements GoloIrVisitor {
   }
 
   @Override
-  public void visitDecorator(Decorator decorator) {
-    decorator.getExpressionStatement().accept(this);
-  }
-
-  private final HashSet<LocalReference> uninitializedReferences = new HashSet<>();
-
-  @Override
   public void visitBlock(Block block) {
     ReferenceTable table = block.getReferenceTable();
     for (LocalReference reference : table.ownedReferences()) {
-      if (reference.getIndex() < 0 && !isModuleState(reference)) {
+      if (reference.getIndex() < 0 && !reference.isModuleState()) {
         reference.setIndex(assignmentCounter.next());
         uninitializedReferences.add(reference);
       }
@@ -145,26 +133,6 @@ class LocalReferenceAssignmentAndVerificationVisitor implements GoloIrVisitor {
   }
 
   @Override
-  public void visitQuotedBlock(QuotedBlock qblock) {
-    qblock.getExpression().accept(this);
-  }
-
-  private boolean isModuleState(LocalReference reference) {
-    return (reference.getKind().equals(LocalReference.Kind.MODULE_VARIABLE)) ||
-        (reference.getKind().equals(LocalReference.Kind.MODULE_CONSTANT));
-  }
-
-  @Override
-  public void visitConstantStatement(ConstantStatement constantStatement) {
-
-  }
-
-  @Override
-  public void visitReturnStatement(ReturnStatement returnStatement) {
-    returnStatement.getExpressionStatement().accept(this);
-  }
-
-  @Override
   public void visitFunctionInvocation(FunctionInvocation functionInvocation) {
     if (tableStack.peek().hasReferenceFor(functionInvocation.getName())) {
       if (tableStack.peek().get(functionInvocation.getName()).isModuleState()) {
@@ -173,13 +141,9 @@ class LocalReferenceAssignmentAndVerificationVisitor implements GoloIrVisitor {
         functionInvocation.setOnReference(true);
       }
     }
-    for (ExpressionStatement argument : functionInvocation.getArguments()) {
-      argument.accept(this);
-    }
-    for (FunctionInvocation invocation : functionInvocation.getAnonymousFunctionInvocations()) {
-      invocation.accept(this);
-    }
+    super.visitFunctionInvocation(functionInvocation);
   }
+
 
   @Override
   public void visitAssignmentStatement(AssignmentStatement assignmentStatement) {
@@ -210,11 +174,7 @@ class LocalReferenceAssignmentAndVerificationVisitor implements GoloIrVisitor {
 
   private boolean assigningConstant(LocalReference reference, Set<LocalReference> assignedReferences) {
     return (reference.getKind().equals(LocalReference.Kind.MODULE_CONSTANT) && !"<clinit>".equals(functionStack.peek().getName())) ||
-        isConstantReference(reference) && assignedReferences.contains(reference);
-  }
-
-  private boolean isConstantReference(LocalReference reference) {
-    return reference.getKind().equals(LocalReference.Kind.CONSTANT) || reference.getKind().equals(LocalReference.Kind.MODULE_CONSTANT);
+        reference.isConstant() && assignedReferences.contains(reference);
   }
 
   private boolean referenceNameExists(LocalReference reference, Set<LocalReference> referencesInBlock) {
@@ -245,65 +205,10 @@ class LocalReferenceAssignmentAndVerificationVisitor implements GoloIrVisitor {
   }
 
   @Override
-  public void visitConditionalBranching(ConditionalBranching conditionalBranching) {
-    conditionalBranching.getCondition().accept(this);
-    conditionalBranching.getTrueBlock().accept(this);
-    if (conditionalBranching.hasFalseBlock()) {
-      conditionalBranching.getFalseBlock().accept(this);
-    } else if (conditionalBranching.hasElseConditionalBranching()) {
-      conditionalBranching.getElseConditionalBranching().accept(this);
-    }
-  }
-
-  @Override
-  public void visitBinaryOperation(BinaryOperation binaryOperation) {
-    binaryOperation.getLeftExpression().accept(this);
-    binaryOperation.getRightExpression().accept(this);
-  }
-
-  @Override
-  public void visitUnaryOperation(UnaryOperation unaryOperation) {
-    unaryOperation.getExpressionStatement().accept(this);
-  }
-
-  @Override
   public void visitLoopStatement(LoopStatement loopStatement) {
     loopStack.push(loopStatement);
-    if (loopStatement.hasInitStatement()) {
-      loopStatement.getInitStatement().accept(this);
-    }
-    loopStatement.getConditionStatement().accept(this);
-    loopStatement.getBlock().accept(this);
-    if (loopStatement.hasPostStatement()) {
-      loopStatement.getPostStatement().accept(this);
-    }
+    super.visitLoopStatement(loopStatement);
     loopStack.pop();
-  }
-
-  @Override
-  public void visitMethodInvocation(MethodInvocation methodInvocation) {
-    for (ExpressionStatement argument : methodInvocation.getArguments()) {
-      argument.accept(this);
-    }
-    for (FunctionInvocation invocation : methodInvocation.getAnonymousFunctionInvocations()) {
-      invocation.accept(this);
-    }
-  }
-
-  @Override
-  public void visitThrowStatement(ThrowStatement throwStatement) {
-    throwStatement.getExpressionStatement().accept(this);
-  }
-
-  @Override
-  public void visitTryCatchFinally(TryCatchFinally tryCatchFinally) {
-    tryCatchFinally.getTryBlock().accept(this);
-    if (tryCatchFinally.hasCatchBlock()) {
-      tryCatchFinally.getCatchBlock().accept(this);
-    }
-    if (tryCatchFinally.hasFinallyBlock()) {
-      tryCatchFinally.getFinallyBlock().accept(this);
-    }
   }
 
   @Override
@@ -325,10 +230,4 @@ class LocalReferenceAssignmentAndVerificationVisitor implements GoloIrVisitor {
     }
   }
 
-  @Override
-  public void visitCollectionLiteral(CollectionLiteral collectionLiteral) {
-    for (ExpressionStatement statement : collectionLiteral.getExpressions()) {
-      statement.accept(this);
-    }
-  }
 }

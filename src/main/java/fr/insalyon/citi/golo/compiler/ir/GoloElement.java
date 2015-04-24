@@ -28,6 +28,7 @@ public class GoloElement {
   }
 
   public GoloASTNode getASTNode() {
+    if (nodeRef == null) { return null; }
     return nodeRef.get();
   }
 
@@ -41,5 +42,11 @@ public class GoloElement {
       return new PositionInSourceCode(0, 0);
     }
     return new PositionInSourceCode(node.jjtGetFirstToken().beginLine, node.jjtGetFirstToken().beginColumn);
+  }
+
+  public void accept(GoloIrVisitor visitor) { };
+
+  public void replaceElement(GoloElement original, GoloElement newElement) {
+    throw new UnsupportedOperationException("elements can't be replaced in " + this.getClass().getName());
   }
 }

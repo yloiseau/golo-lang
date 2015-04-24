@@ -25,8 +25,6 @@ import fr.insalyon.citi.golo.compiler.ir.*;
 import static gololang.macros.CodeBuilder.*;
 import static fr.insalyon.citi.golo.runtime.OperatorType.*;
 
-// TODO: deal with macro calls in quoted blocks
-
 /**
  * Visitor to expand {@code quote} expressions.
  * <p>
@@ -38,7 +36,6 @@ class QuotedIrExpander extends DummyIrVisitor {
   private static final String OPERATORS = "fr.insalyon.citi.golo.runtime.OperatorType.";
   private boolean inQuotedBlock = false;
   private Deque<Object> expandedBlocks = new LinkedList<>();
-  private int nestedBlockDepth = 0;
 
   private static FunctionInvocationBuilder enumValue(Enum<?> val) {
     return functionInvocation().name(val.getClass().getName() + "." + val.name());
@@ -59,40 +56,25 @@ class QuotedIrExpander extends DummyIrVisitor {
 
   @Override
   public void visitQuotedBlock(QuotedBlock qblock) {
-    int previousDepth = nestedBlockDepth;
-    nestedBlockDepth = 0;
     inQuotedBlock = true;
-    qblock.getExpression().accept(this);
-    expandedBlocks.push(functionInvocation()
-      .name(BUILDER + "quoted")
+    qblock.getStatement().accept(this);
+    FunctionInvocation element = functionInvocation()
+      .name(BUILDER + "toGoloElement")
       .arg(expandedBlocks.pop())
-      .build()
-    );
+      .build();
+    if (qblock.hasASTNode()) {
+      element.setASTNode(qblock.getASTNode());
+    }
+    expandedBlocks.push(element);
     inQuotedBlock = false;
-    nestedBlockDepth = previousDepth;
-  }
-
-  private boolean isSingleExpressionQuote(Block block) {
-    return (
-        nestedBlockDepth == 1
-        && !block.isUnquoted()
-        && block.getStatements().size() == 1
-        && block.getStatements().get(0) instanceof ExpressionStatement
-        );
   }
 
   @Override
   public void visitBlock(Block block) {
-    nestedBlockDepth++;
     if (!inQuotedBlock) {
       super.visitBlock(block);
     } else if (block.isUnquoted()) {
       expandedBlocks.push(block);
-    } else if (isSingleExpressionQuote(block)) {
-      // If the quoted block contains only one expression statement, we quote this statement only
-      // to ease the manipulation, and do a quotedBlock.getExpression() instead of
-      // quotedBlock.getExpression().getStatements().get(0)
-      block.getStatements().get(0).accept(this);
     } else {
       FunctionInvocationBuilder blockBuilder = functionInvocation().name(BUILDER + "block");
       for (GoloStatement statement : block.getStatements()) {
@@ -101,7 +83,6 @@ class QuotedIrExpander extends DummyIrVisitor {
       }
       expandedBlocks.push(blockBuilder);
     }
-    nestedBlockDepth--;
   }
 
   @Override
@@ -255,6 +236,8 @@ class QuotedIrExpander extends DummyIrVisitor {
   public void visitFunctionInvocation(FunctionInvocation functionInvocation) {
     if (!inQuotedBlock) {
       super.visitFunctionInvocation(functionInvocation);
+    } else if (functionInvocation.isUnquoted()) {
+      expandedBlocks.push(functionInvocation);
     } else {
       expandedBlocks.push(buildInvocation(
         functionInvocation()
@@ -279,6 +262,20 @@ class QuotedIrExpander extends DummyIrVisitor {
           .arg(constant(methodInvocation.getName()))
           .arg(constant(methodInvocation.isNullSafeGuarded())),
         methodInvocation
+      ));
+    }
+  }
+
+  @Override
+  public void visitMacroInvocation(MacroInvocation macroInvocation) {
+    if (!inQuotedBlock) {
+      super.visitMacroInvocation(macroInvocation);
+    } else {
+      expandedBlocks.push(buildInvocation(
+        functionInvocation()
+          .name(BUILDER + "macroInvocation")
+          .arg(constant(macroInvocation.getName())),
+        macroInvocation
       ));
     }
   }

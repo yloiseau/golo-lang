@@ -41,6 +41,9 @@ public class IrTreeDumper implements GoloIrVisitor {
   public void visitModule(GoloModule module) {
     space();
     System.out.println(module.getPackageAndClass());
+    for (GoloFunction macro : module.getMacros()) {
+      macro.accept(this);
+    }
     for (GoloFunction function : module.getFunctions()) {
       function.accept(this);
     }
@@ -150,7 +153,7 @@ public class IrTreeDumper implements GoloIrVisitor {
     space();
     System.out.println("QuotedBlock");
     incr();
-    qblock.getExpression().accept(this);
+    qblock.getStatement().accept(this);
     decr();
   }
 
@@ -185,6 +188,19 @@ public class IrTreeDumper implements GoloIrVisitor {
     }
     for (FunctionInvocation invocation : functionInvocation.getAnonymousFunctionInvocations()) {
       invocation.accept(this);
+    }
+    decr();
+  }
+
+  @Override
+  public void visitMacroInvocation(MacroInvocation macroInvocation) {
+
+    incr();
+    space();
+    System.out.println("Macro call: " + macroInvocation.getName());
+    for (ExpressionStatement argument : macroInvocation.getArguments()) {
+      space();
+      argument.accept(this);
     }
     decr();
   }

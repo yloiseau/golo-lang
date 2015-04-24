@@ -687,6 +687,25 @@ class ParseTreeToGoloIrVisitor implements GoloParserVisitor {
   }
 
   @Override
+  public Object visit(ASTMacroInvocation node, Object data) {
+    Context context = (Context) data;
+    MacroInvocation macroInvocation = new MacroInvocation(node.getName());
+    node.setIrElement(macroInvocation);
+    final int numChildren = node.jjtGetNumChildren();
+    for (int i = 0; i < numChildren; i++) {
+      GoloASTNode argumentNode = (GoloASTNode) node.jjtGetChild(i);
+      argumentNode.jjtAccept(this, data);
+      macroInvocation.addArgument((ExpressionStatement) context.objectStack.pop());
+    }
+    if (node.isTopLevel()) {
+      context.module.addMacroInvocation(macroInvocation);
+    } else {
+      context.objectStack.push(macroInvocation);
+    }
+    return data;
+  }
+
+  @Override
   public Object visit(ASTAnonymousFunctionInvocation node, Object data) {
     Context context = (Context) data;
     FunctionInvocation invocation = new FunctionInvocation();
@@ -971,8 +990,9 @@ class ParseTreeToGoloIrVisitor implements GoloParserVisitor {
   public Object visit(ASTQuotedBlock node, Object data) {
     Context context = (Context) data;
     node.jjtGetChild(0).jjtAccept(this, data);
-    Block block = (Block) context.objectStack.pop();
+    GoloStatement block = (GoloStatement) context.objectStack.pop();
     QuotedBlock qblock = new QuotedBlock(block);
+    node.setIrElement(qblock);
     context.objectStack.push(qblock);
     return data;
   }
@@ -983,11 +1003,6 @@ class ParseTreeToGoloIrVisitor implements GoloParserVisitor {
     node.jjtGetChild(0).jjtAccept(this, data);
     ExpressionStatement expression = (ExpressionStatement) context.objectStack.peek();
     expression.unquote();
-    return data;
-  }
-
-  @Override
-  public Object visit(ASTMacroInvocation node, Object data) {
     return data;
   }
 }

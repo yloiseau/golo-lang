@@ -65,4 +65,13 @@ public class GoloClassLoader extends ClassLoader {
     }
     return lastClassIsModule;
   }
+
+  public synchronized void loadMacros(String goloSourceFilename, InputStream sourceCodeInputStream) throws GoloCompilationException {
+    List<CodeGenerationResult> results = compiler.compileMacros(goloSourceFilename, sourceCodeInputStream);
+    for (CodeGenerationResult result : results) {
+      System.out.println("Load macro for " + result.getPackageAndClass());
+      byte[] bytecode = result.getBytecode();
+      defineClass(null, bytecode, 0, bytecode.length);
+    }
+  }
 }

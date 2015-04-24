@@ -34,6 +34,8 @@ public interface GoloIrVisitor {
 
   void visitFunctionInvocation(FunctionInvocation functionInvocation);
 
+  void visitMacroInvocation(MacroInvocation macroInvocation);
+
   void visitAssignmentStatement(AssignmentStatement assignmentStatement);
 
   void visitReferenceLookup(ReferenceLookup referenceLookup);

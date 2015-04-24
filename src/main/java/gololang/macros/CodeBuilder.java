@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package fr.insalyon.citi.golo.compiler;
+package gololang.macros;
 
 import fr.insalyon.citi.golo.compiler.ir.*;
 import fr.insalyon.citi.golo.runtime.OperatorType;
@@ -25,9 +25,7 @@ import java.util.Deque;
 
 import static java.util.Arrays.asList;
 
-// TODO: move this in gololang.metaprog
-
-public final class IrBuilder {
+public final class CodeBuilder {
 
   public static interface IrNodeBuilder<T> {
     T build();
@@ -35,7 +33,7 @@ public final class IrBuilder {
 
   public static ExpressionStatement toExpression(Object expression) {
     if (expression == null) { return null; }
-    if (expression instanceof GoloStatement) {
+    if (expression instanceof ExpressionStatement) {
       return (ExpressionStatement) expression;
     } 
     if (expression instanceof IrNodeBuilder) {
@@ -53,6 +51,18 @@ public final class IrBuilder {
       return (GoloStatement) ((IrNodeBuilder) statement).build();
     }
     throw new IllegalArgumentException(statement + " is not a GoloStatement nor a IrNodeBuilder");
+  }
+
+  public static GoloElement toGoloElement(Object element) {
+    if (element == null) { return null; }
+    if (element instanceof GoloElement) {
+      return (GoloElement) element;
+    } 
+    if (element instanceof IrNodeBuilder) {
+      return (GoloElement) ((IrNodeBuilder) element).build();
+    }
+    throw new IllegalArgumentException(element + " is not a GoloElement nor a IrNodeBuilder");
+
   }
 
   public static Block toBlock(Object block) {
@@ -91,13 +101,49 @@ public final class IrBuilder {
   }
 
   public static final class LocalReferenceBuilder implements IrNodeBuilder<LocalReference> {
-    private LocalReference.Kind kind;
     private String name;
     private boolean synthetic = false;
     private int index = -1;
+    private boolean moduleLevel = false;
+    private boolean variable = false;
+
+    private LocalReference.Kind kind() {
+      if (!moduleLevel && !variable) { return LocalReference.Kind.CONSTANT; }
+      if (!moduleLevel && variable) { return LocalReference.Kind.VARIABLE; }
+      if (moduleLevel && !variable) { return LocalReference.Kind.MODULE_CONSTANT; }
+      if (moduleLevel && variable) { return LocalReference.Kind.MODULE_VARIABLE; }
+      return null;
+    }
 
     public LocalReferenceBuilder kind(LocalReference.Kind k) {
-      this.kind = k;
+      switch (k) {
+        case CONSTANT:
+          moduleLevel = false;
+          variable = false;
+          break;
+        case VARIABLE:
+          moduleLevel = false;
+          variable = true;
+          break;
+        case MODULE_VARIABLE:
+          moduleLevel = true;
+          variable = true;
+          break;
+        case MODULE_CONSTANT:
+          moduleLevel = true;
+          variable = false;
+          break;
+      }
+      return this;
+    }
+
+    public LocalReferenceBuilder variable() {
+      variable = true;
+      return this;
+    }
+
+    public LocalReferenceBuilder moduleLevel() {
+      moduleLevel = true;
       return this;
     }
 
@@ -117,7 +163,7 @@ public final class IrBuilder {
     }
 
     public LocalReference build() {
-      LocalReference ref = new LocalReference(kind, name, synthetic);
+      LocalReference ref = new LocalReference(kind(), name, synthetic);
       ref.setIndex(index);
       return ref;
     }
@@ -247,21 +293,17 @@ public final class IrBuilder {
       return this;
     }
 
-    public ConditionalBranchingBuilder whenTrue(BlockBuilder block) {
+    public ConditionalBranchingBuilder whenTrue(Object block) {
       if (block == null) {
         trueBlock = new Block(new ReferenceTable());
       } else {
-        trueBlock = block.build();
+        trueBlock = toBlock(block);
       }
       return this;
     }
 
-    public ConditionalBranchingBuilder whenFalse(BlockBuilder block) {
-      if (block == null) {
-        falseBlock = null;
-      } else {
-        falseBlock = block.build();
-      }
+    public ConditionalBranchingBuilder whenFalse(Object block) {
+      falseBlock = toBlock(block);
       return this;
     }
 
@@ -339,11 +381,11 @@ public final class IrBuilder {
     }
 
     public LoopBuilder block(ReferenceTable rt, Object... statements) {
-      return block(IrBuilder.block(statements).ref(rt));
+      return block(CodeBuilder.block(statements).ref(rt));
     }
 
     public LoopBuilder block(Object... statements) {
-      return block(IrBuilder.block(statements));
+      return block(CodeBuilder.block(statements));
     }
 
     public LoopStatement build() {
@@ -455,7 +497,7 @@ public final class IrBuilder {
   }
 
   public static QuotedBlock quoted(Object expr) {
-    return new QuotedBlock(toExpression(expr));
+    return new QuotedBlock(toGoloStatement(expr));
   }
 
   public static ConstantStatement constant(Object value) {
@@ -478,9 +520,12 @@ public final class IrBuilder {
     return localRef(kind, name).index(index).synthetic(synthetic);
   }
 
+  public static LocalReferenceBuilder externalRef(ReferenceLookup ref) {
+    return localRef(LocalReference.Kind.VARIABLE, ref.getName(), -1, false);
+  }
 
   public static ReturnStatement returnsVoid() {
-    ReturnStatement ret = new ReturnStatement(null);
+    ReturnStatement ret = new ReturnStatement(constant(null));
     ret.returningVoid();
     return ret;
   }
@@ -497,11 +542,46 @@ public final class IrBuilder {
     return functionInvocation().name(name).onReference(onRef).onModuleState(onModule).constant(constant);
   }
 
+  public static final class MacroInvocationBuilder implements IrNodeBuilder<MacroInvocation> {
+
+    private String name;
+    private final List<ExpressionStatement> args = new LinkedList<>();
+
+    public MacroInvocationBuilder name(String n) {
+      name = n;
+      return this;
+    }
+
+    public MacroInvocationBuilder arg(Object expression) {
+      args.add(toExpression(expression));
+      return this;
+    }
+
+    public MacroInvocation build() {
+      if (name == null || "".equals(name)) {
+        throw new IllegalStateException("unnamed macro");
+      }
+      MacroInvocation macro = new MacroInvocation(name);
+      for (ExpressionStatement arg : args) {
+        macro.addArgument(arg);
+      }
+      return macro;
+    }
+  }
+
+  public static MacroInvocationBuilder macroInvocation() {
+    return new MacroInvocationBuilder();
+  }
+
+  public static MacroInvocationBuilder macroInvocation(String name) {
+    return macroInvocation().name(name);
+  }
+
   public static ConditionalBranchingBuilder branch() {
     return new ConditionalBranchingBuilder();
   }
 
-  public static ConditionalBranchingBuilder branch(Object condition, 
+  public static ConditionalBranchingBuilder branch(Object condition,
                                                    BlockBuilder trueBlock, BlockBuilder falseBlock,
                                                    ConditionalBranchingBuilder elseBranch) {
     return branch().condition(condition).whenTrue(trueBlock).whenFalse(falseBlock).elseBranch(elseBranch);
@@ -617,4 +697,183 @@ public final class IrBuilder {
       .catchBlock(catchBlock)
       .finallyBlock(finallyBlock);
   }
+
+  public static class Operations {
+    // TODO: all params are objects
+    public static BinaryOperation plus(Object left, Object right) {
+      return binaryOperation(OperatorType.PLUS, toExpression(left), toExpression(right));
+    }
+
+    public static BinaryOperation minus(ExpressionStatement left, ExpressionStatement right) {
+      return binaryOperation(OperatorType.MINUS, left, right);
+    }
+
+    public static BinaryOperation times(ExpressionStatement left, ExpressionStatement right) {
+      return binaryOperation(OperatorType.TIMES, left, right);
+    }
+
+    public static BinaryOperation divide(ExpressionStatement left, ExpressionStatement right) {
+      return binaryOperation(OperatorType.DIVIDE, left, right);
+    }
+
+    public static BinaryOperation modulo(ExpressionStatement left, ExpressionStatement right) {
+      return binaryOperation(OperatorType.MODULO, left, right);
+    }
+
+    public static BinaryOperation equals(ExpressionStatement left, ExpressionStatement right) {
+      return binaryOperation(OperatorType.EQUALS, left, right);
+    }
+
+    public static BinaryOperation notEquals(ExpressionStatement left, ExpressionStatement right) {
+      return binaryOperation(OperatorType.NOTEQUALS, left, right);
+    }
+
+    public static BinaryOperation less(ExpressionStatement left, ExpressionStatement right) {
+      return binaryOperation(OperatorType.LESS, left, right);
+    }
+
+    public static BinaryOperation lessOrEquals(ExpressionStatement left, ExpressionStatement right) {
+      return binaryOperation(OperatorType.LESSOREQUALS, left, right);
+    }
+
+    public static BinaryOperation more(ExpressionStatement left, ExpressionStatement right) {
+      return binaryOperation(OperatorType.MORE, left, right);
+    }
+
+    public static BinaryOperation moreOrEquals(ExpressionStatement left, ExpressionStatement right) {
+      return binaryOperation(OperatorType.MOREOREQUALS, left, right);
+    }
+
+    public static BinaryOperation logicalAnd(ExpressionStatement left, ExpressionStatement right) {
+      return binaryOperation(OperatorType.AND, left, right);
+    }
+
+    public static BinaryOperation logicalOr(ExpressionStatement left, ExpressionStatement right) {
+      return binaryOperation(OperatorType.OR, left, right);
+    }
+
+    public static UnaryOperation logicalNot(ExpressionStatement expr) {
+      return unaryOperation(OperatorType.NOT, expr);
+    }
+
+    public static BinaryOperation identityOperator(ExpressionStatement left, ExpressionStatement right) {
+      return binaryOperation(OperatorType.IS, left, right);
+    }
+
+    public static BinaryOperation differenceOperator(ExpressionStatement left, ExpressionStatement right) {
+      return binaryOperation(OperatorType.ISNT, left, right);
+    }
+
+    public static BinaryOperation ofTypeOperator(ExpressionStatement left, ExpressionStatement right) {
+      return binaryOperation(OperatorType.OFTYPE, left, right);
+    }
+
+    public static BinaryOperation nullSafeOperator(ExpressionStatement left, ExpressionStatement right) {
+      return binaryOperation(OperatorType.ORIFNULL, left, right);
+    }
+
+    public static BinaryOperation methodCall(Object left, Object right) {
+      return binaryOperation(OperatorType.METHOD_CALL, toExpression(left), toExpression(right));
+    }
+  }
+
+  public static final class FunctionDeclarationBuilder implements IrNodeBuilder<GoloFunction> {
+    private String name = "anonymous";
+    private GoloFunction.Visibility visibility = GoloFunction.Visibility.PUBLIC ;
+    private GoloFunction.Scope scope = GoloFunction.Scope.MODULE;
+    private boolean macro = false;
+    private final List<String> parameters = new LinkedList<>();
+    private final List<String> syntheticParameters = new LinkedList<>();
+    private Block block = CodeBuilder.block(returns(constant(null))).build();
+    private boolean varargs = false;
+
+    @Override
+    public GoloFunction build() {
+      GoloFunction f = new GoloFunction(name, visibility, scope, macro);
+      f.setParameterNames(parameters);
+      f.setVarargs(varargs);
+      f.setBlock(block);
+      ReferenceTable referenceTable = block.getReferenceTable();
+      for (String parameter : parameters) {
+        referenceTable.add(new LocalReference(LocalReference.Kind.CONSTANT, parameter));
+      }
+      if (!block.hasReturn()) {
+        ReturnStatement missingReturnStatement = new ReturnStatement(new ConstantStatement(null));
+        if (f.isMain()) {
+          missingReturnStatement.returningVoid();
+        }
+        block.addStatement(missingReturnStatement);
+      }
+      return f;
+    }
+
+    public FunctionDeclarationBuilder name(String n) {
+      name = n;
+      return this;
+    }
+
+    public FunctionDeclarationBuilder macro(boolean m) {
+      macro = m;
+      return this;
+    }
+
+    public FunctionDeclarationBuilder visibility(GoloFunction.Visibility v) {
+      visibility = v;
+      return this;
+    }
+
+    public FunctionDeclarationBuilder inAugment() {
+      scope = GoloFunction.Scope.AUGMENT;
+      return this;
+    }
+
+    public FunctionDeclarationBuilder asClosure() {
+      scope = GoloFunction.Scope.CLOSURE;
+      return this;
+    }
+
+    public FunctionDeclarationBuilder inModule() {
+      scope = GoloFunction.Scope.MODULE;
+      return this;
+    }
+
+    public FunctionDeclarationBuilder param(String... params) {
+      parameters.addAll(asList(params));
+      return this;
+    }
+
+    public FunctionDeclarationBuilder block(Object... statements) {
+      return block(CodeBuilder.block(statements));
+    }
+
+    public FunctionDeclarationBuilder block(BlockBuilder blockBuilder) {
+      this.block = blockBuilder.build();
+      return this;
+    }
+
+    public FunctionDeclarationBuilder varargs() {
+      varargs = true;
+      return this;
+    }
+
+    // synthetic params
+    // synthetic - selfname
+    // decorators
+
+  }
+
+  public static FunctionDeclarationBuilder publicFunction() {
+    return new FunctionDeclarationBuilder();
+  }
+
+  public static FunctionDeclarationBuilder localFunction() {
+    return new FunctionDeclarationBuilder()
+                .visibility(GoloFunction.Visibility.LOCAL);
+  }
+
+  public static FunctionDeclarationBuilder closureFunction() {
+    return new FunctionDeclarationBuilder()
+      .visibility(GoloFunction.Visibility.LOCAL).asClosure();
+  }
+
 }

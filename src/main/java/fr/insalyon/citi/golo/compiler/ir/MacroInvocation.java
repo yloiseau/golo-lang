@@ -16,30 +16,19 @@
 
 package fr.insalyon.citi.golo.compiler.ir;
 
-public class ConstantStatement extends ExpressionStatement {
+public class MacroInvocation extends AbstractInvocation {
 
-  private Object value;
-
-  public ConstantStatement(Object value) {
-    super();
-    this.value = value;
-  }
-
-  public Object getValue() {
-    return value;
-  }
-
-  public void setValue(Object v) {
-    value = v;
+  public MacroInvocation(String name) {
+    super(name);
   }
 
   @Override
   public void accept(GoloIrVisitor visitor) {
-    visitor.visitConstantStatement(this);
+    visitor.visitMacroInvocation(this);
   }
-
+  
   @Override
   public String toString() {
-    return String.valueOf(value);
+    return String.format("MacroInvocation{name=%s}", getName());
   }
 }

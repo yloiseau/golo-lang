@@ -94,6 +94,15 @@ public class GoloCompiler {
     return parser;
   }
 
+  public final GoloModule buildModule(String goloSourceFilename, InputStream sourceCodeInputStream) throws GoloCompilationException {
+    resetExceptionBuilder();
+    ASTCompilationUnit compilationUnit = parse(goloSourceFilename, initParser(goloSourceFilename, sourceCodeInputStream));
+    throwIfErrorEncountered();
+    GoloModule goloModule = check(compilationUnit);
+    throwIfErrorEncountered();
+    return goloModule;
+  }
+
   /**
    * Compiles a Golo source file from an input stream, and returns a collection of results.
    *
@@ -103,14 +112,31 @@ public class GoloCompiler {
    * @throws GoloCompilationException if a problem occurs during any phase of the compilation work.
    */
   public final List<CodeGenerationResult> compile(String goloSourceFilename, InputStream sourceCodeInputStream) throws GoloCompilationException {
-    resetExceptionBuilder();
-    ASTCompilationUnit compilationUnit = parse(goloSourceFilename, initParser(goloSourceFilename, sourceCodeInputStream));
-    throwIfErrorEncountered();
-    GoloModule goloModule = check(compilationUnit);
-    throwIfErrorEncountered();
+    GoloModule goloModule = buildModule(goloSourceFilename, sourceCodeInputStream);
     JavaBytecodeGenerationGoloIrVisitor bytecodeGenerator = new JavaBytecodeGenerationGoloIrVisitor();
+    List<CodeGenerationResult> result = new LinkedList<>();
+    //bytecodeGenerator.setOnlyMacros(true);
+    //result.addAll(bytecodeGenerator.generateBytecode(goloModule, goloSourceFilename));
+    bytecodeGenerator.setOnlyMacros(false);
+    result.addAll(bytecodeGenerator.generateBytecode(goloModule, goloSourceFilename));
+    return result;
+  }
+
+  /**
+   * Compiles Macros from a Golo source file from an input stream, and returns a collection of results.
+   *
+   * @param goloSourceFilename    the source file name.
+   * @param sourceCodeInputStream the source code input stream.
+   * @return a list of compilation results.
+   * @throws GoloCompilationException if a problem occurs during any phase of the compilation work.
+   */
+  public final List<CodeGenerationResult> compileMacros(String goloSourceFilename, InputStream sourceCodeInputStream) throws GoloCompilationException {
+    GoloModule goloModule = buildModule(goloSourceFilename, sourceCodeInputStream);
+    JavaBytecodeGenerationGoloIrVisitor bytecodeGenerator = new JavaBytecodeGenerationGoloIrVisitor();
+    bytecodeGenerator.setOnlyMacros(true);
     return bytecodeGenerator.generateBytecode(goloModule, goloSourceFilename);
   }
+
 
   private void throwIfErrorEncountered() {
     if (!getProblems().isEmpty()) {
@@ -144,7 +170,9 @@ public class GoloCompiler {
     if (targetFolder.isFile()) {
       throw new IllegalArgumentException(targetFolder + " already exists and is a file.");
     }
-    List<CodeGenerationResult> results = compile(goloSourceFilename, sourceCodeInputStream);
+    List<CodeGenerationResult> results = new LinkedList<>();
+    //results.addAll(compileMacros(goloSourceFilename, sourceCodeInputStream));
+    results.addAll(compile(goloSourceFilename, sourceCodeInputStream));
     for (CodeGenerationResult result : results) {
       File outputFolder = new File(targetFolder, result.getPackageAndClass().packageName().replaceAll("\\.", "/"));
       if (!outputFolder.exists() && !outputFolder.mkdirs()) {
@@ -189,24 +217,11 @@ public class GoloCompiler {
     ParseTreeToGoloIrVisitor parseTreeToIR = new ParseTreeToGoloIrVisitor();
     parseTreeToIR.setExceptionBuilder(exceptionBuilder);
     GoloModule goloModule = parseTreeToIR.transform(compilationUnit);
-    expand(goloModule);
-    ClosureCaptureGoloIrVisitor closureCaptureVisitor = new ClosureCaptureGoloIrVisitor();
-    closureCaptureVisitor.visitModule(goloModule);
-    LocalReferenceAssignmentAndVerificationVisitor localReferenceVisitor = new LocalReferenceAssignmentAndVerificationVisitor();
-    localReferenceVisitor.setExceptionBuilder(exceptionBuilder);
-    localReferenceVisitor.visitModule(goloModule);
+    goloModule.accept(new QuotedIrExpander());
+    goloModule.accept(new MacroExpansionIrVisitor());
+    goloModule.accept(new ClosureCaptureGoloIrVisitor());
+    goloModule.accept(new LocalReferenceAssignmentAndVerificationVisitor(exceptionBuilder));
     return goloModule;
-  }
-
-  /**
-   * Walk the intermediate representation tree and expand macros.
-   * <p>
-   * Transforms the IR in place.
-   * Currently only do the quote/unquote magic
-   */
-  public final void expand(GoloModule module) {
-    QuotedIrExpander expander = new QuotedIrExpander();
-    expander.visitModule(module);
   }
 
   /**

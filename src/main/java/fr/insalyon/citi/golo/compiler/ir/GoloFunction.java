@@ -152,6 +152,7 @@ public final class GoloFunction extends GoloElement {
     return "<clinit>".equals(name);
   }
 
+  @Override
   public void accept(GoloIrVisitor visitor) {
     visitor.visitFunction(this);
   }

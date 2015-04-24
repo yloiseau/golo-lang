@@ -19,6 +19,7 @@ package fr.insalyon.citi.golo.compiler.parser;
 public class ASTMacroInvocation extends GoloASTNode implements NamedNode {
 
   private String name;
+  private boolean topLevel = false;
 
   public ASTMacroInvocation(int id) {
     super(id);
@@ -36,6 +37,14 @@ public class ASTMacroInvocation extends GoloASTNode implements NamedNode {
   @Override
   public void setName(String name) {
     this.name = name;
+  }
+  
+  public void setTopLevel(boolean v) {
+    topLevel = v;
+  }
+
+  public boolean isTopLevel() {
+    return topLevel;
   }
   
   @Override

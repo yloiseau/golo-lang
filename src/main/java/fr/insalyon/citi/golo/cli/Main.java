@@ -517,6 +517,7 @@ public class Main {
       }
     } else if (file.getName().endsWith(".golo")) {
       try (FileInputStream in = new FileInputStream(file)) {
+        //loader.loadMacros(file.getName(), in);
         Class<?> loadedClass = loader.load(file.getName(), in);
         if (module == null || loadedClass.getCanonicalName().equals(module)) {
           return loadedClass;

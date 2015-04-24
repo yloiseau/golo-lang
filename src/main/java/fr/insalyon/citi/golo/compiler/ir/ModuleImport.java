@@ -55,4 +55,5 @@ public final class ModuleImport extends GoloElement {
     int result = packageAndClass.hashCode();
     return result;
   }
+
 }

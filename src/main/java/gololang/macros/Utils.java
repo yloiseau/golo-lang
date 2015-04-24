@@ -14,32 +14,16 @@
  * limitations under the License.
  */
 
-package fr.insalyon.citi.golo.compiler.ir;
+package gololang.macros;
 
-public class ConstantStatement extends ExpressionStatement {
+import fr.insalyon.citi.golo.compiler.ir.GoloElement;
+import fr.insalyon.citi.golo.compiler.ir.IrTreeDumper;
 
-  private Object value;
+public final class Utils {
 
-  public ConstantStatement(Object value) {
-    super();
-    this.value = value;
-  }
+  private Utils() { }
 
-  public Object getValue() {
-    return value;
-  }
-
-  public void setValue(Object v) {
-    value = v;
-  }
-
-  @Override
-  public void accept(GoloIrVisitor visitor) {
-    visitor.visitConstantStatement(this);
-  }
-
-  @Override
-  public String toString() {
-    return String.valueOf(value);
+  public static void prettyPrint(GoloElement node) {
+    node.accept(new IrTreeDumper());
   }
 }

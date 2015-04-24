@@ -85,6 +85,11 @@ class JavaBytecodeGenerationGoloIrVisitor implements GoloIrVisitor {
   private List<CodeGenerationResult> generationResults;
   private String sourceFilename;
   private Context context;
+  private boolean onlyMacros = false;
+
+  public void setOnlyMacros(boolean v) {
+    onlyMacros = v;
+  }
 
   private static class Context {
     private final Deque<ReferenceTable> referenceTableStack = new LinkedList<>();
@@ -109,26 +114,30 @@ class JavaBytecodeGenerationGoloIrVisitor implements GoloIrVisitor {
     writeImportMetaData(module.getImports());
     klass = module.getPackageAndClass().toString();
     jvmKlass = module.getPackageAndClass().toJVMType();
-    for (GoloFunction function : module.getFunctions()) {
-      function.accept(this);
-    }
-    generateAugmentationsBytecode(module, module.getAugmentations());
-    generateAugmentationsBytecode(module, module.getNamedAugmentations());
-    if (module.getStructs().size() > 0) {
-      JavaBytecodeStructGenerator structGenerator = new JavaBytecodeStructGenerator();
-      for (Struct struct : module.getStructs()) {
-        generationResults.add(structGenerator.compile(struct, sourceFilename));
+    //if (onlyMacros) {
+      generateMacroBytecode(module);
+    //} else {
+      for (GoloFunction function : module.getFunctions()) {
+        function.accept(this);
       }
-    }
-    if (!module.getUnions().isEmpty()) {
-      JavaBytecodeUnionGenerator unionGenerator = new JavaBytecodeUnionGenerator();
-      for (Union e : module.getUnions()) {
-        generationResults.addAll(unionGenerator.compile(e, sourceFilename));
+      generateAugmentationsBytecode(module, module.getAugmentations());
+      generateAugmentationsBytecode(module, module.getNamedAugmentations());
+      if (module.getStructs().size() > 0) {
+        JavaBytecodeStructGenerator structGenerator = new JavaBytecodeStructGenerator();
+        for (Struct struct : module.getStructs()) {
+          generationResults.add(structGenerator.compile(struct, sourceFilename));
+        }
       }
-    }
-    for (LocalReference moduleState : module.getModuleState()) {
-      writeModuleState(moduleState);
-    }
+      if (!module.getUnions().isEmpty()) {
+        JavaBytecodeUnionGenerator unionGenerator = new JavaBytecodeUnionGenerator();
+        for (Union e : module.getUnions()) {
+          generationResults.addAll(unionGenerator.compile(e, sourceFilename));
+        }
+      }
+      for (LocalReference moduleState : module.getModuleState()) {
+        writeModuleState(moduleState);
+      }
+    //}
     writeAugmentsMetaData(module.getAugmentations().keySet());
     writeAugmentationApplicationsMetaData(module.getAugmentationApplications());
     classWriter.visitEnd();
@@ -272,6 +281,40 @@ class JavaBytecodeGenerationGoloIrVisitor implements GoloIrVisitor {
     classWriter.visitOuterClass(outerName, null, null);
 
     for (GoloFunction function : functions) {
+      function.accept(this);
+    }
+
+    Set<ModuleImport> imports = new HashSet<>(module.getImports());
+    imports.add(new ModuleImport(module.getPackageAndClass()));
+    writeImportMetaData(imports);
+
+    classWriter.visitEnd();
+    generationResults.add(new CodeGenerationResult(classWriter.toByteArray(), packageAndClass));
+    classWriter = mainClassWriter;
+  }
+
+  private void generateMacroBytecode(GoloModule module) {
+    ClassWriter mainClassWriter = classWriter;
+    PackageAndClass packageAndClass = new PackageAndClass(
+        module.getPackageAndClass().toString(),
+        "Macros");
+    String macroClassInternalName = packageAndClass.toJVMType();
+    String outerName = module.getPackageAndClass().toJVMType();
+
+    /*
+    mainClassWriter.visitInnerClass(
+        macroClassInternalName,
+        outerName,
+        "Macros",
+        ACC_PUBLIC | ACC_STATIC);
+    */
+
+    classWriter = new ClassWriter(COMPUTE_FRAMES | COMPUTE_MAXS);
+    classWriter.visit(V1_8, ACC_PUBLIC | ACC_SUPER, macroClassInternalName, null, JOBJECT, null);
+    classWriter.visitSource(sourceFilename, null);
+    //classWriter.visitOuterClass(outerName, null, null);
+
+    for (GoloFunction function : module.getMacros()) {
       function.accept(this);
     }
 
@@ -513,6 +556,11 @@ class JavaBytecodeGenerationGoloIrVisitor implements GoloIrVisitor {
     for (FunctionInvocation invocation : methodInvocation.getAnonymousFunctionInvocations()) {
       invocation.accept(this);
     }
+  }
+
+  @Override
+  public void visitMacroInvocation(MacroInvocation macroInvocation) {
+    throw new IllegalStateException("No macro call should remains at this stage.");
   }
 
   @Override
