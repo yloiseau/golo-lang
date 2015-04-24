@@ -22,8 +22,10 @@ import java.util.LinkedList;
 
 import fr.insalyon.citi.golo.compiler.ir.*;
 
-import static fr.insalyon.citi.golo.compiler.IrBuilder.*;
+import static gololang.macros.CodeBuilder.*;
 import static fr.insalyon.citi.golo.runtime.OperatorType.*;
+
+// TODO: deal with macro calls in quoted blocks
 
 /**
  * Visitor to expand {@code quote} expressions.
@@ -32,7 +34,7 @@ import static fr.insalyon.citi.golo.runtime.OperatorType.*;
  * {@code IrBuilder} methods that build the equivalent IR when evaluated.
  */
 class QuotedIrExpander extends DummyIrVisitor {
-  private static final String BUILDER = "fr.insalyon.citi.golo.compiler.IrBuilder.";
+  private static final String BUILDER = "gololang.macros.CodeBuilder.";
   private static final String OPERATORS = "fr.insalyon.citi.golo.runtime.OperatorType.";
   private boolean inQuotedBlock = false;
   private Deque<Object> expandedBlocks = new LinkedList<>();
