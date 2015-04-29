@@ -98,7 +98,7 @@ public class MacroExpansionIrVisitor extends DummyIrVisitor {
   public void visitFunctionInvocation(FunctionInvocation functionInvocation) {
     elements.push(functionInvocation);
     super.visitFunctionInvocation(functionInvocation);
-    elements.pop();  
+    elements.pop();
   }
 
   @Override
@@ -110,6 +110,7 @@ public class MacroExpansionIrVisitor extends DummyIrVisitor {
         expanded.accept(this);
       }
       if (expanded instanceof Block && !blockStack.isEmpty()) {
+        // XXX: relink or fork ?
         ((Block) expanded).getReferenceTable().relink(blockStack.peek().getReferenceTable());
       }
     }
@@ -129,7 +130,7 @@ public class MacroExpansionIrVisitor extends DummyIrVisitor {
 
   private GoloElement expandSpecial(MacroInvocation invocation) {
     switch (invocation.getName()) {
-      case "use" : 
+      case "use" :
         return useMacro(invocation.getArguments());
     }
     return null;
@@ -155,7 +156,7 @@ public class MacroExpansionIrVisitor extends DummyIrVisitor {
       }
     }
     if (result == null) {
-      result = block().build(); 
+      result = block().build();
     }
     if (invocation.hasASTNode()) {
       result.setASTNode(invocation.getASTNode());
@@ -174,7 +175,7 @@ public class MacroExpansionIrVisitor extends DummyIrVisitor {
         classNames.add(prefix + MACROCLASS);
       }
       methodName = name.substring(methodClassSeparatorIndex + 1);
-    } 
+    }
     classNames.addAll(macroClasses);
     for (String className : classNames) {
       try {

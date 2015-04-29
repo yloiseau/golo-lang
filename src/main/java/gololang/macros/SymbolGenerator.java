@@ -28,7 +28,7 @@ public class SymbolGenerator {
   private int counter = 0;
   private String name;
   private final Map<String, String> symbols = new HashMap<>();
-  
+
   public static String gensym(String name, long suffix) {
     return String.format(FORMAT, name, suffix);
   }

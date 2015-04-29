@@ -299,13 +299,13 @@ public final class CodeBuilder {
     public static LoopBuilder currentLoop() {
       return currentLoop.peekFirst();
     }
-    
+
     public static void currentLoop(LoopBuilder l) {
       currentLoop.addFirst(l);
     }
 
     public LoopBuilder init(AssignmentStatementBuilder s) {
-      if (s == null) { 
+      if (s == null) {
         init = null;
       } else {
         init = s.build();
@@ -314,16 +314,16 @@ public final class CodeBuilder {
     }
 
     public LoopBuilder condition(Object s) {
-      if (s == null) { 
+      if (s == null) {
         cond = constant(false);
-      } else 
+      } else
         cond = toExpression(s);
       return this;
     }
 
     public LoopBuilder post(Object s) {
       if (s == null) {
-        post = null; 
+        post = null;
       } else {
         post = toGoloStatement(s);
       }
@@ -357,9 +357,9 @@ public final class CodeBuilder {
     return new LoopBuilder();
   }
 
-  public static LoopBuilder loop(AssignmentStatementBuilder init, 
-                                 Object condition, 
-                                 Object post, 
+  public static LoopBuilder loop(AssignmentStatementBuilder init,
+                                 Object condition,
+                                 Object post,
                                  BlockBuilder block) {
     return loop().init(init).condition(condition).post(post).block(block);
   }
@@ -638,8 +638,8 @@ public final class CodeBuilder {
     }
 
     public TryCatchFinally build() {
-      return new TryCatchFinally(exceptionId, 
-          toBlock(tryBlock), 
+      return new TryCatchFinally(exceptionId,
+          toBlock(tryBlock),
           toBlock(catchBlock),
           toBlock(finallyBlock));
     }
@@ -815,9 +815,9 @@ public final class CodeBuilder {
       return this;
     }
 
-    // synthetic params
-    // synthetic - selfname
-    // decorators
+    // TODO: synthetic params
+    // TODO: synthetic - selfname
+    // TODO: decorators
 
   }
 

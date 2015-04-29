@@ -162,6 +162,9 @@ public final class GoloModule extends GoloElement {
 
   public void addStruct(Struct struct) {
     structs.add(struct);
+    for (GoloFunction factory : struct.createFactories()) {
+      functions.add(factory);
+    }
   }
 
   public void addUnion(Union e) {
@@ -190,9 +193,9 @@ public final class GoloModule extends GoloElement {
     } else if (result instanceof GoloFunction) {
       addFunction((GoloFunction) result);
     } else {
-      // struct
-      // augments
-      // states
+      // TODO: struct
+      // TODO: augments
+      // TODO: states
       throw new IllegalArgumentException("invalid return type for a top level macro");
     }
   }

@@ -26,7 +26,7 @@ public class MacroInvocation extends AbstractInvocation {
   public void accept(GoloIrVisitor visitor) {
     visitor.visitMacroInvocation(this);
   }
-  
+
   @Override
   public String toString() {
     return String.format("MacroInvocation{name=%s}", getName());
