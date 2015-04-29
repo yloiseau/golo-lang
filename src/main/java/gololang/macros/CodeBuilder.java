@@ -22,6 +22,8 @@ import fr.insalyon.citi.golo.runtime.OperatorType;
 import java.util.List;
 import java.util.LinkedList;
 import java.util.Deque;
+import java.util.Set;
+import java.util.LinkedHashSet;
 
 import static java.util.Arrays.asList;
 
@@ -833,6 +835,33 @@ public final class CodeBuilder {
   public static FunctionDeclarationBuilder closureFunction() {
     return new FunctionDeclarationBuilder()
       .visibility(GoloFunction.Visibility.LOCAL).asClosure();
+  }
+
+  public static final class StructBuilder implements IrNodeBuilder<Struct> {
+    private Set<String> members = new LinkedHashSet<>();
+    private String name;
+
+    public StructBuilder name(String n) {
+      this.name = n;
+      return this;
+    }
+
+    public StructBuilder members(String... members) {
+      this.members.addAll(asList(members));
+      return this;
+    }
+
+    @Override
+    public Struct build() {
+      if (name == null || members.isEmpty()) {
+        throw new IllegalStateException("StructBuilder not initialized");
+      }
+      return new Struct(name, members);
+    }
+  }
+
+  public static StructBuilder structure() {
+    return new StructBuilder();
   }
 
 }

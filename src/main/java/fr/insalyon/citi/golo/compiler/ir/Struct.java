@@ -27,16 +27,17 @@ import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.Set;
 
-public final class Struct {
+public final class Struct extends GoloElement {
 
   public static final String IMMUTABLE_FACTORY_METHOD = "$_immutable";
 
-  private final PackageAndClass packageAndClass;
+  private PackageAndClass moduleName;
+  private final String name;
   private final Set<String> members;
   private final Set<String> publicMembers;
 
-  public Struct(PackageAndClass packageAndClass, Set<String> members) {
-    this.packageAndClass = packageAndClass;
+  public Struct(String name, Set<String> members) {
+    this.name = name;
     this.members = members;
     this.publicMembers = new LinkedHashSet<>();
     for (String member : members) {
@@ -47,7 +48,11 @@ public final class Struct {
   }
 
   public PackageAndClass getPackageAndClass() {
-    return packageAndClass;
+    return new PackageAndClass(moduleName.toString() + ".types", name);
+  }
+
+  public void setModuleName(PackageAndClass module) {
+    this.moduleName = module;
   }
 
   public Set<String> getMembers() {
@@ -60,17 +65,17 @@ public final class Struct {
 
   public Set<GoloFunction> createFactories() {
     Set<GoloFunction> factories = new LinkedHashSet<>();
-    String name = packageAndClass.className();
+    String name = getPackageAndClass().className();
 
     GoloFunction factory = new GoloFunction(name, PUBLIC, MODULE);
     Block block = new Block(new ReferenceTable());
     factory.setBlock(block);
-    block.addStatement(new ReturnStatement(new FunctionInvocation(packageAndClass.toString())));
+    block.addStatement(new ReturnStatement(new FunctionInvocation(getPackageAndClass().toString())));
     factories.add(factory);
 
     factory = new GoloFunction(name, PUBLIC, MODULE);
     factory.setParameterNames(new LinkedList<>(members));
-    FunctionInvocation call = new FunctionInvocation(packageAndClass.toString());
+    FunctionInvocation call = new FunctionInvocation(getPackageAndClass().toString());
     ReferenceTable table = new ReferenceTable();
     block = new Block(table);
     for (String member : members) {
@@ -83,7 +88,7 @@ public final class Struct {
 
     factory = new GoloFunction("Immutable" + name, PUBLIC, MODULE);
     factory.setParameterNames(new LinkedList<>(members));
-    call = new FunctionInvocation(packageAndClass.toString() + "." + IMMUTABLE_FACTORY_METHOD);
+    call = new FunctionInvocation(getPackageAndClass().toString() + "." + IMMUTABLE_FACTORY_METHOD);
     table = new ReferenceTable();
     block = new Block(table);
     for (String member : members) {

@@ -114,11 +114,9 @@ class ParseTreeToGoloIrVisitor implements GoloParserVisitor {
   public Object visit(ASTStructDeclaration node, Object data) {
     Context context = (Context) data;
     GoloModule module = context.module;
-
-    PackageAndClass structClass = new PackageAndClass(
-        module.getPackageAndClass().toString() + ".types",
-        node.getName());
-    module.addStruct(new Struct(structClass, node.getMembers()));
+    Struct struct = new Struct(node.getName(), node.getMembers());
+    struct.setASTNode(node);
+    module.addStruct(struct);
     return data;
   }
 
