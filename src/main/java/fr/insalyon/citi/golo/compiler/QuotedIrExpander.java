@@ -22,8 +22,12 @@ import java.util.LinkedList;
 
 import fr.insalyon.citi.golo.compiler.ir.*;
 
+import gololang.macros.SymbolGenerator;
+
 import static gololang.macros.CodeBuilder.*;
 import static fr.insalyon.citi.golo.runtime.OperatorType.*;
+
+// TODO: relink reference tables when building subblocks
 
 /**
  * Visitor to expand {@code quote} expressions.
@@ -33,7 +37,10 @@ import static fr.insalyon.citi.golo.runtime.OperatorType.*;
  */
 class QuotedIrExpander extends DummyIrVisitor {
   private static final String BUILDER = "gololang.macros.CodeBuilder.";
+  private static final String UTILS = "gololang.macros.Utils.";
   private static final String OPERATORS = "fr.insalyon.citi.golo.runtime.OperatorType.";
+
+  private final SymbolGenerator symbols = new SymbolGenerator().name("quoted_var");
   private boolean inQuotedBlock = false;
   private Deque<Object> expandedBlocks = new LinkedList<>();
 
@@ -59,7 +66,7 @@ class QuotedIrExpander extends DummyIrVisitor {
     inQuotedBlock = true;
     qblock.getStatement().accept(this);
     FunctionInvocation element = functionInvocation()
-      .name(BUILDER + "toGoloElement")
+      .name(UTILS + "toGoloElement")
       .arg(expandedBlocks.pop())
       .build();
     if (qblock.hasASTNode()) {
@@ -132,9 +139,13 @@ class QuotedIrExpander extends DummyIrVisitor {
     } else if (referenceLookup.isUnquoted()) {
       expandedBlocks.push(referenceLookup);
     } else {
+      String name = referenceLookup.getName();
+      if (symbols.hasSymbol(name)) {
+        name = symbols.get(name);
+      }
       expandedBlocks.push(functionInvocation()
           .name(BUILDER + "refLookup")
-          .arg(constant(referenceLookup.getName()))
+          .arg(constant(name))
       );
     }
   }
@@ -147,10 +158,9 @@ class QuotedIrExpander extends DummyIrVisitor {
       FunctionInvocationBuilder localRefBuilder = functionInvocation()
         .name(BUILDER + "localRef")
         .arg(enumValue(ref.getKind()))
-        .arg(constant(ref.getName()))
-        .arg(constant(ref.getIndex()))
-        .arg(constant(ref.isSynthetic()));
-
+        .arg(constant(symbols.get(ref.getName())))
+        .arg(constant(-1))
+        .arg(constant(true));
       expandedBlocks.push(
           functionInvocation().name(BUILDER + "assignment")
           .arg(constant(assignmentStatement.isDeclaring()))
@@ -191,12 +201,12 @@ class QuotedIrExpander extends DummyIrVisitor {
       if (loopStatement.hasPostStatement()) {
         post = expandedBlocks.pop();
       }
+      Object block = expandedBlocks.pop();
+      Object condition = expandedBlocks.pop();
       Object init = constant(null);
       if (loopStatement.hasInitStatement()) {
         init = expandedBlocks.pop();
       }
-      Object condition = expandedBlocks.pop();
-      Object block = expandedBlocks.pop();
 
       expandedBlocks.push(functionInvocation()
           .name(BUILDER + "loop")

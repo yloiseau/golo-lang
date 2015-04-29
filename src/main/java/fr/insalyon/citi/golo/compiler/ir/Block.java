@@ -47,9 +47,6 @@ public final class Block extends ExpressionStatement {
 
   @Override
   public void replaceElement(GoloElement original, GoloElement newStatement) {
-    if (newStatement instanceof Block) {
-      ((Block) newStatement).getReferenceTable().relink(this.referenceTable);
-    } 
     this.statements.set(this.statements.indexOf(original), (GoloStatement) newStatement);
   }
 

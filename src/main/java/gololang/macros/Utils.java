@@ -16,14 +16,64 @@
 
 package gololang.macros;
 
-import fr.insalyon.citi.golo.compiler.ir.GoloElement;
-import fr.insalyon.citi.golo.compiler.ir.IrTreeDumper;
+import fr.insalyon.citi.golo.compiler.ir.*;
 
 public final class Utils {
 
   private Utils() { }
 
-  public static void prettyPrint(GoloElement node) {
-    node.accept(new IrTreeDumper());
+  public static void prettyPrint(Object node) {
+    try {
+      toGoloElement(node).accept(new IrTreeDumper());
+    } catch (IllegalArgumentException e) {
+      System.out.println(node);
+    }
   }
+
+  public static ExpressionStatement toExpression(Object expression) {
+    if (expression == null) { return null; }
+    if (expression instanceof ExpressionStatement) {
+      return (ExpressionStatement) expression;
+    } 
+    if (expression instanceof CodeBuilder.IrNodeBuilder) {
+      return (ExpressionStatement) ((CodeBuilder.IrNodeBuilder) expression).build();
+    }
+    throw new IllegalArgumentException(expression + " is not a ExpressionStatement nor a IrNodeBuilder");
+  }
+
+  public static GoloStatement toGoloStatement(Object statement) {
+    if (statement == null) { return null; }
+    if (statement instanceof GoloStatement) {
+      return (GoloStatement) statement;
+    } 
+    if (statement instanceof CodeBuilder.IrNodeBuilder) {
+      return (GoloStatement) ((CodeBuilder.IrNodeBuilder) statement).build();
+    }
+    throw new IllegalArgumentException(statement + " is not a GoloStatement nor a IrNodeBuilder");
+  }
+
+  public static GoloElement toGoloElement(Object element) {
+    if (element == null) { return null; }
+    if (element instanceof GoloElement) {
+      return (GoloElement) element;
+    } 
+    if (element instanceof CodeBuilder.IrNodeBuilder) {
+      return (GoloElement) ((CodeBuilder.IrNodeBuilder) element).build();
+    }
+    throw new IllegalArgumentException(element + " is not a GoloElement nor a IrNodeBuilder");
+
+  }
+
+  public static Block toBlock(Object block) {
+    if (block == null) { return null; }
+    if (block instanceof Block) {
+      return (Block) block;
+    } 
+    if (block instanceof CodeBuilder.IrNodeBuilder) {
+      return (Block) ((CodeBuilder.IrNodeBuilder) block).build();
+    }
+    throw new IllegalArgumentException(block + " is not a Block nor a IrNodeBuilder");
+  }
+
+
 }

@@ -182,6 +182,7 @@ public final class GoloModule extends GoloElement {
 
   @Override
   public void replaceElement(GoloElement origin, GoloElement result) {
+    topLevelMacroInvocations.remove(origin);
     if (result instanceof Block) {
       for (GoloStatement statement : ((Block) result).getStatements()) {
         replaceElement(origin, statement);

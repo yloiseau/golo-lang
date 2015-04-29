@@ -25,55 +25,14 @@ import java.util.Deque;
 
 import static java.util.Arrays.asList;
 
+import static gololang.macros.Utils.*;
+
+// TODO: relink reference tables when building subblocks
+
 public final class CodeBuilder {
 
   public static interface IrNodeBuilder<T> {
     T build();
-  }
-
-  public static ExpressionStatement toExpression(Object expression) {
-    if (expression == null) { return null; }
-    if (expression instanceof ExpressionStatement) {
-      return (ExpressionStatement) expression;
-    } 
-    if (expression instanceof IrNodeBuilder) {
-      return (ExpressionStatement) ((IrNodeBuilder) expression).build();
-    }
-    throw new IllegalArgumentException(expression + " is not a ExpressionStatement nor a IrNodeBuilder");
-  }
-
-  public static GoloStatement toGoloStatement(Object statement) {
-    if (statement == null) { return null; }
-    if (statement instanceof GoloStatement) {
-      return (GoloStatement) statement;
-    } 
-    if (statement instanceof IrNodeBuilder) {
-      return (GoloStatement) ((IrNodeBuilder) statement).build();
-    }
-    throw new IllegalArgumentException(statement + " is not a GoloStatement nor a IrNodeBuilder");
-  }
-
-  public static GoloElement toGoloElement(Object element) {
-    if (element == null) { return null; }
-    if (element instanceof GoloElement) {
-      return (GoloElement) element;
-    } 
-    if (element instanceof IrNodeBuilder) {
-      return (GoloElement) ((IrNodeBuilder) element).build();
-    }
-    throw new IllegalArgumentException(element + " is not a GoloElement nor a IrNodeBuilder");
-
-  }
-
-  public static Block toBlock(Object block) {
-    if (block == null) { return null; }
-    if (block instanceof Block) {
-      return (Block) block;
-    } 
-    if (block instanceof IrNodeBuilder) {
-      return (Block) ((IrNodeBuilder) block).build();
-    }
-    throw new IllegalArgumentException(block + " is not a Block nor a IrNodeBuilder");
   }
 
   public static final class BlockBuilder implements IrNodeBuilder<Block> {

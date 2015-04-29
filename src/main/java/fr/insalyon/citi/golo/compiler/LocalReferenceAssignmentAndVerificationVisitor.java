@@ -108,13 +108,24 @@ class LocalReferenceAssignmentAndVerificationVisitor extends DummyIrVisitor {
   @Override
   public void visitBlock(Block block) {
     ReferenceTable table = block.getReferenceTable();
+    extractUninitializedReferences(table);
+    tableStack.push(table);
+    assignmentStack.push(extractAssignedReferences(table));
+    super.visitBlock(block);
+    assignmentStack.pop();
+    tableStack.pop();
+  }
+
+  private void extractUninitializedReferences(ReferenceTable table) {
     for (LocalReference reference : table.ownedReferences()) {
       if (reference.getIndex() < 0 && !reference.isModuleState()) {
         reference.setIndex(assignmentCounter.next());
         uninitializedReferences.add(reference);
       }
     }
-    tableStack.push(table);
+  }
+
+  private Set<LocalReference> extractAssignedReferences(ReferenceTable table) {
     HashSet<LocalReference> assigned = new HashSet<>();
     if (table == functionStack.peek().getBlock().getReferenceTable()) {
       for (String param : functionStack.peek().getParameterNames()) {
@@ -124,12 +135,7 @@ class LocalReferenceAssignmentAndVerificationVisitor extends DummyIrVisitor {
     if (!assignmentStack.isEmpty()) {
       assigned.addAll(assignmentStack.peek());
     }
-    assignmentStack.push(assigned);
-    for (GoloStatement statement : block.getStatements()) {
-      statement.accept(this);
-    }
-    tableStack.pop();
-    assignmentStack.pop();
+    return assigned;
   }
 
   @Override
@@ -161,6 +167,7 @@ class LocalReferenceAssignmentAndVerificationVisitor extends DummyIrVisitor {
               "` at " + assignmentStatement.getPositionInSourceCode()
       );
     }
+    bindReference(reference);
     assignedReferences.add(reference);
     assignmentStatement.getExpressionStatement().accept(this);
     if (assignmentStatement.isDeclaring() && !reference.isSynthetic()) {
@@ -168,13 +175,26 @@ class LocalReferenceAssignmentAndVerificationVisitor extends DummyIrVisitor {
     }
   }
 
+  private void bindReference(LocalReference reference) {
+    ReferenceTable table = tableStack.peek();
+    if (reference.getIndex() < 0) {
+      if (table.hasReferenceFor(reference.getName())) {
+        reference.setIndex(table.get(reference.getName()).getIndex());
+      } else if (reference.isSynthetic()) {
+        reference.setIndex(assignmentCounter.next());
+        table.add(reference);
+      }
+    }
+  }
+  
   private boolean redeclaringReferenceInBlock(AssignmentStatement assignmentStatement, LocalReference reference, Set<LocalReference> assignedReferences) {
     return !reference.isSynthetic() && assignmentStatement.isDeclaring() && referenceNameExists(reference, assignedReferences);
   }
 
   private boolean assigningConstant(LocalReference reference, Set<LocalReference> assignedReferences) {
-    return (reference.getKind().equals(LocalReference.Kind.MODULE_CONSTANT) && !"<clinit>".equals(functionStack.peek().getName())) ||
-        reference.isConstant() && assignedReferences.contains(reference);
+    return reference.isConstant() && (
+        assignedReferences.contains(reference) ||
+        ( reference.isModuleState() && !functionStack.peek().isModuleInit()));
   }
 
   private boolean referenceNameExists(LocalReference reference, Set<LocalReference> referencesInBlock) {
