@@ -67,6 +67,7 @@ public final class GoloModule extends GoloElement {
   private final Set<LocalReference> moduleState = new LinkedHashSet<>();
   private final Set<MacroInvocation> topLevelMacroInvocations = new LinkedHashSet<>();
   private GoloFunction moduleStateInitializer = null;
+  private ReferenceTable globalReferences = new ReferenceTable();
 
   public static final ModuleImport PREDEF = new ModuleImport(
       PackageAndClass.fromString("gololang.Predefined"));
@@ -88,6 +89,10 @@ public final class GoloModule extends GoloElement {
     imports.add(STD_AUGMENTATIONS);
     imports.add(GOLOLANG);
     imports.add(JAVALANG);
+  }
+
+  public ReferenceTable getReferenceTable() {
+    return this.globalReferences;
   }
 
   public void addModuleStateInitializer(ReferenceTable table, AssignmentStatement assignment) {
@@ -136,6 +141,12 @@ public final class GoloModule extends GoloElement {
   }
 
   public void addFunction(GoloFunction function) {
+    if (function.getBlock() == null) {
+      // FIXME: This happens while compiling golo itself... but how could it be possible?
+      function.setBlock(new Block(globalReferences.fork()));
+    } else {
+      function.getBlock().getReferenceTable().relinkTopLevel(globalReferences);
+    }
     if (function.isMacro()) {
       macros.add(function);
     } else {
@@ -181,25 +192,14 @@ public final class GoloModule extends GoloElement {
   }
 
   public Set<MacroInvocation> getMacroInvocations() {
-    return unmodifiableSet(topLevelMacroInvocations);
+    return new LinkedHashSet<>(topLevelMacroInvocations);
   }
 
   @Override
   public void replaceElement(GoloElement origin, GoloElement result) {
     topLevelMacroInvocations.remove(origin);
-    if (result instanceof Block) {
-      for (GoloStatement statement : ((Block) result).getStatements()) {
-        replaceElement(origin, statement);
-      }
-    } else if (result instanceof GoloFunction) {
-      addFunction((GoloFunction) result);
-    } else if (result instanceof Struct) {
-      addStruct((Struct) result);
-    } else {
-      // TODO: augments
-      // TODO: states
-      throw new IllegalArgumentException("invalid return type for a top level macro");
-    }
+    System.out.println("got a " + result);
+    result.replaceInParent(origin, this);
   }
 
   public Set<GoloFunction> getMacros() {

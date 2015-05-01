@@ -55,7 +55,7 @@ public class ASTAugmentDeclaration extends GoloASTNode implements NamedNode {
   public String toString() {
     return "ASTAugmentDeclaration{" +
         "target='" + target + '\'' +
-        (isNamedAugmentation() 
+        (isNamedAugmentation()
          ? ", augmentations=" + augmentationNames
          : "") +
         '}';

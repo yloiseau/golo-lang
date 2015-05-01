@@ -66,5 +66,5 @@ public class AssignmentStatement extends GoloStatement {
   public void replaceElement(GoloElement original, GoloElement newStatement) {
     this.expressionStatement = (ExpressionStatement) newStatement;
   }
-  
+
 }

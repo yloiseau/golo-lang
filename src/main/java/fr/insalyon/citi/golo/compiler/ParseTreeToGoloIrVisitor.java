@@ -91,7 +91,7 @@ class ParseTreeToGoloIrVisitor implements GoloParserVisitor {
     Context context = (Context) data;
     context.module = new GoloModule(PackageAndClass.fromString(node.getName()));
     node.setIrElement(context.module);
-    context.referenceTableStack.push(new ReferenceTable());
+    context.referenceTableStack.push(context.module.getReferenceTable());
     return node.childrenAccept(this, data);
   }
 

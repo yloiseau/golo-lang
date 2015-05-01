@@ -156,4 +156,13 @@ public final class GoloFunction extends GoloElement {
   public void accept(GoloIrVisitor visitor) {
     visitor.visitFunction(this);
   }
+
+  @Override
+  public void replaceInParent(GoloElement original, GoloElement parent) {
+    if (parent instanceof GoloModule) {
+      ((GoloModule) parent).addFunction(this);
+    } else {
+      super.replaceInParent(original, parent);
+    }
+  }
 }

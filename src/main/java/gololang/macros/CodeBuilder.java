@@ -864,4 +864,12 @@ public final class CodeBuilder {
     return new StructBuilder();
   }
 
+  public static TopLevelElements toplevel(Object... content) {
+    TopLevelElements topLevel = new TopLevelElements();
+    for (Object element : content) {
+      topLevel.add(toGoloElement(element));
+    }
+    return topLevel;
+  }
+
 }

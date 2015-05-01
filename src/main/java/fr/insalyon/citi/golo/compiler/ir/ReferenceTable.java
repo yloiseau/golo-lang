@@ -66,6 +66,14 @@ public final class ReferenceTable {
     this.parent = parent;
   }
 
+  public void relinkTopLevel(ReferenceTable topLevel) {
+    if (this.parent == null) {
+      this.parent = topLevel;
+    } else if (this.parent != topLevel) {
+      this.parent.relinkTopLevel(topLevel);
+    }
+  }
+
   public Set<String> symbols() {
     LinkedHashSet<String> localSymbols = new LinkedHashSet<>(table.keySet());
     if (parent != null) {

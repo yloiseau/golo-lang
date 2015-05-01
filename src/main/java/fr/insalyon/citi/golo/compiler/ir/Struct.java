@@ -101,4 +101,13 @@ public final class Struct extends GoloElement {
 
     return factories;
   }
+
+  @Override
+  public void replaceInParent(GoloElement original, GoloElement parent) {
+    if (parent instanceof GoloModule) {
+      ((GoloModule) parent).addStruct(this);
+    } else {
+      super.replaceInParent(original, parent);
+    }
+  }
 }

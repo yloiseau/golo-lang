@@ -47,6 +47,13 @@ public class GoloElement {
   public void accept(GoloIrVisitor visitor) { };
 
   public void replaceElement(GoloElement original, GoloElement newElement) {
-    throw new UnsupportedOperationException("elements can't be replaced in " + this.getClass().getName());
+    throw new UnsupportedOperationException(
+        this.getClass().getName() + " can't replace " +
+        original.getClass().getName() + " in " +
+        newElement.getClass().getName());
+  }
+
+  public void replaceInParent(GoloElement original, GoloElement parent) {
+    parent.replaceElement(original, this);
   }
 }

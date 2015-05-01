@@ -96,4 +96,5 @@ public final class LocalReference {
     result = 31 * result + name.hashCode();
     return result;
   }
+
 }

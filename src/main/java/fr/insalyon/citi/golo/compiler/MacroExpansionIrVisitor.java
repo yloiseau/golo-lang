@@ -114,7 +114,7 @@ public class MacroExpansionIrVisitor extends DummyIrVisitor {
         ((Block) expanded).getReferenceTable().relink(blockStack.peek().getReferenceTable());
       }
     }
-    elements.peek().replaceElement(macroInvocation, expanded);
+    expanded.replaceInParent(macroInvocation, elements.peek());
   }
 
   @Override
