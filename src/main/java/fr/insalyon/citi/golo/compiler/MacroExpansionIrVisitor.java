@@ -81,6 +81,7 @@ public class MacroExpansionIrVisitor extends DummyIrVisitor {
     elements.push(module);
     super.visitModule(module);
     elements.pop();
+    module.internStructAugmentations();
   }
 
   private void addImportsToMacros(GoloModule module) {

@@ -166,6 +166,11 @@ public final class GoloModule extends GoloElement {
     augmentations.add(target, function);
   }
 
+  public void addAugmentation(Augmentation augment) {
+    augmentations.addAll(augment.getTarget(), augment.getFunctions());
+    augmentationApplications.addAll(augment.getTarget(), augment.getNames());
+  }
+
   public void addAugmentationApplication(String target,
                                          Collection<String> augmentNames) {
     augmentationApplications.addAll(target, augmentNames);
@@ -198,7 +203,6 @@ public final class GoloModule extends GoloElement {
   @Override
   public void replaceElement(GoloElement origin, GoloElement result) {
     topLevelMacroInvocations.remove(origin);
-    System.out.println("got a " + result);
     result.replaceInParent(origin, this);
   }
 

@@ -872,4 +872,39 @@ public final class CodeBuilder {
     return topLevel;
   }
 
+  public static final class AugmentationBuilder implements IrNodeBuilder<Augmentation> {
+    private String target;
+    private Set<FunctionDeclarationBuilder> functions = new LinkedHashSet<>();
+    private Set<String> names = new LinkedHashSet<>();
+
+    public AugmentationBuilder target(String name) {
+      target = name;
+      return this;
+    }
+
+    public AugmentationBuilder withFunction(FunctionDeclarationBuilder func) {
+      functions.add(func);
+      return this;
+    }
+
+    public AugmentationBuilder withAugmentation(String name) {
+      names.add(name);
+      return this;
+    }
+
+    @Override
+    public Augmentation build() {
+      Augmentation augment = new Augmentation(target);
+      for (FunctionDeclarationBuilder func : functions) {
+        augment.addFunction(func.build());
+      }
+      augment.addNames(names);
+      return augment;
+    }
+  }
+
+  public static AugmentationBuilder augmentType(String targetName) {
+    return new AugmentationBuilder().target(targetName);
+  }
+
 }
