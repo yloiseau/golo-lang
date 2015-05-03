@@ -24,6 +24,7 @@ import java.util.Collection;
 import java.util.LinkedList;
 import java.lang.invoke.MethodHandle;
 
+import static java.util.Arrays.asList;
 import static java.lang.invoke.MethodHandles.publicLookup;
 import static java.lang.reflect.Modifier.isStatic;
 import static java.lang.invoke.MethodType.genericMethodType;
@@ -56,7 +57,9 @@ public class MacroExpansionIrVisitor extends DummyIrVisitor {
   private Deque<Block> blockStack = new LinkedList<>();
   private boolean recur = true;
   private List<String> macroClasses = new LinkedList<>();
-  private List<String> globalMacroClasses = new LinkedList<>();
+  private List<String> globalMacroClasses = new LinkedList<>(asList(
+    "gololang.macros.Predefined"
+  ));
 
   public void addGlobalMacroClass(String name) {
     globalMacroClasses.add(name);
@@ -86,13 +89,13 @@ public class MacroExpansionIrVisitor extends DummyIrVisitor {
 
   private void addImportsToMacros(GoloModule module) {
     macroClasses.clear();
-    macroClasses.add(module.getPackageAndClass().toString());
-    macroClasses.add(module.getPackageAndClass().toString()  + MACROCLASS);
-    for (ModuleImport mod : module.getImports()) {
-      macroClasses.add(mod.getPackageAndClass().toString());
-      macroClasses.add(mod.getPackageAndClass().toString() + MACROCLASS);
-    }
     macroClasses.addAll(globalMacroClasses);
+    for (ModuleImport mod : module.getImports()) {
+      macroClasses.add(0, mod.getPackageAndClass().toString());
+      macroClasses.add(0, mod.getPackageAndClass().toString() + MACROCLASS);
+    }
+    macroClasses.add(0, module.getPackageAndClass().toString()  + MACROCLASS);
+    macroClasses.add(0, module.getPackageAndClass().toString());
   }
 
   @Override
@@ -139,7 +142,7 @@ public class MacroExpansionIrVisitor extends DummyIrVisitor {
 
   private GoloElement useMacro(List<ExpressionStatement> args) {
     for (ExpressionStatement arg : args) {
-      macroClasses.add(((ConstantStatement) arg).getValue().toString());
+      macroClasses.add(0, ((ConstantStatement) arg).getValue().toString());
     }
     return null;
   }

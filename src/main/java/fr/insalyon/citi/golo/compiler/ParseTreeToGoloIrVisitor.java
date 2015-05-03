@@ -61,6 +61,7 @@ class ParseTreeToGoloIrVisitor implements GoloParserVisitor {
     GoloModule module;
     Union currentUnion;
     boolean inNamedAugmentation;
+    boolean inQuote = false;
     String augmentation;
     Deque<Object> objectStack = new LinkedList<>();
     Deque<ReferenceTable> referenceTableStack = new LinkedList<>();
@@ -513,6 +514,7 @@ class ParseTreeToGoloIrVisitor implements GoloParserVisitor {
   public Object visit(ASTReference node, Object data) {
     Context context = (Context) data;
     ReferenceLookup referenceLookup = new ReferenceLookup(node.getName());
+    referenceLookup.setUnquoted(node.isUnquoted());
     context.objectStack.push(referenceLookup);
     node.setIrElement(referenceLookup);
     return data;
@@ -552,7 +554,7 @@ class ParseTreeToGoloIrVisitor implements GoloParserVisitor {
   public Object visit(ASTAssignment node, Object data) {
     Context context = (Context) data;
     LocalReference reference = context.referenceTableStack.peek().get(node.getName());
-    if (reference == null) {
+    if (reference == null && !context.inQuote) {
       getOrCreateExceptionBuilder(context).report(UNDECLARED_REFERENCE, node,
           "Assigning to either a parameter or an undeclared reference `" + node.getName() +
               "` at (line=" + node.getLineInSourceCode() +
@@ -560,10 +562,14 @@ class ParseTreeToGoloIrVisitor implements GoloParserVisitor {
       );
     }
     node.childrenAccept(this, data);
+    if (reference == null && context.inQuote) {
+      reference = new LocalReference(VARIABLE, node.getName());
+    }
     if (reference != null) {
       AssignmentStatement assignmentStatement = new AssignmentStatement(
           reference,
           (ExpressionStatement) context.objectStack.pop());
+      assignmentStatement.setOnUnquotedReference(node.isOnUnquotedReference());
       context.objectStack.push(assignmentStatement);
       node.setIrElement(assignmentStatement);
     }
@@ -954,7 +960,9 @@ class ParseTreeToGoloIrVisitor implements GoloParserVisitor {
   @Override
   public Object visit(ASTQuotedBlock node, Object data) {
     Context context = (Context) data;
+    context.inQuote = true;
     node.jjtGetChild(0).jjtAccept(this, data);
+    context.inQuote = false;
     GoloStatement block = (GoloStatement) context.objectStack.pop();
     QuotedBlock qblock = new QuotedBlock(block);
     node.setIrElement(qblock);

@@ -65,6 +65,7 @@ class QuotedIrExpander extends DummyIrVisitor {
   public void visitQuotedBlock(QuotedBlock qblock) {
     inQuotedBlock = true;
     qblock.getStatement().accept(this);
+    /*
     FunctionInvocation element = functionInvocation()
       .name(UTILS + "toGoloElement")
       .arg(expandedBlocks.pop())
@@ -73,6 +74,7 @@ class QuotedIrExpander extends DummyIrVisitor {
       element.setASTNode(qblock.getASTNode());
     }
     expandedBlocks.push(element);
+    */
     inQuotedBlock = false;
   }
 
@@ -155,12 +157,19 @@ class QuotedIrExpander extends DummyIrVisitor {
     super.visitAssignmentStatement(assignmentStatement);
     if (inQuotedBlock) {
       LocalReference ref = assignmentStatement.getLocalReference();
-      FunctionInvocationBuilder localRefBuilder = functionInvocation()
-        .name(BUILDER + "localRef")
-        .arg(enumValue(ref.getKind()))
-        .arg(constant(symbols.get(ref.getName())))
-        .arg(constant(-1))
-        .arg(constant(true));
+      FunctionInvocationBuilder localRefBuilder;
+      if (assignmentStatement.isOnUnquotedReference()) {
+        localRefBuilder = functionInvocation()
+          .name(BUILDER + "externalRef")
+          .arg(refLookup(ref.getName()));
+      } else {
+        localRefBuilder = functionInvocation()
+          .name(BUILDER + "localRef")
+          .arg(enumValue(ref.getKind()))
+          .arg(constant(symbols.get(ref.getName())))
+          .arg(constant(-1))
+          .arg(constant(true));
+      }
       expandedBlocks.push(
           functionInvocation().name(BUILDER + "assignment")
           .arg(constant(assignmentStatement.isDeclaring()))

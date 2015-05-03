@@ -31,6 +31,16 @@ public class TryCatchFinally extends GoloStatement {
     this.finallyBlock = finallyBlock;
   }
 
+  public void relinkInnerBlocks(ReferenceTable table) {
+    getTryBlock().getReferenceTable().relink(table);
+    if (hasCatchBlock()) {
+      getCatchBlock().getReferenceTable().relink(table);
+    }
+    if (hasFinallyBlock()) {
+      getFinallyBlock().getReferenceTable().relink(table);
+    }
+  }
+
   public String getExceptionId() {
     return exceptionId;
   }

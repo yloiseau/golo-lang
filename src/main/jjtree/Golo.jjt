@@ -204,7 +204,7 @@ TOKEN :
 {
   < QUOTE: "quote" >
   |
-  < UNQUOTE: "unquote(" >
+  < UNQUOTE: "unquote" >
   |
   < MACRO_INVOCATION: "&" >
   |
@@ -1168,9 +1168,7 @@ void QuotedBlock(): {}
 
 void UnquotedExpression(): {}
 {
-    <UNQUOTE> CommutativeExpression() ")"
-    |
-    <UNQUOTE_LITERAL> Reference()
+    <UNQUOTE> "(" ExpressionStatement() ")"
 }
 
 ASTMacroInvocation MacroInvocation():
@@ -1309,11 +1307,18 @@ void CollectionLiteral():
 }
 
 
-void Reference():{}
+void Reference():
 {
-  <IDENTIFIER>
+  Token idToken;
+  Token unquoted = null;
+}
+{
+  (unquoted=<UNQUOTE_LITERAL>)? idToken=<IDENTIFIER>
   {
-    jjtThis.setName(jjtThis.jjtGetFirstToken().image);
+    jjtThis.setName(idToken.image);
+    if (unquoted != null) {
+      jjtThis.setUnquoted(true);
+    }
   }
 }
 
@@ -1340,11 +1345,15 @@ ASTLetOrVar LetOrVar():
 void Assignment():
 {
   Token idToken;
+  Token unquoted = null;
 }
 {
-  idToken=<IDENTIFIER> "=" (BlankLine())? ExpressionStatement()
+  (unquoted=<UNQUOTE_LITERAL>)? idToken=<IDENTIFIER> "=" (BlankLine())? ExpressionStatement()
   {
     jjtThis.setName(idToken.image);
+    if (unquoted != null) {
+      jjtThis.setOnUnquotedReference(true);
+    }
   }
 }
 

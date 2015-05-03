@@ -19,6 +19,7 @@ package fr.insalyon.citi.golo.compiler.parser;
 public class ASTReference extends GoloASTNode implements NamedNode {
 
   private String name;
+  private boolean unquoted = false;
 
   public ASTReference(int id) {
     super(id);
@@ -36,6 +37,14 @@ public class ASTReference extends GoloASTNode implements NamedNode {
   @Override
   public void setName(String name) {
     this.name = name;
+  }
+
+  public void setUnquoted(boolean v) {
+    this.unquoted = v;
+  }
+
+  public boolean isUnquoted() {
+    return unquoted;
   }
 
   @Override

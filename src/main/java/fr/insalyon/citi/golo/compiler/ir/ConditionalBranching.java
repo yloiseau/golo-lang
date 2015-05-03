@@ -39,6 +39,16 @@ public final class ConditionalBranching extends GoloStatement {
     this.falseBlock = null;
   }
 
+  public void relinkInnerBlocks(ReferenceTable table) {
+    getTrueBlock().getReferenceTable().relink(table);
+    if (hasFalseBlock()) {
+      getFalseBlock().getReferenceTable().relink(table);
+    }
+    if (hasElseConditionalBranching()) {
+      getElseConditionalBranching().relinkInnerBlocks(table);
+    }
+  }
+
   public ExpressionStatement getCondition() {
     return condition;
   }

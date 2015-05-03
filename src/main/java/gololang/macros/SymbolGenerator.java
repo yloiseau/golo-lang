@@ -72,6 +72,9 @@ public class SymbolGenerator {
   }
 
   public String get(String localName) {
+    if (localName.startsWith("$")) {
+      return localName.substring(1);
+    }
     symbols.putIfAbsent(localName, gensym(name + "_" + localName));
     return symbols.get(localName);
   }

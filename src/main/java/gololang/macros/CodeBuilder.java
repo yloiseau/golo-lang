@@ -29,8 +29,6 @@ import static java.util.Arrays.asList;
 
 import static gololang.macros.Utils.*;
 
-// TODO: relink reference tables when building subblocks
-
 public final class CodeBuilder {
 
   public static interface IrNodeBuilder<T> {
@@ -47,7 +45,22 @@ public final class CodeBuilder {
     }
 
     public BlockBuilder add(Object statement) {
-      statements.add(toGoloStatement(statement));
+      GoloStatement stat = toGoloStatement(statement);
+      if (stat instanceof Block) {
+        Block block = (Block) stat;
+        for (GoloStatement innerStatement : block.getStatements()) {
+          this.add(innerStatement);
+        }
+        return this;
+      }
+      if (stat instanceof ConditionalBranching) {
+        ((ConditionalBranching) stat).relinkInnerBlocks(ref);
+      } else if (stat instanceof LoopStatement) {
+        ((LoopStatement) stat).getBlock().getReferenceTable().relink(ref);
+      } else if (stat instanceof TryCatchFinally) {
+        ((TryCatchFinally) stat).relinkInnerBlocks(ref);
+      }
+      statements.add(stat);
       return this;
     }
 
@@ -129,6 +142,7 @@ public final class CodeBuilder {
       return ref;
     }
   }
+
   public static final class MethodInvocationBuilder implements IrNodeBuilder<MethodInvocation> {
 
     private String name;
@@ -481,8 +495,16 @@ public final class CodeBuilder {
     return localRef(kind, name).index(index).synthetic(synthetic);
   }
 
-  public static LocalReferenceBuilder externalRef(ReferenceLookup ref) {
-    return localRef(LocalReference.Kind.VARIABLE, ref.getName(), -1, false);
+  public static LocalReferenceBuilder externalRef(Object ref) {
+    String refName;
+    if (ref instanceof String) {
+      refName = (String) ref;
+    } else if (ref instanceof ReferenceLookup) {
+      refName = ((ReferenceLookup) ref).getName();
+    } else {
+      throw new IllegalArgumentException("invalid type for externalRef");
+    }
+    return localRef(LocalReference.Kind.VARIABLE, refName, -1, false);
   }
 
   public static ReturnStatement returnsVoid() {
@@ -660,77 +682,76 @@ public final class CodeBuilder {
   }
 
   public static class Operations {
-    // TODO: all params are objects
     public static BinaryOperation plus(Object left, Object right) {
       return binaryOperation(OperatorType.PLUS, toExpression(left), toExpression(right));
     }
 
-    public static BinaryOperation minus(ExpressionStatement left, ExpressionStatement right) {
-      return binaryOperation(OperatorType.MINUS, left, right);
+    public static BinaryOperation minus(Object left, Object right) {
+      return binaryOperation(OperatorType.MINUS, toExpression(left), toExpression(right));
     }
 
-    public static BinaryOperation times(ExpressionStatement left, ExpressionStatement right) {
-      return binaryOperation(OperatorType.TIMES, left, right);
+    public static BinaryOperation times(Object left, Object right) {
+      return binaryOperation(OperatorType.TIMES, toExpression(left), toExpression(right));
     }
 
-    public static BinaryOperation divide(ExpressionStatement left, ExpressionStatement right) {
-      return binaryOperation(OperatorType.DIVIDE, left, right);
+    public static BinaryOperation divide(Object left, Object right) {
+      return binaryOperation(OperatorType.DIVIDE, toExpression(left), toExpression(right));
     }
 
-    public static BinaryOperation modulo(ExpressionStatement left, ExpressionStatement right) {
-      return binaryOperation(OperatorType.MODULO, left, right);
+    public static BinaryOperation modulo(Object left, Object right) {
+      return binaryOperation(OperatorType.MODULO, toExpression(left), toExpression(right));
     }
 
-    public static BinaryOperation equals(ExpressionStatement left, ExpressionStatement right) {
-      return binaryOperation(OperatorType.EQUALS, left, right);
+    public static BinaryOperation equals(Object left, Object right) {
+      return binaryOperation(OperatorType.EQUALS, toExpression(left), toExpression(right));
     }
 
-    public static BinaryOperation notEquals(ExpressionStatement left, ExpressionStatement right) {
-      return binaryOperation(OperatorType.NOTEQUALS, left, right);
+    public static BinaryOperation notEquals(Object left, Object right) {
+      return binaryOperation(OperatorType.NOTEQUALS, toExpression(left), toExpression(right));
     }
 
-    public static BinaryOperation less(ExpressionStatement left, ExpressionStatement right) {
-      return binaryOperation(OperatorType.LESS, left, right);
+    public static BinaryOperation less(Object left, Object right) {
+      return binaryOperation(OperatorType.LESS, toExpression(left), toExpression(right));
     }
 
-    public static BinaryOperation lessOrEquals(ExpressionStatement left, ExpressionStatement right) {
-      return binaryOperation(OperatorType.LESSOREQUALS, left, right);
+    public static BinaryOperation lessOrEquals(Object left, Object right) {
+      return binaryOperation(OperatorType.LESSOREQUALS, toExpression(left), toExpression(right));
     }
 
-    public static BinaryOperation more(ExpressionStatement left, ExpressionStatement right) {
-      return binaryOperation(OperatorType.MORE, left, right);
+    public static BinaryOperation more(Object left, Object right) {
+      return binaryOperation(OperatorType.MORE, toExpression(left), toExpression(right));
     }
 
-    public static BinaryOperation moreOrEquals(ExpressionStatement left, ExpressionStatement right) {
-      return binaryOperation(OperatorType.MOREOREQUALS, left, right);
+    public static BinaryOperation moreOrEquals(Object left, Object right) {
+      return binaryOperation(OperatorType.MOREOREQUALS, toExpression(left), toExpression(right));
     }
 
-    public static BinaryOperation logicalAnd(ExpressionStatement left, ExpressionStatement right) {
-      return binaryOperation(OperatorType.AND, left, right);
+    public static BinaryOperation logicalAnd(Object left, Object right) {
+      return binaryOperation(OperatorType.AND, toExpression(left), toExpression(right));
     }
 
-    public static BinaryOperation logicalOr(ExpressionStatement left, ExpressionStatement right) {
-      return binaryOperation(OperatorType.OR, left, right);
+    public static BinaryOperation logicalOr(Object left, Object right) {
+      return binaryOperation(OperatorType.OR, toExpression(left), toExpression(right));
     }
 
-    public static UnaryOperation logicalNot(ExpressionStatement expr) {
-      return unaryOperation(OperatorType.NOT, expr);
+    public static UnaryOperation logicalNot(Object expr) {
+      return unaryOperation(OperatorType.NOT, toExpression(expr));
     }
 
-    public static BinaryOperation identityOperator(ExpressionStatement left, ExpressionStatement right) {
-      return binaryOperation(OperatorType.IS, left, right);
+    public static BinaryOperation identityOperator(Object left, Object right) {
+      return binaryOperation(OperatorType.IS, toExpression(left), toExpression(right));
     }
 
-    public static BinaryOperation differenceOperator(ExpressionStatement left, ExpressionStatement right) {
-      return binaryOperation(OperatorType.ISNT, left, right);
+    public static BinaryOperation differenceOperator(Object left, Object right) {
+      return binaryOperation(OperatorType.ISNT, toExpression(left), toExpression(right));
     }
 
-    public static BinaryOperation ofTypeOperator(ExpressionStatement left, ExpressionStatement right) {
-      return binaryOperation(OperatorType.OFTYPE, left, right);
+    public static BinaryOperation ofTypeOperator(Object left, Object right) {
+      return binaryOperation(OperatorType.OFTYPE, toExpression(left), toExpression(right));
     }
 
-    public static BinaryOperation nullSafeOperator(ExpressionStatement left, ExpressionStatement right) {
-      return binaryOperation(OperatorType.ORIFNULL, left, right);
+    public static BinaryOperation nullSafeOperator(Object left, Object right) {
+      return binaryOperation(OperatorType.ORIFNULL, toExpression(left), toExpression(right));
     }
 
     public static BinaryOperation methodCall(Object left, Object right) {

@@ -19,6 +19,7 @@ package fr.insalyon.citi.golo.compiler.parser;
 public class ASTAssignment extends GoloASTNode implements NamedNode {
 
   private String name;
+  private boolean onUnquotedReference = false;
 
   public ASTAssignment(int id) {
     super(id);
@@ -38,10 +39,18 @@ public class ASTAssignment extends GoloASTNode implements NamedNode {
     this.name = name;
   }
 
+  public boolean isOnUnquotedReference() {
+    return this.onUnquotedReference;
+  }
+
+  public void setOnUnquotedReference(boolean v) {
+    onUnquotedReference = v;
+  }
+
   @Override
   public String toString() {
     return "ASTAssignment{" +
-        "name='" + name + '\'' +
+        "name='" + getName() + '\'' +
         '}';
   }
 

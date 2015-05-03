@@ -28,6 +28,10 @@ public abstract class ExpressionStatement extends GoloStatement {
     return unquoted;
   }
 
+  public void setUnquoted(boolean v) {
+    unquoted = v;
+  }
+
   public ExpressionStatement unquote() {
     unquoted = true;
     return this;

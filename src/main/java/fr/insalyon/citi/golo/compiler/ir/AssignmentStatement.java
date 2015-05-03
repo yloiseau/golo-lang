@@ -21,6 +21,7 @@ public class AssignmentStatement extends GoloStatement {
   private LocalReference localReference;
   private ExpressionStatement expressionStatement;
   private boolean declaring = false;
+  private boolean onUnquotedRef = false;
 
   public AssignmentStatement(LocalReference localReference, ExpressionStatement expressionStatement) {
     super();
@@ -34,6 +35,14 @@ public class AssignmentStatement extends GoloStatement {
 
   public void setDeclaring(boolean declaring) {
     this.declaring = declaring;
+  }
+
+  public boolean isOnUnquotedReference() {
+    return onUnquotedRef;
+  }
+
+  public void setOnUnquotedReference(boolean v) {
+    onUnquotedRef = v;
   }
 
   public LocalReference getLocalReference() {

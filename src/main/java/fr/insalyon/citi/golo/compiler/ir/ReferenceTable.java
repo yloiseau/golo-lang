@@ -66,10 +66,18 @@ public final class ReferenceTable {
     this.parent = parent;
   }
 
+  private boolean isLinkedTo(ReferenceTable other) {
+    if (this != other && this.parent == null) {
+      return false;
+    }
+    return this == other || this.parent == other || this.parent.isLinkedTo(other);
+  }
+
   public void relinkTopLevel(ReferenceTable topLevel) {
+    if (this == topLevel) { return; }
     if (this.parent == null) {
       this.parent = topLevel;
-    } else if (this.parent != topLevel) {
+    } else if (!this.isLinkedTo(topLevel) && !topLevel.isLinkedTo(this)) {
       this.parent.relinkTopLevel(topLevel);
     }
   }

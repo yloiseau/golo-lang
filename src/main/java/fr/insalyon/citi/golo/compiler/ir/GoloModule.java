@@ -142,7 +142,7 @@ public final class GoloModule extends GoloElement {
 
   public void addFunction(GoloFunction function) {
     if (function.getBlock() == null) {
-      // FIXME: This happens while compiling golo itself... but how could it be possible?
+      // XXX: This happens while compiling golo itself... but how could it be possible?
       function.setBlock(new Block(globalReferences.fork()));
     } else {
       function.getBlock().getReferenceTable().relinkTopLevel(globalReferences);
