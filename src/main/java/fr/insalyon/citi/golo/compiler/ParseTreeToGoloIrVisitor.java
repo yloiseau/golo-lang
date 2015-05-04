@@ -26,6 +26,7 @@ import java.util.List;
 
 import static gololang.macros.CodeBuilder.*;
 import static gololang.macros.Utils.relinkReferenceTables;
+import static gololang.macros.SymbolGenerator.gensym;
 
 import static fr.insalyon.citi.golo.compiler.GoloCompilationException.Problem.Type.UNDECLARED_REFERENCE;
 import static fr.insalyon.citi.golo.compiler.ir.GoloFunction.Scope.*;
@@ -780,55 +781,43 @@ class ParseTreeToGoloIrVisitor implements GoloParserVisitor {
   @Override
   public Object visit(ASTForEachLoop node, Object data) {
     Context context = (Context) data;
+
+    LocalReferenceBuilder elementReference = localRef().name(node.getElementIdentifier()).variable();
+    LocalReferenceBuilder iteratorReference = localRef().name(gensym("iterator")).variable().synthetic(true);
+
     ReferenceTable localTable = context.referenceTableStack.peek().fork();
-
-    LocalReference elementReference = new LocalReference(VARIABLE, node.getElementIdentifier());
-    localTable.add(elementReference);
-
-    String iteratorId = "$$__iterator__$$__" + System.currentTimeMillis();
-    LocalReference iteratorReference = new LocalReference(VARIABLE, iteratorId, true);
-    localTable.add(iteratorReference);
-
+    localTable.add(elementReference.build());
+    localTable.add(iteratorReference.build());
     context.referenceTableStack.push(localTable);
+
     node.jjtGetChild(0).jjtAccept(this, data);
     ExpressionStatement iterableExpressionStatement = (ExpressionStatement) context.objectStack.pop();
     node.jjtGetChild(1).jjtAccept(this, data);
     Block block = (Block) context.objectStack.pop();
 
-    AssignmentStatement init =
-        new AssignmentStatement(
-            iteratorReference,
-            new BinaryOperation(
-                OperatorType.METHOD_CALL,
-                iterableExpressionStatement,
-                new MethodInvocation("iterator"))
-        );
-    init.setDeclaring(true);
-    init.setASTNode(node);
-
-    ExpressionStatement condition =
-        new BinaryOperation(
-            OperatorType.METHOD_CALL,
-            new ReferenceLookup(iteratorId),
-            new MethodInvocation("hasNext"));
-    condition.setASTNode(node);
-
-    AssignmentStatement next = new AssignmentStatement(
-        elementReference,
-        new BinaryOperation(
-            OperatorType.METHOD_CALL,
-            new ReferenceLookup(iteratorId),
-            new MethodInvocation("next"))
-    );
-    next.setDeclaring(true);
-    next.setASTNode(node);
+    AssignmentStatement next = assignment(true, elementReference,
+        Operations.methodCall(iteratorReference.lookup(), methodInvocation("next"))
+        ).build();
     block.prependStatement(next);
 
-    LoopStatement loopStatement = new LoopStatement(init, condition, block, null);
+    LoopStatement loopStatement = loop()
+      .init(assignment(true, iteratorReference,
+        Operations.methodCall(iterableExpressionStatement, methodInvocation("iterator"))
+      ))
+      .condition(
+        Operations.methodCall(iteratorReference.lookup(), methodInvocation("hasNext"))
+      )
+      .block(block)
+      .build();
+
+    node.setIrElement(loopStatement);
+    loopStatement.getInitStatement().setASTNode(node);
+    loopStatement.getConditionStatement().setASTNode(node);
+    loopStatement.getBlock().getStatements().get(0).setASTNode(node);
+
     Block localBlock = new Block(localTable);
     localBlock.addStatement(loopStatement);
     context.objectStack.push(localBlock);
-    node.setIrElement(loopStatement);
 
     context.referenceTableStack.pop();
     return data;

@@ -46,15 +46,15 @@ public final class CodeBuilder {
       return this;
     }
 
+    public BlockBuilder merge(Block block) {
+      for (GoloStatement innerStatement : block.getStatements()) {
+        this.add(innerStatement);
+      }
+      return this; 
+    }
+
     public BlockBuilder add(Object statement) {
       GoloStatement stat = toGoloStatement(statement);
-      if (stat instanceof Block) {
-        Block block = (Block) stat;
-        for (GoloStatement innerStatement : block.getStatements()) {
-          this.add(innerStatement);
-        }
-        return this;
-      }
       if (stat instanceof AssignmentStatement) {
         AssignmentStatement assign = (AssignmentStatement) stat;
         if (assign.isDeclaring()) {
@@ -978,7 +978,7 @@ public final class CodeBuilder {
   public static final class MatchBuilder implements IrNodeBuilder<Block> {
 
     private CaseBuilder caseBuilder = caseBranch();
-    private LocalReferenceBuilder matchVar = localRef().variable().name(gensym("match"));
+    private LocalReferenceBuilder matchVar = localRef().variable().synthetic(true).name(gensym("match"));
 
     public MatchBuilder otherwiseValue(Object expression) {
       caseBuilder.otherwiseBlock(assign(expression));
@@ -1011,7 +1011,7 @@ public final class CodeBuilder {
   public static final class ForEachBuilder implements IrNodeBuilder<Block> {
 
     private LocalReferenceBuilder elementVar = localRef().variable();
-    private LocalReferenceBuilder iteratorVar = localRef().variable().name(gensym("iterator"));
+    private LocalReferenceBuilder iteratorVar = localRef().variable().synthetic(true).name(gensym("iterator"));
     private Block block;
     private ExpressionStatement iterable;
 
@@ -1058,6 +1058,8 @@ public final class CodeBuilder {
     return new ForEachBuilder().variable(name);
   }
   
+  // TODO: forLoop builder
+  // TODO: whileLoop builder
 
 
 }
