@@ -412,6 +412,7 @@
           <javaVersion>1.8</javaVersion>
           <ignorePackages>
             <ignorePackage>fr.insalyon.citi.golo.compiler.parser</ignorePackage>
+            <ignorePackage>gololang.macros</ignorePackage>
           </ignorePackages>
         </configuration>
         <executions>

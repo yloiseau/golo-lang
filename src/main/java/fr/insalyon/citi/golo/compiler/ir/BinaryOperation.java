@@ -60,4 +60,10 @@ public class BinaryOperation extends ExpressionStatement {
   public String toString() {
     return String.format("%s %s %s", leftExpression, type, rightExpression);
   }
+
+  public boolean isMethodCall() {
+    return this.getType() == OperatorType.METHOD_CALL
+      || this.getType() == OperatorType.ELVIS_METHOD_CALL
+      || this.getType() == OperatorType.ANON_CALL;
+  }
 }

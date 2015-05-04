@@ -27,8 +27,6 @@ import gololang.macros.SymbolGenerator;
 import static gololang.macros.CodeBuilder.*;
 import static fr.insalyon.citi.golo.runtime.OperatorType.*;
 
-// TODO: relink reference tables when building subblocks
-
 /**
  * Visitor to expand {@code quote} expressions.
  * <p>

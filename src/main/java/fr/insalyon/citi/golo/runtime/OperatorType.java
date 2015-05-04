@@ -56,4 +56,51 @@ public enum OperatorType {
   public String toString() {
     return symbol;
   }
+
+  public static OperatorType fromString(String symbol) {
+    switch (symbol) {
+      case "+":
+        return PLUS;
+      case "-":
+        return MINUS;
+      case "*":
+        return TIMES;
+      case "/":
+        return DIVIDE;
+      case "%":
+        return MODULO;
+      case "<":
+        return LESS;
+      case "<=":
+        return LESSOREQUALS;
+      case "==":
+        return EQUALS;
+      case "!=":
+        return NOTEQUALS;
+      case ">":
+        return MORE;
+      case ">=":
+        return MOREOREQUALS;
+      case "and":
+        return AND;
+      case "or":
+        return OR;
+      case "not":
+        return NOT;
+      case "is":
+        return IS;
+      case "isnt":
+        return ISNT;
+      case "oftype":
+        return OFTYPE;
+      case ":":
+        return METHOD_CALL;
+      case "orIfNull":
+        return ORIFNULL;
+      case "?:":
+        return ELVIS_METHOD_CALL;
+      default:
+        throw new IllegalArgumentException(symbol);
+    }
+  }
 }

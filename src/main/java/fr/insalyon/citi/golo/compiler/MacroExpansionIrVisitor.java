@@ -30,7 +30,7 @@ import static java.lang.reflect.Modifier.isStatic;
 import static java.lang.invoke.MethodType.genericMethodType;
 import static gololang.macros.CodeBuilder.quoted;
 import static gololang.macros.CodeBuilder.block;
-import static gololang.macros.Utils.toGoloElement;
+import static gololang.macros.Utils.*;
 
 // TODO: add a cache of the found macros ?
 // TODO: non FQN macro finder:
@@ -113,10 +113,7 @@ public class MacroExpansionIrVisitor extends DummyIrVisitor {
       if (recur) {
         expanded.accept(this);
       }
-      if (expanded instanceof Block && !blockStack.isEmpty()) {
-        // XXX: relink or fork ?
-        ((Block) expanded).getReferenceTable().relink(blockStack.peek().getReferenceTable());
-      }
+      relinkReferenceTables(expanded, blockStack.peek());
     }
     expanded.replaceInParent(macroInvocation, elements.peek());
   }

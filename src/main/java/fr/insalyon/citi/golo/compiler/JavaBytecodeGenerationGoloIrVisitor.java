@@ -404,16 +404,10 @@ class JavaBytecodeGenerationGoloIrVisitor implements GoloIrVisitor {
       methodVisitor.visitInsn(POP);
     } else if (statementClass == BinaryOperation.class) {
       BinaryOperation operation = (BinaryOperation) statement;
-      if (isMethodCall(operation)) {
+      if (operation.isMethodCall()) {
         methodVisitor.visitInsn(POP);
       }
     }
-  }
-
-  private boolean isMethodCall(BinaryOperation operation) {
-    return operation.getType() == METHOD_CALL
-            || operation.getType() == ELVIS_METHOD_CALL
-            || operation.getType() == ANON_CALL;
   }
 
   @Override
@@ -866,7 +860,7 @@ class JavaBytecodeGenerationGoloIrVisitor implements GoloIrVisitor {
   private void genericBinaryOperator(BinaryOperation binaryOperation, OperatorType operatorType) {
     binaryOperation.getLeftExpression().accept(this);
     binaryOperation.getRightExpression().accept(this);
-    if (!isMethodCall(binaryOperation)) {
+    if (!binaryOperation.isMethodCall()) {
       String name = operatorType.name().toLowerCase();
       methodVisitor.visitInvokeDynamicInsn(name, goloFunctionSignature(2), OPERATOR_HANDLE, (Integer) 2);
     }

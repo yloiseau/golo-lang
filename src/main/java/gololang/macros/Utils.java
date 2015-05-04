@@ -17,6 +17,7 @@
 package gololang.macros;
 
 import fr.insalyon.citi.golo.compiler.ir.*;
+import fr.insalyon.citi.golo.compiler.parser.GoloParser;
 
 public final class Utils {
 
@@ -75,5 +76,27 @@ public final class Utils {
     throw new IllegalArgumentException(block + " is not a Block nor a IrNodeBuilder");
   }
 
+  // TODO: create an interface 'Linkable.relink' and use polymorphism
+  public static void relinkReferenceTables(GoloElement element, ReferenceTable table) {
+    if (table == null) { return; }
+    if (element instanceof Block) {
+      ((Block) element).getReferenceTable().relink(table);
+    } else if (element instanceof ConditionalBranching) {
+      ((ConditionalBranching) element).relinkInnerBlocks(table);
+    } else if (element instanceof LoopStatement) {
+      ((LoopStatement) element).getBlock().getReferenceTable().relink(table);
+    } else if (element instanceof TryCatchFinally) {
+      ((TryCatchFinally) element).relinkInnerBlocks(table);
+    }
+  }
 
+  public static void relinkReferenceTables(GoloElement element, Block outerBlock) {
+    if (outerBlock != null) {
+      relinkReferenceTables(element, outerBlock.getReferenceTable());
+    }
+  }
+
+  public static GoloParser.ParserClassRef toClassRef(Class<?> cls) {
+    return new GoloParser.ParserClassRef(cls.getCanonicalName());
+  }
 }

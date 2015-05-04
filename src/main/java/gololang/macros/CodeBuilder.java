@@ -24,10 +24,12 @@ import java.util.LinkedList;
 import java.util.Deque;
 import java.util.Set;
 import java.util.LinkedHashSet;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 import static java.util.Arrays.asList;
-
 import static gololang.macros.Utils.*;
+import static gololang.macros.SymbolGenerator.gensym;
 
 public final class CodeBuilder {
 
@@ -53,13 +55,13 @@ public final class CodeBuilder {
         }
         return this;
       }
-      if (stat instanceof ConditionalBranching) {
-        ((ConditionalBranching) stat).relinkInnerBlocks(ref);
-      } else if (stat instanceof LoopStatement) {
-        ((LoopStatement) stat).getBlock().getReferenceTable().relink(ref);
-      } else if (stat instanceof TryCatchFinally) {
-        ((TryCatchFinally) stat).relinkInnerBlocks(ref);
+      if (stat instanceof AssignmentStatement) {
+        AssignmentStatement assign = (AssignmentStatement) stat;
+        if (assign.isDeclaring()) {
+          ref.add(((AssignmentStatement) stat).getLocalReference());
+        }
       }
+      relinkReferenceTables(stat, ref);
       statements.add(stat);
       return this;
     }
@@ -136,10 +138,15 @@ public final class CodeBuilder {
       return this;
     }
 
+    @Override
     public LocalReference build() {
       LocalReference ref = new LocalReference(kind(), name, synthetic);
       ref.setIndex(index);
       return ref;
+    }
+
+    public ReferenceLookup lookup() {
+      return refLookup(name);
     }
   }
 
@@ -476,6 +483,12 @@ public final class CodeBuilder {
   }
 
   public static ConstantStatement constant(Object value) {
+    if (value instanceof Class) {
+      return new ConstantStatement(toClassRef((Class) value));
+    } 
+    if (value instanceof ConstantStatement) {
+      return (ConstantStatement) value;
+    }
     return new ConstantStatement(value);
   }
 
@@ -738,19 +751,19 @@ public final class CodeBuilder {
       return unaryOperation(OperatorType.NOT, toExpression(expr));
     }
 
-    public static BinaryOperation identityOperator(Object left, Object right) {
+    public static BinaryOperation identity(Object left, Object right) {
       return binaryOperation(OperatorType.IS, toExpression(left), toExpression(right));
     }
 
-    public static BinaryOperation differenceOperator(Object left, Object right) {
+    public static BinaryOperation difference(Object left, Object right) {
       return binaryOperation(OperatorType.ISNT, toExpression(left), toExpression(right));
     }
 
-    public static BinaryOperation ofTypeOperator(Object left, Object right) {
+    public static BinaryOperation ofType(Object left, Object right) {
       return binaryOperation(OperatorType.OFTYPE, toExpression(left), toExpression(right));
     }
 
-    public static BinaryOperation nullSafeOperator(Object left, Object right) {
+    public static BinaryOperation nullSafe(Object left, Object right) {
       return binaryOperation(OperatorType.ORIFNULL, toExpression(left), toExpression(right));
     }
 
@@ -927,5 +940,73 @@ public final class CodeBuilder {
   public static AugmentationBuilder augmentType(String targetName) {
     return new AugmentationBuilder().target(targetName);
   }
+
+  public static final class CaseBuilder implements IrNodeBuilder<ConditionalBranching> {
+    private final Deque<ExpressionStatement> conditions = new LinkedList<>();
+    private final Deque<Block> blocks = new LinkedList<>();
+    private Block otherwiseBlock;
+
+    public CaseBuilder otherwiseBlock(Object block) {
+      otherwiseBlock = toBlock(block);
+      return this;
+    }
+
+    public CaseBuilder whenCase(Object condition, Object block) {
+      conditions.push(toExpression(condition));
+      blocks.push(toBlock(block));
+      return this;
+    }
+
+    @Override
+    public ConditionalBranching build() {
+      if (otherwiseBlock == null) { throw new IllegalStateException("No otherwise clause"); }
+      if (conditions.isEmpty()) { throw new IllegalStateException("No when clause"); }
+      ConditionalBranchingBuilder caseBranch = branch().whenFalse(otherwiseBlock);
+      while (conditions.size() > 1) {
+        caseBranch = branch().elseBranch(caseBranch.condition(conditions.pop()).whenTrue(blocks.pop()));
+      }
+      return caseBranch.condition(conditions.pop()).whenTrue(blocks.pop()).build();
+    }
+  }
+
+  public static CaseBuilder caseBranch() {
+    return new CaseBuilder();
+  }
+  
+  //TODO: MatchBuilder
+  public static final class MatchBuilder implements IrNodeBuilder<Block> {
+
+    private CaseBuilder caseBuilder = caseBranch();
+    private LocalReferenceBuilder matchVar = localRef().variable().name(gensym("match"));
+
+    public MatchBuilder otherwiseValue(Object expression) {
+      caseBuilder.otherwiseBlock(assign(expression));
+      return this;
+    }
+
+    public MatchBuilder whenValue(Object condition, Object expression) {
+      caseBuilder.whenCase(condition, assign(expression));
+      return this;
+    }
+
+    private BlockBuilder assign(Object expression) {
+      return block(assignment().localRef(matchVar).expression(expression));
+    }
+
+    @Override
+    public Block build() {
+      return block()
+        .add(assignment(true, matchVar, constant(null)))
+        .add(caseBuilder)
+        .add(matchVar.lookup())
+        .build();
+    }
+  }
+
+  public static MatchBuilder matching() {
+    return new MatchBuilder();
+  }
+  
+
 
 }

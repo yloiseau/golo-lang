@@ -24,6 +24,8 @@ import java.util.Deque;
 import java.util.LinkedList;
 import java.util.List;
 
+import gololang.macros.CodeBuilder;
+
 import static fr.insalyon.citi.golo.compiler.GoloCompilationException.Problem.Type.UNDECLARED_REFERENCE;
 import static fr.insalyon.citi.golo.compiler.ir.GoloFunction.Scope.*;
 import static fr.insalyon.citi.golo.compiler.ir.GoloFunction.Visibility.LOCAL;
@@ -364,58 +366,11 @@ class ParseTreeToGoloIrVisitor implements GoloParserVisitor {
     Context context = (Context) data;
     node.childrenAccept(this, data);
     UnaryOperation unaryOperation = new UnaryOperation(
-        operationFrom(node.getOperator()),
+        OperatorType.fromString(node.getOperator()),
         (ExpressionStatement) context.objectStack.pop());
     context.objectStack.push(unaryOperation);
     node.setIrElement(unaryOperation);
     return data;
-  }
-
-  private OperatorType operationFrom(String symbol) {
-    switch (symbol) {
-      case "+":
-        return OperatorType.PLUS;
-      case "-":
-        return OperatorType.MINUS;
-      case "*":
-        return OperatorType.TIMES;
-      case "/":
-        return OperatorType.DIVIDE;
-      case "%":
-        return OperatorType.MODULO;
-      case "<":
-        return OperatorType.LESS;
-      case "<=":
-        return OperatorType.LESSOREQUALS;
-      case "==":
-        return OperatorType.EQUALS;
-      case "!=":
-        return OperatorType.NOTEQUALS;
-      case ">":
-        return OperatorType.MORE;
-      case ">=":
-        return OperatorType.MOREOREQUALS;
-      case "and":
-        return OperatorType.AND;
-      case "or":
-        return OperatorType.OR;
-      case "not":
-        return OperatorType.NOT;
-      case "is":
-        return OperatorType.IS;
-      case "isnt":
-        return OperatorType.ISNT;
-      case "oftype":
-        return OperatorType.OFTYPE;
-      case ":":
-        return OperatorType.METHOD_CALL;
-      case "orIfNull":
-        return OperatorType.ORIFNULL;
-      case "?:":
-        return ELVIS_METHOD_CALL;
-      default:
-        throw new IllegalArgumentException(symbol);
-    }
   }
 
   private void makeBinaryOperation(GoloASTNode node, List<String> symbols, Context context) {
@@ -426,7 +381,7 @@ class ParseTreeToGoloIrVisitor implements GoloParserVisitor {
       expressions.push((ExpressionStatement) context.objectStack.pop());
     }
     for (String operatorSymbol : symbols) {
-      operators.push(operationFrom(operatorSymbol));
+      operators.push(OperatorType.fromString(operatorSymbol));
     }
     ExpressionStatement right = expressions.pop();
     ExpressionStatement left = expressions.pop();
@@ -773,7 +728,6 @@ class ParseTreeToGoloIrVisitor implements GoloParserVisitor {
       lastWhenCondition = (ExpressionStatement) stack.pop();
       branching = new ConditionalBranching(lastWhenCondition, lastWhenBlock, branching);
     }
-
     context.objectStack.push(branching);
     node.setIrElement(branching);
     return data;
