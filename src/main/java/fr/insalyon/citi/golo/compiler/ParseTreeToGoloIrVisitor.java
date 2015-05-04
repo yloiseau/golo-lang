@@ -24,7 +24,8 @@ import java.util.Deque;
 import java.util.LinkedList;
 import java.util.List;
 
-import gololang.macros.CodeBuilder;
+import static gololang.macros.CodeBuilder.*;
+import static gololang.macros.Utils.relinkReferenceTables;
 
 import static fr.insalyon.citi.golo.compiler.GoloCompilationException.Problem.Type.UNDECLARED_REFERENCE;
 import static fr.insalyon.citi.golo.compiler.ir.GoloFunction.Scope.*;
@@ -708,26 +709,15 @@ class ParseTreeToGoloIrVisitor implements GoloParserVisitor {
   public Object visit(ASTCase node, Object data) {
     Context context = (Context) data;
     final int lastWhen = node.jjtGetNumChildren() - 1;
-    Deque<Object> stack = new LinkedList<>();
-
+    CaseBuilder caseBuilder = caseBranch();
     for (int i = 0; i < lastWhen; i = i + 2) {
-      node.jjtGetChild(i).jjtAccept(this, data);
-      stack.push(context.objectStack.pop());
       node.jjtGetChild(i + 1).jjtAccept(this, data);
-      stack.push(context.objectStack.pop());
+      node.jjtGetChild(i).jjtAccept(this, data);
+      caseBuilder.whenCase(context.objectStack.pop(), context.objectStack.pop());
     }
     node.jjtGetChild(node.jjtGetNumChildren() - 1).jjtAccept(this, data);
-    stack.push(context.objectStack.pop());
-
-    Block otherwise = (Block) stack.pop();
-    Block lastWhenBlock = (Block) stack.pop();
-    ExpressionStatement lastWhenCondition = (ExpressionStatement) stack.pop();
-    ConditionalBranching branching = new ConditionalBranching(lastWhenCondition, lastWhenBlock, otherwise);
-    while (!stack.isEmpty()) {
-      lastWhenBlock = (Block) stack.pop();
-      lastWhenCondition = (ExpressionStatement) stack.pop();
-      branching = new ConditionalBranching(lastWhenCondition, lastWhenBlock, branching);
-    }
+    caseBuilder.otherwiseBlock(context.objectStack.pop());
+    ConditionalBranching branching = caseBuilder.build();
     context.objectStack.push(branching);
     node.setIrElement(branching);
     return data;
@@ -735,44 +725,21 @@ class ParseTreeToGoloIrVisitor implements GoloParserVisitor {
 
   @Override
   public Object visit(ASTMatch node, Object data) {
-    ASTCase astCase = new ASTCase(0);
-
-    int i = 0;
-    String varName = "__$$_match_" + System.currentTimeMillis();
-    while (i < node.jjtGetNumChildren() - 1) {
-      astCase.jjtAddChild(node.jjtGetChild(i), i);
-      i = i + 1;
-      matchTreeToCase(node, astCase, i, varName);
-      i = i + 1;
+    Context context = (Context) data;
+    final int lastWhen = node.jjtGetNumChildren() - 1;
+    MatchBuilder matchBuilder = matching();
+    for (int i = 0; i < lastWhen; i = i + 2) {
+      node.jjtGetChild(i + 1).jjtAccept(this, data);
+      node.jjtGetChild(i).jjtAccept(this, data);
+      matchBuilder.whenValue(context.objectStack.pop(), context.objectStack.pop());
     }
-    matchTreeToCase(node, astCase, i, varName);
-
-    ASTLetOrVar var = new ASTLetOrVar(0);
-    var.setName(varName);
-    var.setType(VAR);
-    ASTLiteral astLiteral = new ASTLiteral(0);
-    astLiteral.setLiteralValue(null);
-    var.jjtAddChild(astLiteral, 0);
-
-    ASTReference astReference = new ASTReference(0);
-    astReference.setName(varName);
-
-    ASTBlock astBlock = new ASTBlock(0);
-    astBlock.jjtAddChild(var, 0);
-    astBlock.jjtAddChild(astCase, 1);
-    astBlock.jjtAddChild(astReference, 2);
-
-    astBlock.jjtAccept(this, data);
+    node.jjtGetChild(node.jjtGetNumChildren() - 1).jjtAccept(this, data);
+    matchBuilder.otherwiseValue(context.objectStack.pop());
+    Block block = matchBuilder.build();
+    relinkReferenceTables(block, context.referenceTableStack.peek());
+    context.objectStack.push(block);
+    node.setIrElement(block);
     return data;
-  }
-
-  private void matchTreeToCase(ASTMatch node, ASTCase astCase, int i, String varName) {
-    ASTBlock astBlock = new ASTBlock(0);
-    astCase.jjtAddChild(astBlock, i);
-    ASTAssignment astAssignment = new ASTAssignment(0);
-    astAssignment.setName(varName);
-    astAssignment.jjtAddChild(node.jjtGetChild(i), 0);
-    astBlock.jjtAddChild(astAssignment, 0);
   }
 
   @Override
