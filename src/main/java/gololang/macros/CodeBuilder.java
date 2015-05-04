@@ -58,7 +58,13 @@ public final class CodeBuilder {
       if (stat instanceof AssignmentStatement) {
         AssignmentStatement assign = (AssignmentStatement) stat;
         if (assign.isDeclaring()) {
-          ref.add(((AssignmentStatement) stat).getLocalReference());
+          ref.add(assign.getLocalReference());
+        }
+      }
+      if (stat instanceof LoopStatement) {
+        LoopStatement loop = (LoopStatement) stat;
+        if (loop.hasInitStatement()) {
+          ref.add(loop.getInitStatement().getLocalReference());
         }
       }
       relinkReferenceTables(stat, ref);
@@ -353,17 +359,13 @@ public final class CodeBuilder {
       return this;
     }
 
-    public LoopBuilder block(BlockBuilder b) {
+    public LoopBuilder block(Object b) {
       if (b == null) {
         block = new Block(new ReferenceTable());
       } else {
-        block = b.build();
+        block = toBlock(b);
       }
       return this;
-    }
-
-    public LoopBuilder block(ReferenceTable rt, Object... statements) {
-      return block(CodeBuilder.block(statements).ref(rt));
     }
 
     public LoopBuilder block(Object... statements) {
@@ -973,7 +975,6 @@ public final class CodeBuilder {
     return new CaseBuilder();
   }
   
-  //TODO: MatchBuilder
   public static final class MatchBuilder implements IrNodeBuilder<Block> {
 
     private CaseBuilder caseBuilder = caseBranch();
@@ -1005,6 +1006,56 @@ public final class CodeBuilder {
 
   public static MatchBuilder matching() {
     return new MatchBuilder();
+  }
+
+  public static final class ForEachBuilder implements IrNodeBuilder<Block> {
+
+    private LocalReferenceBuilder elementVar = localRef().variable();
+    private LocalReferenceBuilder iteratorVar = localRef().variable().name(gensym("iterator"));
+    private Block block;
+    private ExpressionStatement iterable;
+
+    public ForEachBuilder variable(String name) {
+      this.elementVar.name(name);
+      return this;
+    }
+
+    public ForEachBuilder on(Object expression) {
+      this.iterable = toExpression(expression);
+      return this;
+    }
+
+    public ForEachBuilder block(Object block) {
+      this.block = toBlock(block);
+      return this;
+    }
+
+    private BinaryOperation nextCall() {
+      return Operations.methodCall(this.iteratorVar.lookup(), methodInvocation("next"));
+    }
+
+    private BinaryOperation hasNextCall() {
+      return Operations.methodCall(this.iteratorVar.lookup(), methodInvocation("hasNext"));
+    }
+
+    private BinaryOperation iteratorCall() {
+      return Operations.methodCall(this.iterable, methodInvocation("iterator"));
+    }
+    
+    @Override
+    public Block build() {
+      return CodeBuilder.block(loop()
+        .init(assignment(true, iteratorVar, iteratorCall()))
+        .condition(hasNextCall())
+        .block(CodeBuilder.block()
+          .add(assignment(true, elementVar, nextCall()))
+          .add(this.block)
+        )).build();
+    }
+  }
+
+  public static ForEachBuilder forEachLoop(String name) {
+    return new ForEachBuilder().variable(name);
   }
   
 

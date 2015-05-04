@@ -37,6 +37,10 @@ public final class Block extends ExpressionStatement {
     return referenceTable;
   }
 
+  public void setReferenceTable(ReferenceTable referenceTable) {
+    this.referenceTable = referenceTable;
+  }
+
   public void internReferenceTable() {
     this.referenceTable = referenceTable.flatDeepCopy(true);
   }
