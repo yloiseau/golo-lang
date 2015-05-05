@@ -68,12 +68,14 @@ public final class Struct extends GoloElement {
     String name = getPackageAndClass().className();
 
     GoloFunction factory = new GoloFunction(name, PUBLIC, MODULE);
+    factory.setSynthetic(true);
     Block block = new Block(new ReferenceTable());
     factory.setBlock(block);
     block.addStatement(new ReturnStatement(new FunctionInvocation(getPackageAndClass().toString())));
     factories.add(factory);
 
     factory = new GoloFunction(name, PUBLIC, MODULE);
+    factory.setSynthetic(true);
     factory.setParameterNames(new LinkedList<>(members));
     FunctionInvocation call = new FunctionInvocation(getPackageAndClass().toString());
     ReferenceTable table = new ReferenceTable();
@@ -87,6 +89,7 @@ public final class Struct extends GoloElement {
     factories.add(factory);
 
     factory = new GoloFunction("Immutable" + name, PUBLIC, MODULE);
+    factory.setSynthetic(true);
     factory.setParameterNames(new LinkedList<>(members));
     call = new FunctionInvocation(getPackageAndClass().toString() + "." + IMMUTABLE_FACTORY_METHOD);
     table = new ReferenceTable();
@@ -109,5 +112,10 @@ public final class Struct extends GoloElement {
     } else {
       super.replaceInParent(original, parent);
     }
+  }
+
+  @Override
+  public void accept(GoloIrVisitor visitor) {
+    visitor.visitStruct(this);
   }
 }

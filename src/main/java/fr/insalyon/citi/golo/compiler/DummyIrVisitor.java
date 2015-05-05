@@ -27,7 +27,7 @@ import fr.insalyon.citi.golo.compiler.ir.*;
  * visitors by overriding only the specific methods, like for example the ones used in the
  * compilation check and transformation step.
  */
-abstract class DummyIrVisitor implements GoloIrVisitor {
+public abstract class DummyIrVisitor implements GoloIrVisitor {
 
   @Override
   public void visitModule(GoloModule module) {
@@ -56,6 +56,17 @@ abstract class DummyIrVisitor implements GoloIrVisitor {
       }
     }
   }
+
+  @Override
+  public void visitAugmentation(Augmentation augment) {
+    // TODO: dummy augment visit
+  }
+
+  @Override
+  public void visitModuleImport(ModuleImport moduleImport) { }
+
+  @Override
+  public void visitStruct(Struct struct) { }
 
   @Override
   public void visitFunction(GoloFunction function) {

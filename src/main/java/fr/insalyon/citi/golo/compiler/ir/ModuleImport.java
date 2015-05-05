@@ -21,20 +21,30 @@ import fr.insalyon.citi.golo.compiler.PackageAndClass;
 public final class ModuleImport extends GoloElement {
 
   private final PackageAndClass packageAndClass;
+  private final boolean implicit;
+
+  public ModuleImport(PackageAndClass packageAndClass, boolean implicit) {
+    this.packageAndClass = packageAndClass;
+    this.implicit = implicit;
+  }
 
   public ModuleImport(PackageAndClass packageAndClass) {
-    this.packageAndClass = packageAndClass;
+    this(packageAndClass, false);
   }
 
   public PackageAndClass getPackageAndClass() {
     return packageAndClass;
   }
 
+  public boolean isImplicit() {
+    return this.implicit;
+  }
 
   @Override
   public String toString() {
     return "ModuleImport{" +
         "packageAndClass=" + packageAndClass +
+        ( implicit ? ", implicit" : "") +
         '}';
   }
 
@@ -57,5 +67,7 @@ public final class ModuleImport extends GoloElement {
   }
 
   @Override
-  public void accept(GoloIrVisitor visitor) { }
+  public void accept(GoloIrVisitor visitor) {
+    visitor.visitModuleImport(this);
+  }
 }

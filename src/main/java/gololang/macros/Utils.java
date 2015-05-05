@@ -14,6 +14,11 @@
  * limitations under the License.
  */
 
+// TODO: parse command: str -> IR ?? how to do with incomplete code (just 1 expression)
+// TODO: expand / expand_one (ir -> ir)
+// TODO: dump (IR representation) and pretty print (source code)
+// TODO: eval(ir, context) ? (cf. Dynamic Code Evaluation)
+
 package gololang.macros;
 
 import fr.insalyon.citi.golo.compiler.ir.*;

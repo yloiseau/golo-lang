@@ -113,6 +113,7 @@ public class Main {
   @Parameters(commandDescription = "Diagnosis for the Golo compiler internals")
   static class DiagnoseCommand {
 
+    // TODO: update de shell completion
     @Parameter(names = "--tool", description = "The diagnosis tool to use: {ast, ir, pp, ppe}", validateWith = DiagnoseModeValidator.class)
     String mode = "ir";
 

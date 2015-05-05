@@ -71,4 +71,9 @@ public class Augmentation extends GoloElement {
       super.replaceInParent(original, parent);
     }
   }
+
+  @Override
+  public void accept(GoloIrVisitor visitor) {
+    visitor.visitAugmentation(this);
+  }
 }

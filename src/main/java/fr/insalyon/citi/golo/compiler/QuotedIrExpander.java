@@ -27,6 +27,8 @@ import gololang.macros.SymbolGenerator;
 import static gololang.macros.CodeBuilder.*;
 import static fr.insalyon.citi.golo.runtime.OperatorType.*;
 
+// TODO: use exception builder instead of throwing exceptions if user error
+
 /**
  * Visitor to expand {@code quote} expressions.
  * <p>

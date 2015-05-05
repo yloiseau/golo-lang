@@ -16,9 +16,11 @@
 
 package fr.insalyon.citi.golo.compiler.ir;
 
+import fr.insalyon.citi.golo.compiler.DummyIrVisitor;
+
 import java.util.Set;
 
-public class IrTreeDumper implements GoloIrVisitor {
+public class IrTreeDumper extends DummyIrVisitor {
 
   private int spacing = 0;
 
@@ -48,14 +50,7 @@ public class IrTreeDumper implements GoloIrVisitor {
       function.accept(this);
     }
     for (Struct struct : module.getStructs()) {
-      incr();
-      space();
-      System.out.println("Struct " + struct.getPackageAndClass().className());
-      space();
-      System.out.println(" - target class = " + struct.getPackageAndClass());
-      space();
-      System.out.println(" - members = " + struct.getMembers());
-      decr();
+      struct.accept(this);
     }
     for (String augmentation : module.getAugmentations().keySet()) {
       incr();
@@ -85,6 +80,18 @@ public class IrTreeDumper implements GoloIrVisitor {
       }
       decr();
     }
+  }
+
+  @Override 
+  public void visitStruct(Struct struct) {
+    incr();
+    space();
+    System.out.println("Struct " + struct.getPackageAndClass().className());
+    space();
+    System.out.println(" - target class = " + struct.getPackageAndClass());
+    space();
+    System.out.println(" - members = " + struct.getMembers());
+    decr();
   }
 
   @Override

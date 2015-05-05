@@ -31,6 +31,9 @@ import static java.util.Arrays.asList;
 import static gololang.macros.Utils.*;
 import static gololang.macros.SymbolGenerator.gensym;
 
+
+// TODO: check for builder completeness
+
 public final class CodeBuilder {
 
   public static interface IrNodeBuilder<T> {

@@ -32,6 +32,7 @@ import static gololang.macros.CodeBuilder.quoted;
 import static gololang.macros.CodeBuilder.block;
 import static gololang.macros.Utils.*;
 
+// TODO: use exception builder instead of throwing exceptions if user error
 // TODO: add a cache of the found macros ?
 // TODO: non FQN macro finder:
 // [x] current module

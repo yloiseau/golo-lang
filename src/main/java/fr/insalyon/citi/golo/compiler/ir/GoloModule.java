@@ -69,26 +69,18 @@ public final class GoloModule extends GoloElement {
   private GoloFunction moduleStateInitializer = null;
   private ReferenceTable globalReferences = new ReferenceTable();
 
-  public static final ModuleImport PREDEF = new ModuleImport(
-      PackageAndClass.fromString("gololang.Predefined"));
-
-  public static final ModuleImport STD_AUGMENTATIONS = new ModuleImport(
-      PackageAndClass.fromString("gololang.StandardAugmentations"));
-
-  public static final ModuleImport GOLOLANG = new ModuleImport(
-      PackageAndClass.fromString("gololang"));
-
-  public static final ModuleImport JAVALANG = new ModuleImport(
-      PackageAndClass.fromString("java.lang"));
+  public static final Set<ModuleImport> DEFAULT_IMPORTS = new HashSet<>(Arrays.asList(
+    new ModuleImport(PackageAndClass.fromString("gololang.Predefined"), true),
+    new ModuleImport(PackageAndClass.fromString("gololang.StandardAugmentations"), true),
+    new ModuleImport(PackageAndClass.fromString("gololang"), true),
+    new ModuleImport(PackageAndClass.fromString("java.lang"), true)
+  ));
 
   public static final String MODULE_INITIALIZER_FUNCTION = "<clinit>";
 
   public GoloModule(PackageAndClass packageAndClass) {
     this.packageAndClass = packageAndClass;
-    imports.add(PREDEF);
-    imports.add(STD_AUGMENTATIONS);
-    imports.add(GOLOLANG);
-    imports.add(JAVALANG);
+    imports.addAll(DEFAULT_IMPORTS);
   }
 
   public ReferenceTable getReferenceTable() {

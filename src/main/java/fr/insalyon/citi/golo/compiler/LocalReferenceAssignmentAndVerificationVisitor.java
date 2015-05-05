@@ -83,15 +83,19 @@ class LocalReferenceAssignmentAndVerificationVisitor extends DummyIrVisitor {
     for (String parameterName : function.getParameterNames()) {
       LocalReference reference = table.get(parameterName);
       uninitializedReferences.remove(reference);
-      if (reference == null) {
-        if (!function.isSynthetic()) {
-          throw new IllegalStateException("[please report this bug] " + parameterName + " is not declared in the references of function " + function.getName());
-        }
-      } else {
+      if (reference != null) {
         reference.setIndex(assignmentCounter.next());
+      } else if (!function.isSynthetic()) {
+          throw new IllegalStateException("[please report this bug] " + 
+            parameterName + " is not declared in the references of function " + function.getName());
       }
     }
     function.getBlock().accept(this);
+    captureClosedReference(function);
+    functionStack.pop();
+  }
+
+  private void captureClosedReference(GoloFunction function) {
     String selfName = function.getSyntheticSelfName();
     if (function.isSynthetic() && selfName != null) {
       LocalReference self = function.getBlock().getReferenceTable().get(selfName);
@@ -102,7 +106,6 @@ class LocalReferenceAssignmentAndVerificationVisitor extends DummyIrVisitor {
       AssignmentStatement assign = new AssignmentStatement(self, closureReference);
       function.getBlock().prependStatement(assign);
     }
-    functionStack.pop();
   }
 
   @Override

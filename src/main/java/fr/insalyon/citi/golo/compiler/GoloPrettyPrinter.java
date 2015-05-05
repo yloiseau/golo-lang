@@ -26,10 +26,10 @@ import java.util.Set;
 import static java.util.Arrays.asList;
 
 /* TODO:
- * - [ ] match pretty
- * - [ ] stack for binary operators to correctly parentize them
- * - [ ] struct constructor functions
- * - [ ] decorators not inlined
+ * [ ] match pretty
+ * [ ] stack for binary operators to correctly parenthesize them
+ * [ ] struct constructor functions
+ * [ ] decorators not inlined
  */
 public class GoloPrettyPrinter implements GoloIrVisitor {
 
@@ -37,13 +37,6 @@ public class GoloPrettyPrinter implements GoloIrVisitor {
   private boolean onlyReturn = false;
   private boolean inFunctionRoot = false;
   private StringBuilder buffer;
-
-  private static Set<String> predefinedImports = new HashSet<>(asList(
-    "gololang.Predefined",
-    "gololang.StandardAugmentations",
-    "gololang",
-    "java.lang"
-  ));
 
   // configuration: should be customizable
   private int collectionWrappingThreshold = 5;
@@ -58,9 +51,18 @@ public class GoloPrettyPrinter implements GoloIrVisitor {
     this.buffer.append(o);
   }
 
+  private void newline() {
+    buffer.append('\n');
+  }
+
+  private void blankLine() {
+    if (buffer.charAt(buffer.length() - 1) != '\n') { buffer.append('\n'); }
+    if (buffer.charAt(buffer.length() - 2) != '\n') { buffer.append('\n'); }
+  }
+
   private void println(Object s) {
     print(s);
-    print("\n");
+    newline();
   }
 
   private void printf(String format, Object... values) {
@@ -69,7 +71,7 @@ public class GoloPrettyPrinter implements GoloIrVisitor {
 
   private void space() {
     for (int i = 0; i < spacing; i++) {
-      print(" ");
+      buffer.append(' ');
     }
   }
 
@@ -88,10 +90,10 @@ public class GoloPrettyPrinter implements GoloIrVisitor {
   }
 
   private void endBlock(String delim) {
-    print("\n");
+    newline();
     decr();
     space();
-    print(delim);
+    println(delim);
   }
 
   private void join(Iterable<? extends Object> elements, String separator) {
@@ -139,36 +141,23 @@ public class GoloPrettyPrinter implements GoloIrVisitor {
     this.buffer = new StringBuilder();
     printDocumentation(module);
     println("module " + module.getPackageAndClass());
-    print("\n");
+    newline();
 
     for (ModuleImport imp : module.getImports()) {
-      String importName = imp.getPackageAndClass().toString();
-      if (expanded || !predefinedImports.contains(importName)) {
-        println("import " + importName);
-      }
+      imp.accept(this);
     }
 
     for (GoloFunction function : module.getFunctions()) {
-      if (function.isMain()) {
+      if (function.isMain()) { 
+        // skip the main function to print it at the bottom of the file
         main = function;
         continue;
       }
-      println("\n");
       function.accept(this);
     }
 
     for (Struct struct : module.getStructs()) {
-      println("\n");
-      print("struct " + struct.getPackageAndClass().className() + " = ");
-      if (struct.getMembers().size() > collectionWrappingThreshold) {
-        beginBlock("{");
-        join(struct.getMembers(), ",\n");
-        endBlock("}");
-      } else {
-        print("{");
-        join(struct.getMembers(), ", ");
-        println("}");
-      }
+      struct.accept(this);
     }
 
     for (String augmentation : module.getAugmentations().keySet()) {
@@ -181,10 +170,36 @@ public class GoloPrettyPrinter implements GoloIrVisitor {
     }
 
     if (main != null) {
-      println("\n");
       main.accept(this);
     }
     System.out.println(this.buffer.toString());
+  }
+
+  @Override
+  public void visitAugmentation(Augmentation augment) {
+    // TODO
+  }
+
+  @Override
+  public void visitModuleImport(ModuleImport moduleImport) {
+    if (expanded || !moduleImport.isImplicit()) {
+      println("import " + moduleImport.getPackageAndClass().toString());
+    }
+  }
+
+  @Override
+  public void visitStruct(Struct struct) {
+    blankLine();
+    print("struct " + struct.getPackageAndClass().className() + " = ");
+    if (struct.getMembers().size() > collectionWrappingThreshold) {
+      beginBlock("{");
+      join(struct.getMembers(), ",\n");
+      endBlock("}");
+    } else {
+      print("{");
+      join(struct.getMembers(), ", ");
+      println("}");
+    } 
   }
 
   @Override
@@ -232,6 +247,7 @@ public class GoloPrettyPrinter implements GoloIrVisitor {
   }
 
   private void visitFunctionDefinition(GoloFunction function) {
+    blankLine();
     printDocumentation(function);
     for (Decorator decorator : function.getDecorators()) {
       decorator.accept(this);
@@ -250,7 +266,7 @@ public class GoloPrettyPrinter implements GoloIrVisitor {
     /*if (!expanded) {
       print("@");
       decorator.getExpressionStatement().accept(this);
-      print("\n");
+      newline();
       space();
     }*/
   }
@@ -411,7 +427,7 @@ public class GoloPrettyPrinter implements GoloIrVisitor {
     for (GoloStatement st : statements.subList(1, statements.size())) {
       space();
       st.accept(this);
-      print("\n");
+      newline();
     }
     decr();
     space();
@@ -448,7 +464,7 @@ public class GoloPrettyPrinter implements GoloIrVisitor {
   private void visitWhileLoopStatement(LoopStatement loop) {
     if (loop.hasInitStatement()) {
       loop.getInitStatement().accept(this);
-      print("\n");
+      newline();
       space();
     }
     print("while ");

@@ -20,6 +20,12 @@ public interface GoloIrVisitor {
 
   void visitModule(GoloModule module);
 
+  void visitStruct(Struct struct);
+
+  void visitAugmentation(Augmentation augment);
+
+  void visitModuleImport(ModuleImport moduleImport);
+
   void visitFunction(GoloFunction function);
 
   void visitDecorator(Decorator decorator);
