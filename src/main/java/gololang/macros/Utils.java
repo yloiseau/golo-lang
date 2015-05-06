@@ -102,6 +102,11 @@ public final class Utils {
   }
 
   public static GoloParser.ParserClassRef toClassRef(Class<?> cls) {
-    return new GoloParser.ParserClassRef(cls.getCanonicalName());
+    return toClassRef(cls.getCanonicalName());
   }
+
+  public static GoloParser.ParserClassRef toClassRef(String clsName) {
+    return new GoloParser.ParserClassRef(clsName);
+  }
+
 }

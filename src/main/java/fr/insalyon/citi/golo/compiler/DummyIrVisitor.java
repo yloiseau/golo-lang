@@ -198,4 +198,5 @@ public abstract class DummyIrVisitor implements GoloIrVisitor {
       statement.accept(this);
     }
   }
+
 }

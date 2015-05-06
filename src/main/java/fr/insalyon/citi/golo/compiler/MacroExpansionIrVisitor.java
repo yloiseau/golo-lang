@@ -37,7 +37,8 @@ import static gololang.macros.Utils.*;
 // TODO: non FQN macro finder:
 // [x] current module
 // [x] imported modules
-// [x] special macro
+// [x] special macros
+// [x] predefined macros
 // [~] compiler option
 
 
@@ -115,8 +116,10 @@ public class MacroExpansionIrVisitor extends DummyIrVisitor {
         expanded.accept(this);
       }
       relinkReferenceTables(expanded, blockStack.peek());
+      expanded.replaceInParent(macroInvocation, elements.peek());
+    } else {
+      elements.peek().replaceElement(macroInvocation, Noop.NOOP);
     }
-    expanded.replaceInParent(macroInvocation, elements.peek());
   }
 
   @Override
@@ -157,10 +160,7 @@ public class MacroExpansionIrVisitor extends DummyIrVisitor {
         throw new RuntimeException("failed to call macro: " + invocation.getName(), t);
       }
     }
-    if (result == null) {
-      result = block().build();
-    }
-    if (invocation.hasASTNode()) {
+    if (result != null && invocation.hasASTNode()) {
       result.setASTNode(invocation.getASTNode());
     }
     return result;
@@ -179,14 +179,20 @@ public class MacroExpansionIrVisitor extends DummyIrVisitor {
       methodName = name.substring(methodClassSeparatorIndex + 1);
     }
     classNames.addAll(macroClasses);
+    boolean vararg;
     for (String className : classNames) {
-      try {
-        return publicLookup().findStatic(
-            Class.forName(className),
-            methodName,
-            genericMethodType(arity));
-      } catch (Throwable ignored) {
-        continue;
+      vararg = false;
+      for (int i = arity; i >= 0; i--) {
+        try {
+          return publicLookup().findStatic(
+              Class.forName(className),
+              methodName,
+              genericMethodType(i, vararg));
+        } catch (Throwable ignored) { }
+        if (!vararg) {
+          vararg = true;
+          i = arity + 1;
+        }
       }
     }
     throw new RuntimeException("failed to load macro: " + name);

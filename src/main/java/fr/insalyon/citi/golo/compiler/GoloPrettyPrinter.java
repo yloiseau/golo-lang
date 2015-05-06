@@ -552,4 +552,16 @@ public class GoloPrettyPrinter implements GoloIrVisitor {
       print("]");
     }
   }
+
+  @Override
+  public void visitMacroInvocation(MacroInvocation macroInvocation) {
+    // TODO: prettyPrint macro invocation
+    println(macroInvocation.toString());
+  }
+
+  @Override
+  public void visitQuotedBlock(QuotedBlock qblock) {
+    // TODO: prettyPrint quoted block
+    println(qblock.toString());
+  }
 }

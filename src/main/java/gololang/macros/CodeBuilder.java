@@ -18,6 +18,7 @@ package gololang.macros;
 
 import fr.insalyon.citi.golo.compiler.ir.*;
 import fr.insalyon.citi.golo.runtime.OperatorType;
+import fr.insalyon.citi.golo.compiler.parser.GoloParser;
 
 import java.util.List;
 import java.util.LinkedList;
@@ -489,12 +490,33 @@ public final class CodeBuilder {
 
   public static ConstantStatement constant(Object value) {
     if (value instanceof Class) {
-      return new ConstantStatement(toClassRef((Class) value));
+      return classRef(value);
     } 
     if (value instanceof ConstantStatement) {
       return (ConstantStatement) value;
     }
     return new ConstantStatement(value);
+  }
+
+  public static ConstantStatement classRef(Object cls) {
+    if (cls instanceof String) {
+      return constant(toClassRef((String) cls));
+    }
+    if (cls instanceof Class) {
+      return constant(toClassRef((Class) cls));
+    }
+    if (cls instanceof GoloParser.ParserClassRef) {
+      return constant(cls);
+    }
+    throw new IllegalArgumentException("unknown type " + cls.getClass() + "to build a class reference");
+  }
+
+  public static ConstantStatement functionRef(Object funcName) {
+    return functionRef(null, funcName);
+  }
+
+  public static ConstantStatement functionRef(Object moduleName, Object funcName) {
+    return constant(new GoloParser.FunctionRef((String) moduleName, (String) funcName));
   }
 
   public static ReturnStatement returns(Object expr) {

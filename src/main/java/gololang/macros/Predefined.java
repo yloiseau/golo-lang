@@ -20,10 +20,20 @@ import java.util.regex.Pattern;
 import java.util.regex.Matcher;
 import fr.insalyon.citi.golo.compiler.ir.*;
 import static gololang.macros.CodeBuilder.*;
+import static gololang.macros.CodeBuilder.Operations.*;
+import fr.insalyon.citi.golo.compiler.parser.GoloParser;
 
 public final class Predefined {
   private Predefined() { }
 
+  /**
+   * Create an assignment to an external variable.
+   * <p>
+   * {@code setVar(a, "foo")} is equivalent to
+   * <pre>
+   * let ~a = "foo"
+   * </pre>
+   */
   public static Object setVar(Object reference, Object value) {
     return assignment(false, externalRef((ReferenceLookup) reference), value).build();
   }
@@ -64,4 +74,39 @@ public final class Predefined {
     }
     return func.build();
   }
+
+  /**
+   * Top level macro to add existing functions as augmentations to a given type.
+   * <p>
+   * The given functions <i>must</i> already have a explicit first argument representing the
+   * augmented type value. For instance, one can do
+   * {@code &augmentWithFunctions(java.util.Collection.class, ^java.util.Collections::disjoint)}
+   * which is roughly equivalent to:
+   * <pre>
+   * augment java.util.Collection {
+   *   function disjoint = |this, obj| -> java.util.Collections.disjoint(this, obj)
+   * }
+   * </pre>
+   */
+  public static Object augmentWithFunctions(Object type, Object funcRef, Object... funcRefs) {
+    String typeName = ((GoloParser.ParserClassRef) ((ConstantStatement) type).getValue()).name;
+    AugmentationBuilder theAugment = augmentType(typeName)
+      .withFunction(createAugmentationFunction((ConstantStatement) funcRef));
+    for (Object f : funcRefs) {
+      theAugment.withFunction(createAugmentationFunction((ConstantStatement) f));
+    }
+    return theAugment;
+  }
+
+  private static FunctionDeclarationBuilder createAugmentationFunction(ConstantStatement funcRef) {
+    return publicFunction().name(((GoloParser.FunctionRef) funcRef.getValue()).name)
+      .param("this", "args").varargs()
+      .block(
+        returns(methodCall(
+          methodCall(funcRef, methodInvocation("bindTo").arg(refLookup("this"))),
+          methodInvocation("invoke").arg(refLookup("args"))
+      )));
+  }
+
+
 }
