@@ -19,9 +19,11 @@ package fr.insalyon.citi.golo.compiler;
 import static fr.insalyon.citi.golo.compiler.utils.StringUnescaping.escape;
 import fr.insalyon.citi.golo.compiler.ir.*;
 import fr.insalyon.citi.golo.runtime.OperatorType;
+import fr.insalyon.citi.golo.compiler.parser.GoloParser;
 
 import java.util.HashSet;
 import java.util.List;
+import java.util.LinkedList;
 import java.util.Set;
 import static java.util.Arrays.asList;
 
@@ -33,13 +35,17 @@ import static java.util.Arrays.asList;
  */
 public class GoloPrettyPrinter implements GoloIrVisitor {
 
+  // configuration: should be customizable
+  private static final int COLLECTION_WRAPPING_THRESHOLD = 5;
+  private static final int INDENT = 2;
+
   private int spacing = 0;
   private boolean onlyReturn = false;
   private boolean inFunctionRoot = false;
+  private final StringBuilder header = new StringBuilder();
+  private final StringBuilder body = new StringBuilder();
   private StringBuilder buffer;
 
-  // configuration: should be customizable
-  private int collectionWrappingThreshold = 5;
   private boolean expanded = false;
 
   public GoloPrettyPrinter(boolean expanded) {
@@ -55,9 +61,13 @@ public class GoloPrettyPrinter implements GoloIrVisitor {
     buffer.append('\n');
   }
 
-  private void blankLine() {
+  private void newlineIfNeeded() {
     if (buffer.charAt(buffer.length() - 1) != '\n') { buffer.append('\n'); }
-    if (buffer.charAt(buffer.length() - 2) != '\n') { buffer.append('\n'); }
+  }
+
+  private void blankLine() {
+    if (buffer.length() > 0 && buffer.charAt(buffer.length() - 1) != '\n') { buffer.append('\n'); }
+    if (buffer.length() > 1 && buffer.charAt(buffer.length() - 2) != '\n') { buffer.append('\n'); }
   }
 
   private void println(Object s) {
@@ -76,24 +86,23 @@ public class GoloPrettyPrinter implements GoloIrVisitor {
   }
 
   private void incr() {
-    spacing = spacing + 2;
+    spacing = spacing + INDENT;
   }
 
   private void decr() {
-    spacing = spacing - 2;
+    spacing = Math.max(0, spacing - INDENT);
   }
 
   private void beginBlock(String delim) {
     println(delim);
     incr();
-    space();
   }
 
   private void endBlock(String delim) {
-    newline();
+    newlineIfNeeded();
     decr();
     space();
-    println(delim);
+    print(delim);
   }
 
   private void join(Iterable<? extends Object> elements, String separator) {
@@ -112,11 +121,13 @@ public class GoloPrettyPrinter implements GoloIrVisitor {
   private void joinedVisit(Iterable<? extends GoloElement> elements, String separator) {
     boolean first = true;
     for (GoloElement element : elements) {
-      if (!first) {
-        print(separator);
-        if (separator.endsWith("\n")) { space(); }
-      } else {
+      if (first) {
         first = false;
+      } else {
+        print(separator);
+        if (separator.endsWith("\n")) { 
+          space();
+        }
       }
       element.accept(this);
     }
@@ -135,49 +146,60 @@ public class GoloPrettyPrinter implements GoloIrVisitor {
     }
   }
 
+  public void prettyPrint(GoloModule module) {
+    this.body.delete(0, this.body.length());
+    this.header.delete(0, this.header.length());
+    this.visitModule(module);
+    System.out.println(this.header);
+    System.out.println(this.buffer);
+  }
+
+
   @Override
   public void visitModule(GoloModule module) {
-    GoloFunction main = null;
-    this.buffer = new StringBuilder();
+    this.buffer = this.header;
     printDocumentation(module);
     println("module " + module.getPackageAndClass());
-    newline();
+    blankLine();
 
     for (ModuleImport imp : module.getImports()) {
       imp.accept(this);
     }
-
-    for (GoloFunction function : module.getFunctions()) {
-      if (function.isMain()) { 
-        // skip the main function to print it at the bottom of the file
-        main = function;
-        continue;
-      }
-      function.accept(this);
+    this.buffer = this.body;
+    for (MacroInvocation macroCall : module.getMacroInvocations()) {
+      macroCall.accept(this);
     }
-
     for (Struct struct : module.getStructs()) {
       struct.accept(this);
     }
-
-    for (String augmentation : module.getAugmentations().keySet()) {
-      println("\n");
-      print("augment " + augmentation);
-      print(" ");
-      beginBlock("{");
-      joinedVisit(module.getAugmentations().get(augmentation), "\n\n");
-      endBlock("}");
+    for (Augmentation augmentation : module.getFullAugmentations()) {
+      augmentation.accept(this);
     }
-
-    if (main != null) {
-      main.accept(this);
+    for (GoloFunction macro : module.getMacros()) {
+      macro.accept(this);
     }
-    System.out.println(this.buffer.toString());
+    for (GoloFunction function : module.getFunctions()) {
+      function.accept(this);
+    }
   }
 
   @Override
   public void visitAugmentation(Augmentation augment) {
-    // TODO
+    if (augment.hasNames()) {
+      blankLine();
+      printf("augment %s with ", augment.getTarget());
+      join(augment.getNames(), ", ");
+      newline();
+    }
+    if (augment.hasFunctions()) {
+      blankLine();
+      printf("augment %s ", augment.getTarget());
+      beginBlock("{");
+      for (GoloFunction func : augment.getFunctions()) {
+        func.accept(this);
+      }
+      endBlock("}");
+    }
   }
 
   @Override
@@ -191,73 +213,81 @@ public class GoloPrettyPrinter implements GoloIrVisitor {
   public void visitStruct(Struct struct) {
     blankLine();
     print("struct " + struct.getPackageAndClass().className() + " = ");
-    if (struct.getMembers().size() > collectionWrappingThreshold) {
+    if (struct.getMembers().size() > COLLECTION_WRAPPING_THRESHOLD) {
       beginBlock("{");
       join(struct.getMembers(), ",\n");
       endBlock("}");
     } else {
-      print("{");
+      print("{ ");
       join(struct.getMembers(), ", ");
-      println("}");
+      println(" }");
     } 
   }
 
   @Override
   public void visitFunction(GoloFunction function) {
     if (function.isModuleInit()) {
-      visitModuleInit(function);
+      printModuleInit(function);
     } else if (expanded || !function.isSynthetic()) {
-      visitFunctionDefinition(function);
+      printFunctionDefinition(function);
     }
   }
 
   private void visitClosureExpression(GoloFunction function) {
     inFunctionRoot = true;
     if (function.getSyntheticParameterCount() == 0) {
-      visitFunctionExpression(function);
+      printFunctionExpression(function);
     } else {
-      int realArity = function.getArity() - function.getSyntheticParameterCount();
-      if (realArity != 0) { print("|"); }
-      join(function.getParameterNames().subList(
-          function.getSyntheticParameterCount(),
-          function.getArity()) , ", ");
-      if (function.isVarargs()) { print("..."); }
-      if (realArity != 0) { print("| "); }
+      printFunctionParams(function);
       function.getBlock().accept(this);
     }
   }
 
-  private void visitFunctionExpression(GoloFunction function) {
-    inFunctionRoot = true;
-    if (function.getArity() != 0) { print("|"); }
-    join(function.getParameterNames(), ", ");
-    if (function.isVarargs()) {
-      print("...");
+  private void printFunctionParams(GoloFunction function) {
+    int realArity = function.getArity() - function.getSyntheticParameterCount();
+    if (realArity != 0) { 
+      print("|"); 
     }
-    if (function.getArity() != 0) { print("| "); }
+    join(function.getParameterNames().subList(
+        function.getSyntheticParameterCount(),
+        function.getArity()) , ", ");
+    if (function.isVarargs()) { 
+      print("..."); 
+    }
+    if (realArity != 0) {
+      print("| "); 
+    }
+  }
+
+  private void printFunctionExpression(GoloFunction function) {
+    inFunctionRoot = true;
+    printFunctionParams(function);
     function.getBlock().accept(this);
   }
 
-  private void visitModuleInit(GoloFunction function) {
+  private void printModuleInit(GoloFunction function) {
     if (expanded) {
-      visitFunctionDefinition(function);
+      printFunctionDefinition(function);
     } else {
+      blankLine();
       joinedVisit(function.getBlock().getStatements(), "\n");
     }
   }
 
-  private void visitFunctionDefinition(GoloFunction function) {
+  private void printFunctionDefinition(GoloFunction function) {
     blankLine();
     printDocumentation(function);
     for (Decorator decorator : function.getDecorators()) {
       decorator.accept(this);
     }
+    space();
     if (function.getVisibility() == GoloFunction.Visibility.LOCAL) {
       print("local ");
     }
-    print("function " + function.getName());
+    print(function.isMacro() ? "macro " : "function ");
+    print(function.getName());
     print(" = ");
-    visitFunctionExpression(function);
+    printFunctionExpression(function);
   }
 
   @Override
@@ -291,9 +321,17 @@ public class GoloPrettyPrinter implements GoloIrVisitor {
     if (onlyReturn || isLoopBlock(statements)) {
       statements.get(0).accept(this);
     } else {
-      beginBlock("{");
-      joinedVisit(block.getStatements(), "\n");
-      endBlock("}");
+      if (!block.isSimpleBlock()) {
+        beginBlock("{");
+      }
+      for (GoloStatement s : block.getStatements()) {
+        newlineIfNeeded();
+        space();
+        s.accept(this);
+      }
+      if (!block.isSimpleBlock()) {
+        endBlock("}");
+      }
     }
   }
 
@@ -306,9 +344,14 @@ public class GoloPrettyPrinter implements GoloIrVisitor {
       print("'" + value + "'");
     } else if (value instanceof Long) {
       print(value + "_L");
-    } else if (value instanceof Class<?>) {
-      // FIXME
-      print(((Class<?>) value).getName() + ".class");
+    } else if (value instanceof GoloParser.ParserClassRef) {
+      print(((GoloParser.ParserClassRef) value).name + ".class");
+    } else if (value instanceof GoloParser.FunctionRef) {
+      print("^" +
+            ((((GoloParser.FunctionRef) value).module != null) 
+              ? (((GoloParser.FunctionRef) value).module + "::") 
+              : "") +
+            ((GoloParser.FunctionRef) value).name);
     } else {
       print(constantStatement.getValue());
     }
@@ -369,7 +412,11 @@ public class GoloPrettyPrinter implements GoloIrVisitor {
 
   @Override
   public void visitReferenceLookup(ReferenceLookup referenceLookup) {
-    print(referenceLookup.getName());
+    if (referenceLookup.isUnquoted()) {
+      print("unquote(" + referenceLookup.getName() + ")");
+    } else {
+      print(referenceLookup.getName());
+    }
   }
 
   @Override
@@ -421,17 +468,14 @@ public class GoloPrettyPrinter implements GoloIrVisitor {
     visitForEachParam(loop);
     print(" in ");
     visitForEarchCollection(loop);
-    println(" {");
-    incr();
+    beginBlock("{");
     List<GoloStatement> statements = loop.getBlock().getStatements();
     for (GoloStatement st : statements.subList(1, statements.size())) {
       space();
       st.accept(this);
       newline();
     }
-    decr();
-    space();
-    print("}");
+    endBlock("}");
   }
 
   private void visitForEarchCollection(LoopStatement loop) {
@@ -530,11 +574,8 @@ public class GoloPrettyPrinter implements GoloIrVisitor {
 
   @Override
   public void visitLoopBreakFlowStatement(LoopBreakFlowStatement loopBreakFlowStatement) {
-    // TODO
-    incr();
     space();
-    println("Loop break flow: " + loopBreakFlowStatement.getType().name());
-    decr();
+    println(loopBreakFlowStatement.getType().name());
   }
 
   @Override
@@ -542,7 +583,7 @@ public class GoloPrettyPrinter implements GoloIrVisitor {
     if (collectionLiteral.getType() != CollectionLiteral.Type.tuple || expanded) {
       print(collectionLiteral.getType());
     }
-    if (collectionLiteral.getExpressions().size() > collectionWrappingThreshold) {
+    if (collectionLiteral.getExpressions().size() > COLLECTION_WRAPPING_THRESHOLD) {
       beginBlock("[");
       joinedVisit(collectionLiteral.getExpressions(), ",\n");
       endBlock("]");
@@ -556,12 +597,35 @@ public class GoloPrettyPrinter implements GoloIrVisitor {
   @Override
   public void visitMacroInvocation(MacroInvocation macroInvocation) {
     // TODO: prettyPrint macro invocation
-    println(macroInvocation.toString());
+    LinkedList<ExpressionStatement> arguments = new LinkedList<>(macroInvocation.getArguments());
+    Block blockArgument = null;
+    if (arguments.getLast() instanceof Block) {
+      blockArgument = (Block) arguments.removeLast();
+    }
+    print("&" + macroInvocation.getName());
+    if (!arguments.isEmpty() || blockArgument == null) {
+      if (blockArgument != null) { print(" "); }
+      print("(");
+      joinedVisit(arguments, ", ");
+      print(")");
+    }
+    if (blockArgument != null) {
+      print(" ");
+      blockArgument.accept(this);
+    }
   }
 
   @Override
   public void visitQuotedBlock(QuotedBlock qblock) {
     // TODO: prettyPrint quoted block
-    println(qblock.toString());
+    print("quote ");
+    if (!(qblock.getStatement() instanceof Block)) { beginBlock("{"); }
+    qblock.getStatement().accept(this);
+    if (!(qblock.getStatement() instanceof Block)) { endBlock("{"); }
+  }
+
+  @Override
+  public void visitNoop(Noop noop) {
+    print("# " + noop.comment());
   }
 }

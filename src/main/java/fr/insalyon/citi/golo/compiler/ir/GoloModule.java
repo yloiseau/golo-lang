@@ -116,6 +116,26 @@ public final class GoloModule extends GoloElement {
     return unmodifiableMap(augmentationApplications);
   }
 
+  public Set<Augmentation> getFullAugmentations() {
+    Set<Augmentation> augments = new LinkedHashSet<>();
+    Set<String> targets = new LinkedHashSet<>();
+    for (String target : augmentations.keySet()) {
+      targets.add(target);
+    }
+    for (String target : augmentationApplications.keySet()) {
+      targets.add(target);
+    }
+    for (String target : targets) {
+      Augmentation augment = new Augmentation(target);
+      augment.addNames(augmentationApplications.get(target));
+      for (GoloFunction func : augmentations.get(target)) {
+        augment.addFunction(func);
+      }
+      augments.add(augment);
+    }
+    return augments;
+  }
+
   public Set<Struct> getStructs() {
     return unmodifiableSet(structs);
   }

@@ -118,7 +118,8 @@ public class MacroExpansionIrVisitor extends DummyIrVisitor {
       relinkReferenceTables(expanded, blockStack.peek());
       expanded.replaceInParent(macroInvocation, elements.peek());
     } else {
-      elements.peek().replaceElement(macroInvocation, Noop.NOOP);
+      elements.peek().replaceElement(macroInvocation, 
+          new Noop("macro '" + macroInvocation.getName() + "' expanded without results"));
     }
   }
 

@@ -83,6 +83,7 @@ class QuotedIrExpander extends DummyIrVisitor {
     if (!inQuotedBlock) {
       super.visitBlock(block);
     } else if (block.isUnquoted()) {
+      block.setUnquoted(false);
       expandedBlocks.push(block);
     } else {
       FunctionInvocationBuilder blockBuilder = functionInvocation().name(BUILDER + "block");
@@ -125,6 +126,7 @@ class QuotedIrExpander extends DummyIrVisitor {
     if (!inQuotedBlock) {
       super.visitConstantStatement(constantStatement);
     } else if (constantStatement.isUnquoted()) {
+      constantStatement.setUnquoted(false);
       expandedBlocks.push(constantStatement);
     } else {
       expandedBlocks.push(functionInvocation()
@@ -139,6 +141,7 @@ class QuotedIrExpander extends DummyIrVisitor {
     if (!inQuotedBlock) {
       super.visitReferenceLookup(referenceLookup);
     } else if (referenceLookup.isUnquoted()) {
+      referenceLookup.setUnquoted(false);
       expandedBlocks.push(referenceLookup);
     } else {
       String name = referenceLookup.getName();
@@ -186,6 +189,7 @@ class QuotedIrExpander extends DummyIrVisitor {
     super.visitBinaryOperation(binaryOperation);
     if (inQuotedBlock) {
       if (binaryOperation.isUnquoted()) {
+        binaryOperation.setUnquoted(false);
         expandedBlocks.push(binaryOperation);
       } else {
         Object right = expandedBlocks.pop();
@@ -256,6 +260,7 @@ class QuotedIrExpander extends DummyIrVisitor {
     if (!inQuotedBlock) {
       super.visitFunctionInvocation(functionInvocation);
     } else if (functionInvocation.isUnquoted()) {
+      functionInvocation.setUnquoted(false);
       expandedBlocks.push(functionInvocation);
     } else {
       expandedBlocks.push(buildInvocation(
@@ -342,6 +347,7 @@ class QuotedIrExpander extends DummyIrVisitor {
     super.visitUnaryOperation(unaryOperation);
     if (inQuotedBlock) {
       if (unaryOperation.isUnquoted()) {
+        unaryOperation.setUnquoted(false);
         expandedBlocks.push(unaryOperation);
       } else {
         expandedBlocks.push(functionInvocation()

@@ -31,6 +31,7 @@ public abstract class DummyIrVisitor implements GoloIrVisitor {
 
   @Override
   public void visitModule(GoloModule module) {
+    // imports
     // functions
     // structs
     // module state
@@ -45,10 +46,8 @@ public abstract class DummyIrVisitor implements GoloIrVisitor {
     for (GoloFunction macro : module.getMacros()) {
       macro.accept(this);
     }
-    for (Collection<GoloFunction> functions : module.getAugmentations().values()) {
-      for (GoloFunction function : functions) {
-        function.accept(this);
-      }
+    for (Augmentation augmentation : module.getFullAugmentations()) {
+      augmentation.accept(this);
     }
     for (Collection<GoloFunction> functions : module.getNamedAugmentations().values()) {
       for (GoloFunction function : functions) {
@@ -60,6 +59,9 @@ public abstract class DummyIrVisitor implements GoloIrVisitor {
   @Override
   public void visitAugmentation(Augmentation augment) {
     // TODO: dummy augment visit
+    for (GoloFunction func : augment.getFunctions()) {
+      func.accept(this);
+    }
   }
 
   @Override
@@ -198,5 +200,8 @@ public abstract class DummyIrVisitor implements GoloIrVisitor {
       statement.accept(this);
     }
   }
+
+  @Override
+  public void visitNoop(Noop noop) { }
 
 }

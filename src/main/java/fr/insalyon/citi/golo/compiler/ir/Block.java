@@ -88,4 +88,11 @@ public final class Block extends ExpressionStatement {
   public boolean isEmpty() {
     return statements.isEmpty();
   }
+
+  /**
+   * A simple block is a block containing only an other block.
+   */
+  public boolean isSimpleBlock() {
+    return statements.size() == 1 && (statements.get(0) instanceof Block);
+  }
 }

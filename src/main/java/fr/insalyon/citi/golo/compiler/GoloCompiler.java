@@ -94,12 +94,76 @@ public class GoloCompiler {
     return parser;
   }
 
+  /**
+   * Build a final IR from a Golo source file.
+   * <p>
+   * The resulting module is expanded for macros and checked for soundness.
+   * This is just a facility method that call in sequence and check for exceptions:
+   * <ol>
+   * <li>{@link #parse(String,GoloParser)} 
+   * <li>{@link #transform(ASTCompilationUnit)}
+   * <li>{@link #expand(GoloModule)}
+   * <li>{@link #refine(GoloModule)}
+   * </ol>
+   *
+   * @param goloSourceFilename    the source file name.
+   * @param sourceCodeInputStream the source code input stream.
+   * @return a fully built {@link fr.insalyon.citi.golo.compiler.ir.GoloModule} ready for
+   * compilation
+   * @throws GoloCompilationException if a problem occurs during any phase of the compilation work.
+   */
   public final GoloModule buildModule(String goloSourceFilename, InputStream sourceCodeInputStream) throws GoloCompilationException {
     resetExceptionBuilder();
     ASTCompilationUnit compilationUnit = parse(goloSourceFilename, initParser(goloSourceFilename, sourceCodeInputStream));
     throwIfErrorEncountered();
-    GoloModule goloModule = check(compilationUnit);
+    GoloModule goloModule = transform(compilationUnit);
     throwIfErrorEncountered();
+    expand(goloModule);
+    throwIfErrorEncountered();
+    refine(goloModule);
+    throwIfErrorEncountered();
+    return goloModule;
+  }
+
+  /**
+   * Transforms a compilation unit into a raw Golo module.
+   * <p>
+   * This is the 2nd compilation step, the next one is {@link #expand(GoloModule)}.
+   *
+   * @param compilationUnit  the compilation unit to transform, as returned by {@link #parse(String,GoloParser)}.
+   * @return a raw Golo module.
+   */
+  public GoloModule transform(ASTCompilationUnit compilationUnit) {
+    ParseTreeToGoloIrVisitor parseTreeToIR = new ParseTreeToGoloIrVisitor();
+    parseTreeToIR.setExceptionBuilder(exceptionBuilder);
+    return parseTreeToIR.transform(compilationUnit);
+  }
+
+  /**
+   * Expand quoted block, macro calls and some IR transformations.
+   * <p>
+   * This is the 3rd compilation step, continue to {@link #refine(GoloModule)}.
+   *
+   * @param goloModule  the raw module to expand
+   * @return the modified Golo module (also changed in place)
+   */
+  public GoloModule expand(GoloModule goloModule) {
+     goloModule.accept(new QuotedIrExpander());
+     goloModule.accept(new MacroExpansionIrVisitor());
+     return goloModule;
+  }
+
+  /**
+   * Finalize the IR by checking soundness.
+   * <p>
+   * This is the 4th compilation step.
+   *
+   * @param goloModule  the expanded Golo module to finalize
+   * @return the modified module (also changed in place)
+   */
+  public GoloModule refine(GoloModule goloModule) {
+    goloModule.accept(new ClosureCaptureGoloIrVisitor());
+    goloModule.accept(new LocalReferenceAssignmentAndVerificationVisitor(exceptionBuilder));
     return goloModule;
   }
 
@@ -187,6 +251,8 @@ public class GoloCompiler {
 
   /**
    * Produces a parse tree for a Golo source file. This is mostly useful to IDEs.
+   * <p>
+   * This is the first compilation step, continue with {@link #transform(ASTCompilationUnit)}.
    *
    * @param goloSourceFilename the source file name.
    * @param parser             the parser to use.
@@ -214,14 +280,7 @@ public class GoloCompiler {
    * @throws GoloCompilationException if an error exists in the source represented by the input parse tree.
    */
   public final GoloModule check(ASTCompilationUnit compilationUnit) {
-    ParseTreeToGoloIrVisitor parseTreeToIR = new ParseTreeToGoloIrVisitor();
-    parseTreeToIR.setExceptionBuilder(exceptionBuilder);
-    GoloModule goloModule = parseTreeToIR.transform(compilationUnit);
-    goloModule.accept(new QuotedIrExpander());
-    goloModule.accept(new MacroExpansionIrVisitor());
-    goloModule.accept(new ClosureCaptureGoloIrVisitor());
-    goloModule.accept(new LocalReferenceAssignmentAndVerificationVisitor(exceptionBuilder));
-    return goloModule;
+    return refine(expand(transform(compilationUnit)));
   }
 
   /**

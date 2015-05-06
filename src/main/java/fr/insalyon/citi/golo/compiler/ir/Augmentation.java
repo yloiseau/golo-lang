@@ -23,6 +23,9 @@ import static java.util.Collections.unmodifiableSet;
 
 /**
  * "classical" augmentation.
+ * <p>
+ * Represents all the augmentations applied to a type, i.e. functions and named augmentations
+ * applied with the {@code with} construct.
  */
 public class Augmentation extends GoloElement {
   private final String target;
@@ -51,6 +54,10 @@ public class Augmentation extends GoloElement {
     functions.add(func);
   }
 
+  public boolean hasFunctions() {
+    return !functions.isEmpty();
+  }
+
   public Set<String> getNames() {
     return unmodifiableSet(names);
   }
@@ -61,6 +68,10 @@ public class Augmentation extends GoloElement {
 
   public void addNames(Collection<String> names) {
     this.names.addAll(names);
+  }
+
+  public boolean hasNames() {
+    return !names.isEmpty();
   }
 
   @Override

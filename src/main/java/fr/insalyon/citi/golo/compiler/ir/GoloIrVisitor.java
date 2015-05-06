@@ -66,4 +66,5 @@ public interface GoloIrVisitor {
 
   void visitCollectionLiteral(CollectionLiteral collectionLiteral);
 
+  void visitNoop(Noop noop);
 }

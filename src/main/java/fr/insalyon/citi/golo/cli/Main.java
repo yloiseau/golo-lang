@@ -373,26 +373,28 @@ public class Main {
     GoloCompiler compiler = new GoloCompiler();
     GoloPrettyPrinter printer = new GoloPrettyPrinter(expanded);
     for (String file : files) {
-      dumpPP(file, compiler, printer);
+      dumpPP(file, compiler, printer, expanded);
     }
   }
 
-  private static void dumpPP(String goloFile, GoloCompiler compiler, GoloPrettyPrinter printer) {
+  private static void dumpPP(String goloFile, GoloCompiler compiler, GoloPrettyPrinter printer, boolean expanded) {
     File file = new File(goloFile);
     if (file.isDirectory()) {
       File[] directoryFiles = file.listFiles();
       if (directoryFiles != null) {
         for (File directoryFile : directoryFiles) {
-          dumpPP(directoryFile.getAbsolutePath(), compiler, printer);
+          dumpPP(directoryFile.getAbsolutePath(), compiler, printer, expanded);
         }
       }
     } else if (file.getName().endsWith(".golo")) {
-      System.err.println(">>> Pretty print " + file);
+      //System.err.println(">>> Pretty print " + file);
       try (FileInputStream in = new FileInputStream(goloFile)) {
         ASTCompilationUnit ast = compiler.parse(goloFile, new GoloOffsetParser(in));
-        GoloModule module = compiler.check(ast);
-        printer.visitModule(module);
-        System.out.println();
+        GoloModule module = compiler.transform(ast);
+        if (expanded) {
+          compiler.expand(module);
+        }
+        printer.prettyPrint(module);
       } catch (IOException e) {
         System.out.println("[error] " + goloFile + " does not exist or could not be opened.");
       }
