@@ -22,34 +22,29 @@ import java.util.LinkedHashSet;
 import static java.util.Collections.unmodifiableSet;
 
 /**
- * "classical" augmentation.
- * <p>
- * Represents all the augmentations applied to a type, i.e. functions and named augmentations
- * applied with the {@code with} construct.
+ * Named augmentation definition
  */
-public class Augmentation extends GoloElement {
-  private final String target;
+public class NamedAugmentation extends GoloElement {
+  private final String name;
   private final Set<GoloFunction> functions;
-  private final Set<String> names;
 
-  public Augmentation(String target) {
-    this(target, new LinkedHashSet<>(), new LinkedHashSet<>());
+  public NamedAugmentation(String name) {
+    this(name, new LinkedHashSet<>());
   }
 
-  public Augmentation(String target, Set<GoloFunction> functions, Set<String> names) {
-    this.target = target;
-    this.functions = functions;  
-    this.names = names;
+  public NamedAugmentation(String name, Set<GoloFunction> functions) {
+    this.name = name;
+    this.functions = functions;
   }
 
-  public String getTarget() {
-    return target;
+  public String getName() {
+    return this.name;
   }
 
   public Set<GoloFunction> getFunctions() {
     return unmodifiableSet(functions);
   }
-
+    
   public void addFunction(GoloFunction func) {
     functions.add(func);
   }
@@ -62,33 +57,18 @@ public class Augmentation extends GoloElement {
     return !functions.isEmpty();
   }
 
-  public Set<String> getNames() {
-    return unmodifiableSet(names);
-  }
-
-  public void addName(String name) {
-    names.add(name);
-  }
-
-  public void addNames(Collection<String> names) {
-    this.names.addAll(names);
-  }
-
-  public boolean hasNames() {
-    return !names.isEmpty();
+  @Override
+  public void accept(GoloIrVisitor visitor) {
+    visitor.visitNamedAugmentation(this);
   }
 
   @Override
   public void replaceInParent(GoloElement original, GoloElement parent) {
     if (parent instanceof GoloModule) {
-      ((GoloModule) parent).addAugmentation(this);
+      ((GoloModule) parent).addNamedAugmentation(this);
     } else {
       super.replaceInParent(original, parent);
     }
   }
 
-  @Override
-  public void accept(GoloIrVisitor visitor) {
-    visitor.visitAugmentation(this);
-  }
 }

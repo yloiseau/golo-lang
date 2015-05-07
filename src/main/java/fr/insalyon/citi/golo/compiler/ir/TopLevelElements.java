@@ -50,7 +50,7 @@ public final class TopLevelElements extends GoloElement implements Iterable<Golo
   @Override
   public void replaceInParent(GoloElement original, GoloElement parent) {
     for (GoloElement element : elements) {
-      element.replaceInParent(original, parent);
+      parent.replaceElement(original, element);
     }
   }
 }

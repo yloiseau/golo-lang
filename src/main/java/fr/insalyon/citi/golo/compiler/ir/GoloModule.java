@@ -104,14 +104,17 @@ public final class GoloModule extends GoloElement {
     return unmodifiableSet(imports);
   }
 
+  @Deprecated
   public Map<String, Set<GoloFunction>> getAugmentations() {
     return unmodifiableMap(augmentations);
   }
 
+  @Deprecated
   public Map<String, Set<GoloFunction>> getNamedAugmentations(){
     return unmodifiableMap(namedAugmentations);
   }
 
+  @Deprecated
   public Map<String, Set<String>> getAugmentationApplications() {
     return unmodifiableMap(augmentationApplications);
   }
@@ -128,9 +131,17 @@ public final class GoloModule extends GoloElement {
     for (String target : targets) {
       Augmentation augment = new Augmentation(target);
       augment.addNames(augmentationApplications.get(target));
-      for (GoloFunction func : augmentations.get(target)) {
-        augment.addFunction(func);
-      }
+      augment.addFunctions(augmentations.get(target));
+      augments.add(augment);
+    }
+    return augments;
+  }
+
+  public Set<NamedAugmentation> getFullNamedAugmentations() {
+    Set<NamedAugmentation> augments = new LinkedHashSet<>();
+    for (String name : namedAugmentations.keySet()) {
+      NamedAugmentation augment = new NamedAugmentation(name);
+      augment.addFunctions(namedAugmentations.get(name));
       augments.add(augment);
     }
     return augments;
@@ -174,6 +185,10 @@ public final class GoloModule extends GoloElement {
     namedAugmentations.add(name, function);
   }
 
+  public void addNamedAugmentation(NamedAugmentation augment) {
+    namedAugmentations.addAll(augment.getName(), augment.getFunctions());
+  }
+
   public void addAugmentation(String target, GoloFunction function) {
     augmentations.add(target, function);
   }
@@ -215,7 +230,9 @@ public final class GoloModule extends GoloElement {
   @Override
   public void replaceElement(GoloElement origin, GoloElement result) {
     topLevelMacroInvocations.remove(origin);
-    result.replaceInParent(origin, this);
+    if (result != null && !(result instanceof Noop)) {
+      result.replaceInParent(origin, this);
+    }
   }
 
   public Set<GoloFunction> getMacros() {

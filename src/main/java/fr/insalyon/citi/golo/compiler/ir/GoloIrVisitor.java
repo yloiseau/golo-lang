@@ -24,6 +24,8 @@ public interface GoloIrVisitor {
 
   void visitAugmentation(Augmentation augment);
 
+  void visitNamedAugmentation(NamedAugmentation augment);
+
   void visitModuleImport(ModuleImport moduleImport);
 
   void visitFunction(GoloFunction function);

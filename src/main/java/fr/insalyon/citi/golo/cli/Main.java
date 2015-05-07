@@ -393,6 +393,7 @@ public class Main {
         GoloModule module = compiler.transform(ast);
         if (expanded) {
           compiler.expand(module);
+          compiler.refine(module);
         }
         printer.prettyPrint(module);
       } catch (IOException e) {

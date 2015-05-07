@@ -62,11 +62,11 @@ public class GoloPrettyPrinter implements GoloIrVisitor {
   }
 
   private void newlineIfNeeded() {
-    if (buffer.charAt(buffer.length() - 1) != '\n') { buffer.append('\n'); }
+    if (buffer.length() > 0 && buffer.charAt(buffer.length() - 1) != '\n') { buffer.append('\n'); }
   }
 
   private void blankLine() {
-    if (buffer.length() > 0 && buffer.charAt(buffer.length() - 1) != '\n') { buffer.append('\n'); }
+    newlineIfNeeded();
     if (buffer.length() > 1 && buffer.charAt(buffer.length() - 2) != '\n') { buffer.append('\n'); }
   }
 
@@ -167,10 +167,14 @@ public class GoloPrettyPrinter implements GoloIrVisitor {
     }
     this.buffer = this.body;
     for (MacroInvocation macroCall : module.getMacroInvocations()) {
+      newlineIfNeeded();
       macroCall.accept(this);
     }
     for (Struct struct : module.getStructs()) {
       struct.accept(this);
+    }
+    for (NamedAugmentation augmentation : module.getFullNamedAugmentations()) {
+      augmentation.accept(this);
     }
     for (Augmentation augmentation : module.getFullAugmentations()) {
       augmentation.accept(this);
@@ -196,6 +200,19 @@ public class GoloPrettyPrinter implements GoloIrVisitor {
       printf("augment %s ", augment.getTarget());
       beginBlock("{");
       for (GoloFunction func : augment.getFunctions()) {
+        func.accept(this);
+      }
+      endBlock("}");
+    }
+  }
+
+  @Override
+  public void visitNamedAugmentation(NamedAugmentation augmentation) {
+    if (augmentation.hasFunctions()) {
+      blankLine();
+      printf("augmentation %s = ", augmentation.getName());
+      beginBlock("{");
+      for (GoloFunction func : augmentation.getFunctions()) {
         func.accept(this);
       }
       endBlock("}");
@@ -233,23 +250,17 @@ public class GoloPrettyPrinter implements GoloIrVisitor {
     }
   }
 
-  private void visitClosureExpression(GoloFunction function) {
-    inFunctionRoot = true;
-    if (function.getSyntheticParameterCount() == 0) {
-      printFunctionExpression(function);
-    } else {
-      printFunctionParams(function);
-      function.getBlock().accept(this);
-    }
-  }
-
   private void printFunctionParams(GoloFunction function) {
-    int realArity = function.getArity() - function.getSyntheticParameterCount();
+    int startArguments = 0;
+    if (!expanded) {
+      startArguments = function.getSyntheticParameterCount();
+    }
+    int realArity = function.getArity() - startArguments;
     if (realArity != 0) { 
       print("|"); 
     }
     join(function.getParameterNames().subList(
-        function.getSyntheticParameterCount(),
+        startArguments,
         function.getArity()) , ", ");
     if (function.isVarargs()) { 
       print("..."); 
@@ -378,16 +389,25 @@ public class GoloPrettyPrinter implements GoloIrVisitor {
 
   @Override
   public void visitFunctionInvocation(FunctionInvocation functionInvocation) {
-    if (functionInvocation.isAnonymous()) {
-      print(")(");
-    } else {
-      print(functionInvocation.getName() + "(");
+    if (!functionInvocation.isAnonymous()) {
+      print(functionInvocation.getName());
     }
-    joinedVisit(functionInvocation.getArguments(), ", ");
+    printInvocationArguments(functionInvocation.getArguments());
     for (FunctionInvocation invocation : functionInvocation.getAnonymousFunctionInvocations()) {
       invocation.accept(this);
     }
-    if (!functionInvocation.isAnonymous()) { print(")"); }
+  }
+
+  private void printInvocationArguments(List<ExpressionStatement> arguments) {
+    if (arguments.size() < COLLECTION_WRAPPING_THRESHOLD) {
+      print("(");
+      joinedVisit(arguments, ", ");
+      print(")");
+    } else {
+      beginBlock("(");
+      joinedVisit(arguments, ",\n");
+      endBlock(")");
+    }
   }
 
   @Override
@@ -468,7 +488,7 @@ public class GoloPrettyPrinter implements GoloIrVisitor {
     visitForEachParam(loop);
     print(" in ");
     visitForEarchCollection(loop);
-    beginBlock("{");
+    beginBlock(" {");
     List<GoloStatement> statements = loop.getBlock().getStatements();
     for (GoloStatement st : statements.subList(1, statements.size())) {
       space();
@@ -534,12 +554,11 @@ public class GoloPrettyPrinter implements GoloIrVisitor {
 
   @Override
   public void visitMethodInvocation(MethodInvocation methodInvocation) {
-    print(methodInvocation.getName() + "(");
-    joinedVisit(methodInvocation.getArguments(), ", ");
+    print(methodInvocation.getName());
+    printInvocationArguments(methodInvocation.getArguments());
     for (FunctionInvocation invocation : methodInvocation.getAnonymousFunctionInvocations()) {
       invocation.accept(this);
     }
-    print(")");
   }
 
   @Override
@@ -565,10 +584,14 @@ public class GoloPrettyPrinter implements GoloIrVisitor {
   @Override
   public void visitClosureReference(ClosureReference closureReference) {
     if (expanded) {
-      // TODO: bind the captured parameters ?
       print("^" + closureReference.getTarget().getName());
+      if (closureReference.getTarget().getSyntheticParameterCount() > 0) {
+        print(": insertArguments(0, ");
+        join(closureReference.getTarget().getSyntheticParameterNames(), ", ");
+        print(")");
+      }
     } else {
-      visitClosureExpression(closureReference.getTarget());
+      printFunctionExpression(closureReference.getTarget());
     }
   }
 
@@ -596,7 +619,6 @@ public class GoloPrettyPrinter implements GoloIrVisitor {
 
   @Override
   public void visitMacroInvocation(MacroInvocation macroInvocation) {
-    // TODO: prettyPrint macro invocation
     LinkedList<ExpressionStatement> arguments = new LinkedList<>(macroInvocation.getArguments());
     Block blockArgument = null;
     if (arguments.getLast() instanceof Block) {
@@ -605,9 +627,7 @@ public class GoloPrettyPrinter implements GoloIrVisitor {
     print("&" + macroInvocation.getName());
     if (!arguments.isEmpty() || blockArgument == null) {
       if (blockArgument != null) { print(" "); }
-      print("(");
-      joinedVisit(arguments, ", ");
-      print(")");
+      printInvocationArguments(arguments);
     }
     if (blockArgument != null) {
       print(" ");

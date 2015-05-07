@@ -49,6 +49,9 @@ public abstract class DummyIrVisitor implements GoloIrVisitor {
     for (Augmentation augmentation : module.getFullAugmentations()) {
       augmentation.accept(this);
     }
+    for (NamedAugmentation augmentation : module.getFullNamedAugmentations()) {
+      augmentation.accept(this);
+    }
     for (Collection<GoloFunction> functions : module.getNamedAugmentations().values()) {
       for (GoloFunction function : functions) {
         function.accept(this);
@@ -58,7 +61,13 @@ public abstract class DummyIrVisitor implements GoloIrVisitor {
 
   @Override
   public void visitAugmentation(Augmentation augment) {
-    // TODO: dummy augment visit
+    for (GoloFunction func : augment.getFunctions()) {
+      func.accept(this);
+    }
+  }
+
+  @Override
+  public void visitNamedAugmentation(NamedAugmentation augment) {
     for (GoloFunction func : augment.getFunctions()) {
       func.accept(this);
     }

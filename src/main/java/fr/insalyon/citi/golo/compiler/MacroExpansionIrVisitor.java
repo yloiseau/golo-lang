@@ -118,7 +118,7 @@ public class MacroExpansionIrVisitor extends DummyIrVisitor {
       relinkReferenceTables(expanded, blockStack.peek());
       expanded.replaceInParent(macroInvocation, elements.peek());
     } else {
-      elements.peek().replaceElement(macroInvocation, 
+      elements.peek().replaceElement(macroInvocation,
           new Noop("macro '" + macroInvocation.getName() + "' expanded without results"));
     }
   }
@@ -145,6 +145,7 @@ public class MacroExpansionIrVisitor extends DummyIrVisitor {
   private GoloElement useMacro(List<ExpressionStatement> args) {
     for (ExpressionStatement arg : args) {
       macroClasses.add(0, ((ConstantStatement) arg).getValue().toString());
+      macroClasses.add(0, ((ConstantStatement) arg).getValue().toString() + MACROCLASS);
     }
     return null;
   }
