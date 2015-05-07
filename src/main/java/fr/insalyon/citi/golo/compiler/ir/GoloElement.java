@@ -51,7 +51,6 @@ public abstract class GoloElement {
     return new PositionInSourceCode(node.jjtGetFirstToken().beginLine, node.jjtGetFirstToken().beginColumn);
   }
 
-  @Override
   public void accept(GoloIrVisitor visitor) { };
 
   public void replaceElement(GoloElement original, GoloElement newElement) {

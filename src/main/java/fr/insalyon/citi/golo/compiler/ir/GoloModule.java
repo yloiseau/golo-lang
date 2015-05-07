@@ -211,8 +211,10 @@ public final class GoloModule extends GoloElement {
     }
   }
 
-  public void addUnion(Union e) {
-    unions.add(e);
+  public void addUnion(Union union) {
+    unions.add(union);
+    union.setModuleName(this.getPackageAndClass());
+    this.addImport(new ModuleImport(union.getPackageAndClass()));
   }
 
   public void addLocalState(LocalReference reference) {

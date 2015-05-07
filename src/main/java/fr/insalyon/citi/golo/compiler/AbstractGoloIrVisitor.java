@@ -80,6 +80,9 @@ public abstract class AbstractGoloIrVisitor implements GoloIrVisitor {
   public void visitStruct(Struct struct) { }
 
   @Override
+  public void visitUnion(Union union) { }
+
+  @Override
   public void visitFunction(GoloFunction function) {
     function.getBlock().accept(this);
   }

@@ -22,6 +22,8 @@ public interface GoloIrVisitor {
 
   void visitStruct(Struct struct);
 
+  void visitUnion(Union union);
+
   void visitAugmentation(Augmentation augment);
 
   void visitNamedAugmentation(NamedAugmentation augment);

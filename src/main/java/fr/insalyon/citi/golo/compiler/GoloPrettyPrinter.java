@@ -173,6 +173,9 @@ public class GoloPrettyPrinter implements GoloIrVisitor {
     for (Struct struct : module.getStructs()) {
       struct.accept(this);
     }
+    for (Union union : module.getUnions()) {
+      union.accept(this);
+    }
     for (NamedAugmentation augmentation : module.getFullNamedAugmentations()) {
       augmentation.accept(this);
     }
@@ -238,7 +241,29 @@ public class GoloPrettyPrinter implements GoloIrVisitor {
       print("{ ");
       join(struct.getMembers(), ", ");
       println(" }");
-    } 
+    }
+  }
+
+  @Override
+  public void visitUnion(Union union) {
+    blankLine();
+    print("union " + union.getPackageAndClass().className() + " = ");
+    beginBlock("{");
+    for (Union.Value value : union.getValues()) {
+      newlineIfNeeded();
+      printUnionValue(value);
+    }
+    endBlock("}");
+  }
+
+  private void printUnionValue(Union.Value value) {
+    space();
+    print(value.getName());
+    if (value.hasMembers()) {
+      print(" = { ");
+      join(value.getMembers(), ", ");
+      println(" }");
+    }
   }
 
   @Override

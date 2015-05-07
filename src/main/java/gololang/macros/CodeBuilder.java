@@ -925,6 +925,37 @@ public final class CodeBuilder {
     return new StructBuilder();
   }
 
+  public static final class UnionBuilder implements IrNodeBuilder<Union> {
+    private Map<String, List<String>> values = new LinkedHashMap<>();
+    private String name;
+
+    public UnionBuilder name(String name) {
+      this.name = name;
+      return this;
+    }
+
+    public UnionBuilder value(String name, String... members) {
+      values.put(name, asList(members));
+      return this;
+    }
+
+    @Override
+    public Union build() {
+      if (name == null || values.isEmpty()) {
+        throw new IllegalStateException("UnionBuilder not initialized");
+      }
+      Union union = new Union(name);
+      for (String value : values.keySet()) {
+        union.addValue(value, values.get(value));
+      }
+      return union;
+    }
+  }
+
+  public static UnionBuilder unionType() {
+    return new UnionBuilder();
+  }
+
   public static TopLevelElements toplevel(Object... content) {
     TopLevelElements topLevel = new TopLevelElements();
     for (Object element : content) {

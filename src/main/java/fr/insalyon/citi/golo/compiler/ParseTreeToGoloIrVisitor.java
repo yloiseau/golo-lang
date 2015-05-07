@@ -129,14 +129,9 @@ class ParseTreeToGoloIrVisitor implements GoloParserVisitor {
   public Object visit(ASTUnionDeclaration node, Object data) {
     Context context = (Context) data;
     GoloModule module = context.module;
-
-    PackageAndClass unionClass = new PackageAndClass(
-        module.getPackageAndClass().toString() + ".types",
-        node.getName());
-    Union currentUnion = new Union(unionClass);
+    Union currentUnion = new Union(node.getName());
     context.currentUnion = currentUnion ;
     module.addUnion(currentUnion);
-    module.addImport(new ModuleImport(unionClass));
     return node.childrenAccept(this, data);
   }
 

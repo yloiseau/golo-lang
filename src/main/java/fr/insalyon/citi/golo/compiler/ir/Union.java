@@ -23,22 +23,20 @@ import java.util.Set;
 import java.util.LinkedHashSet;
 import static java.util.Collections.unmodifiableSet;
 
-public final class Union {
+public final class Union extends GoloElement {
 
   public static final class Value {
     private final String name;
     private final Union union;
-    private final PackageAndClass packageAndClass;
     private final Set<String> members = new LinkedHashSet<>();
 
     public Value(Union union, String name) {
       this.name = name;
       this.union = union;
-      this.packageAndClass = union.getPackageAndClass().createInnerClass(name);
     }
 
     public PackageAndClass getPackageAndClass() {
-      return packageAndClass;
+      return union.getPackageAndClass().createInnerClass(name);
     }
 
     public Union getUnion() {
@@ -62,15 +60,20 @@ public final class Union {
     }
   }
 
-  private final PackageAndClass packageAndClass;
+  private  PackageAndClass moduleName;
+  private final String name;
   private final Set<Value> values = new LinkedHashSet<>();
 
-  public Union(PackageAndClass packageAndClass) {
-    this.packageAndClass = packageAndClass;
+  public Union(String name) {
+    this.name = name;
   }
 
   public PackageAndClass getPackageAndClass() {
-    return packageAndClass;
+    return new PackageAndClass(moduleName.toString() + ".types", name);
+  }
+
+  public void setModuleName(PackageAndClass module) {
+    this.moduleName = module;
   }
 
   public void addValue(String name, Collection<String> members) {
@@ -81,5 +84,19 @@ public final class Union {
 
   public Collection<Value> getValues() {
     return unmodifiableSet(this.values);
+  }
+
+  @Override
+  public void replaceInParent(GoloElement original, GoloElement parent) {
+    if (parent instanceof GoloModule) {
+      ((GoloModule) parent).addUnion(this);
+    } else {
+      super.replaceInParent(original, parent);
+    }
+  }
+
+  @Override
+  public void accept(GoloIrVisitor visitor) {
+    visitor.visitUnion(this);
   }
 }

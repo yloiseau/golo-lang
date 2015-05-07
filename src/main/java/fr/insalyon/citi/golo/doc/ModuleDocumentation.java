@@ -22,20 +22,6 @@ import fr.insalyon.citi.golo.compiler.utils.AbstractRegister;
 
 import java.util.*;
 
-class FunctionDocumentationsRegister extends AbstractRegister<String, FunctionDocumentation> {
-  private static final long serialVersionUID = 1L;
-
-  @Override
-  protected Set<FunctionDocumentation> emptyValue() {
-    return new TreeSet<>();
-  }
-
-  @Override
-  protected Map<String, Set<FunctionDocumentation>> initMap() {
-    return new TreeMap<>();
-  }
-}
-
 class ModuleDocumentation implements DocumentationElement {
 
   private String moduleName;
