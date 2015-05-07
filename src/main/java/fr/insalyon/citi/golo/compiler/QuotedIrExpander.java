@@ -35,7 +35,7 @@ import static fr.insalyon.citi.golo.runtime.OperatorType.*;
  * This visitor walk the IR tree and replace {@code QuotedBlock}s with calls to the
  * {@code IrBuilder} methods that build the equivalent IR when evaluated.
  */
-class QuotedIrExpander extends DummyIrVisitor {
+class QuotedIrExpander extends AbstractGoloIrVisitor {
   private static final String BUILDER = "gololang.macros.CodeBuilder.";
   private static final String UTILS = "gololang.macros.Utils.";
   private static final String OPERATORS = "fr.insalyon.citi.golo.runtime.OperatorType.";

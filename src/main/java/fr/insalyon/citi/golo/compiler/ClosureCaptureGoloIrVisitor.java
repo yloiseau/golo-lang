@@ -20,7 +20,7 @@ import fr.insalyon.citi.golo.compiler.ir.*;
 
 import java.util.*;
 
-class ClosureCaptureGoloIrVisitor extends DummyIrVisitor {
+class ClosureCaptureGoloIrVisitor extends AbstractGoloIrVisitor {
 
   class Context {
     final Set<String> parameterReferences = new HashSet<>();

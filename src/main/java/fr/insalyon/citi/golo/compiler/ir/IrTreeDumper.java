@@ -16,11 +16,11 @@
 
 package fr.insalyon.citi.golo.compiler.ir;
 
-import fr.insalyon.citi.golo.compiler.DummyIrVisitor;
+import fr.insalyon.citi.golo.compiler.AbstractGoloIrVisitor;
 
 import java.util.Set;
 
-public class IrTreeDumper extends DummyIrVisitor {
+public class IrTreeDumper extends AbstractGoloIrVisitor {
 
   private int spacing = 0;
 

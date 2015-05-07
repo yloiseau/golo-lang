@@ -35,7 +35,7 @@ import static org.objectweb.asm.ClassWriter.COMPUTE_FRAMES;
 import static org.objectweb.asm.ClassWriter.COMPUTE_MAXS;
 import static org.objectweb.asm.Opcodes.*;
 
-class JavaBytecodeGenerationGoloIrVisitor extends DummyIrVisitor {
+class JavaBytecodeGenerationGoloIrVisitor extends AbstractGoloIrVisitor {
 
   private static final String JOBJECT = "java/lang/Object";
   private static final String TOBJECT = "Ljava/lang/Object;";

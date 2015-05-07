@@ -21,13 +21,13 @@ import java.util.Collection;
 import fr.insalyon.citi.golo.compiler.ir.*;
 
 /**
- * Dummy IR Visitor.
+ * Abstract IR Visitor.
  * <p>
  * This visitor walk the IR tree, but do nothing. It can be used to implement specific IR
  * visitors by overriding only the specific methods, like for example the ones used in the
  * compilation check and transformation step.
  */
-public abstract class DummyIrVisitor implements GoloIrVisitor {
+public abstract class AbstractGoloIrVisitor implements GoloIrVisitor {
 
   @Override
   public void visitModule(GoloModule module) {
@@ -196,6 +196,7 @@ public abstract class DummyIrVisitor implements GoloIrVisitor {
 
   @Override
   public void visitClosureReference(ClosureReference closureReference) {
+    // TODO: visit closure references in AbstractGoloIrVisitor
     //closureReference.getTarget().accept(this);
   }
 

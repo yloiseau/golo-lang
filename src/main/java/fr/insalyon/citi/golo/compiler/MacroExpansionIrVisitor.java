@@ -51,7 +51,7 @@ import static gololang.macros.Utils.*;
  * Macros functions are looked up in the current module, in modules imported by the current one, in modules specified
  * via the {@code use} special macro and in modules in {@code globalMacroClasses}, in that order.
  */
-public class MacroExpansionIrVisitor extends DummyIrVisitor {
+public class MacroExpansionIrVisitor extends AbstractGoloIrVisitor {
 
   private static final String MACROCLASS = ".Macros";
   public static final List<String> SPECIAL = java.util.Arrays.asList("use");

@@ -26,7 +26,7 @@ import java.util.Collection;
 
 import static fr.insalyon.citi.golo.compiler.GoloCompilationException.Problem.Type.*;
 
-class LocalReferenceAssignmentAndVerificationVisitor extends DummyIrVisitor {
+class LocalReferenceAssignmentAndVerificationVisitor extends AbstractGoloIrVisitor {
 
   private GoloModule module = null;
   private AssignmentCounter assignmentCounter = new AssignmentCounter();
