@@ -115,7 +115,9 @@ class JavaBytecodeGenerationGoloIrVisitor extends AbstractGoloIrVisitor {
     klass = module.getPackageAndClass().toString();
     jvmKlass = module.getPackageAndClass().toJVMType();
     //if (onlyMacros) {
+    if (!module.getMacros().isEmpty()) {
       generateMacroBytecode(module);
+    }
     //} else {
       for (GoloFunction function : module.getFunctions()) {
         function.accept(this);
