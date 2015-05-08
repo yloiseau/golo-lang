@@ -16,7 +16,7 @@
 
 package fr.insalyon.citi.golo.compiler.ir;
 
-public class LoopStatement extends GoloStatement {
+public class LoopStatement extends GoloStatement implements Scope {
 
   private final AssignmentStatement initStatement;
   private final ExpressionStatement conditionStatement;
@@ -58,5 +58,10 @@ public class LoopStatement extends GoloStatement {
   @Override
   public void accept(GoloIrVisitor visitor) {
     visitor.visitLoopStatement(this);
+  }
+
+  @Override
+  public void relink(ReferenceTable table) {
+    block.relink(table);
   }
 }

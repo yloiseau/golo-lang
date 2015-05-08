@@ -20,6 +20,7 @@ public class ASTMacroInvocation extends GoloASTNode implements NamedNode {
 
   private String name;
   private boolean topLevel = false;
+  private boolean onContext = false;
 
   public ASTMacroInvocation(int id) {
     super(id);
@@ -45,6 +46,14 @@ public class ASTMacroInvocation extends GoloASTNode implements NamedNode {
 
   public boolean isTopLevel() {
     return topLevel;
+  }
+
+  public void setOnContext(boolean v) {
+    onContext = v;
+  }
+
+  public boolean isOnContext() {
+    return onContext;
   }
   
   @Override

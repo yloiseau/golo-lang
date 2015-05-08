@@ -206,7 +206,7 @@ TOKEN :
   |
   < UNQUOTE: "unquote" >
   |
-  < MACRO_INVOCATION: "&" >
+  < MACRO_INVOCATION: ("&" | "&:") >
   |
   < UNQUOTE_LITERAL: "~" >
   |
@@ -1174,13 +1174,17 @@ void UnquotedExpression(): {}
 ASTMacroInvocation MacroInvocation():
 {
   String name;
+  Token token;
 }
 {
-  <MACRO_INVOCATION> name=QualifiedName()
+  token=<MACRO_INVOCATION> name=QualifiedName()
   ("(" (BlankLine())? (Expressions())? ")")?
   (Block())?
   {
     jjtThis.setName(name);
+    if ("&:".equals(token.image)) {
+      jjtThis.setOnContext(true);
+    }
     return jjtThis;
   }
 }

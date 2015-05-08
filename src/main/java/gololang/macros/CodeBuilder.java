@@ -19,6 +19,7 @@ package gololang.macros;
 import fr.insalyon.citi.golo.compiler.ir.*;
 import fr.insalyon.citi.golo.runtime.OperatorType;
 import fr.insalyon.citi.golo.compiler.parser.GoloParser;
+import fr.insalyon.citi.golo.compiler.PackageAndClass;
 
 import java.util.List;
 import java.util.LinkedList;
@@ -57,20 +58,24 @@ public final class CodeBuilder {
       return this; 
     }
 
-    public BlockBuilder add(Object statement) {
-      GoloStatement stat = toGoloStatement(statement);
-      if (stat instanceof AssignmentStatement) {
-        AssignmentStatement assign = (AssignmentStatement) stat;
+    private void updateRefs(GoloStatement statement) {
+      if (statement instanceof AssignmentStatement) {
+        AssignmentStatement assign = (AssignmentStatement) statement;
         if (assign.isDeclaring()) {
           ref.add(assign.getLocalReference());
         }
       }
-      if (stat instanceof LoopStatement) {
-        LoopStatement loop = (LoopStatement) stat;
+      if (statement instanceof LoopStatement) {
+        LoopStatement loop = (LoopStatement) statement;
         if (loop.hasInitStatement()) {
           ref.add(loop.getInitStatement().getLocalReference());
         }
-      }
+      } 
+    }
+    
+    public BlockBuilder add(Object statement) {
+      GoloStatement stat = toGoloStatement(statement);
+      updateRefs(stat);
       relinkReferenceTables(stat, ref);
       statements.add(stat);
       return this;
@@ -1112,6 +1117,10 @@ public final class CodeBuilder {
 
   public static ForEachBuilder forEachLoop(String name) {
     return new ForEachBuilder().variable(name);
+  }
+
+  public static ModuleImport moduleImport(String name) {
+    return new ModuleImport(PackageAndClass.fromString(name));
   }
   
   // TODO: forLoop builder

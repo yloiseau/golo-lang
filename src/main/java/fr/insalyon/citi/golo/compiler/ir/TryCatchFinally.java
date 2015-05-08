@@ -16,7 +16,7 @@
 
 package fr.insalyon.citi.golo.compiler.ir;
 
-public class TryCatchFinally extends GoloStatement {
+public class TryCatchFinally extends GoloStatement implements Scope {
 
   private final String exceptionId;
   private final Block tryBlock;
@@ -31,13 +31,14 @@ public class TryCatchFinally extends GoloStatement {
     this.finallyBlock = finallyBlock;
   }
 
-  public void relinkInnerBlocks(ReferenceTable table) {
-    getTryBlock().getReferenceTable().relink(table);
+  @Override
+  public void relink(ReferenceTable table) {
+    getTryBlock().relink(table);
     if (hasCatchBlock()) {
-      getCatchBlock().getReferenceTable().relink(table);
+      getCatchBlock().relink(table);
     }
     if (hasFinallyBlock()) {
-      getFinallyBlock().getReferenceTable().relink(table);
+      getFinallyBlock().relink(table);
     }
   }
 

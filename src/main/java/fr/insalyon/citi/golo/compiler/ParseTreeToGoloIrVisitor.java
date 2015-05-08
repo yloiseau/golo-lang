@@ -25,7 +25,6 @@ import java.util.LinkedList;
 import java.util.List;
 
 import static gololang.macros.CodeBuilder.*;
-import static gololang.macros.Utils.relinkReferenceTables;
 import static gololang.macros.SymbolGenerator.gensym;
 
 import static fr.insalyon.citi.golo.compiler.GoloCompilationException.Problem.Type.UNDECLARED_REFERENCE;
@@ -613,6 +612,7 @@ class ParseTreeToGoloIrVisitor implements GoloParserVisitor {
   public Object visit(ASTMacroInvocation node, Object data) {
     Context context = (Context) data;
     MacroInvocation macroInvocation = new MacroInvocation(node.getName());
+    macroInvocation.setOnContext(node.isOnContext());
     node.setIrElement(macroInvocation);
     final int numChildren = node.jjtGetNumChildren();
     for (int i = 0; i < numChildren; i++) {
@@ -732,7 +732,7 @@ class ParseTreeToGoloIrVisitor implements GoloParserVisitor {
     node.jjtGetChild(node.jjtGetNumChildren() - 1).jjtAccept(this, data);
     matchBuilder.otherwiseValue(context.objectStack.pop());
     Block block = matchBuilder.build();
-    relinkReferenceTables(block, context.referenceTableStack.peek());
+    block.relink(context.referenceTableStack.peek());
     context.objectStack.push(block);
     node.setIrElement(block);
     return data;

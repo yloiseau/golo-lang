@@ -16,32 +16,14 @@
 
 package fr.insalyon.citi.golo.compiler.ir;
 
-public class MacroInvocation extends AbstractInvocation {
+/**
+ * Interface for all IR elements that have a scope (a {@link ReferenceTable})
+ * (or encapsulate something that have one).
+ */
+public interface Scope {
 
-  private boolean onContext = false;
-
-  public void setOnContext(boolean v) {
-    onContext = v;
-  }
-
-  public boolean isOnContext() {
-    return onContext;
-  }
-
-  public MacroInvocation(String name) {
-    super(name);
-  }
-
-  @Override
-  public void accept(GoloIrVisitor visitor) {
-    visitor.visitMacroInvocation(this);
-  }
-
-  @Override
-  public String toString() {
-    return "MacroInvocation{" +
-              "name=" + getName() +
-              ", onContext=" + isOnContext() +
-           "}";
-  }
+  /**
+   * Make the given table a parent of this scope.
+   */
+  void relink(ReferenceTable table);
 }

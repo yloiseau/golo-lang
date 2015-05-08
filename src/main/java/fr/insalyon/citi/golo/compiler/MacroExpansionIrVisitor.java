@@ -41,7 +41,6 @@ import static gololang.macros.Utils.*;
 // [x] predefined macros
 // [~] compiler option
 
-
 /**
  * Visitor to expand macro calls.
  * <p>
@@ -155,7 +154,7 @@ public class MacroExpansionIrVisitor extends AbstractGoloIrVisitor {
     if (isSpecial(invocation)) {
       result = expandSpecial(invocation);
     } else {
-      MethodHandle macro = findMacro(invocation.getName(), invocation.getArity());
+      MethodHandle macro = findMacro(invocation);
       try {
         result = toGoloElement(macro.invokeWithArguments(invocation.getArguments()));
       } catch (Throwable t) {
@@ -168,28 +167,37 @@ public class MacroExpansionIrVisitor extends AbstractGoloIrVisitor {
     return result;
   }
 
-  private MethodHandle findMacro(String name, int arity) {
-    String methodName = name;
+  private MethodHandle findMacro(MacroInvocation invocation) {
+    String methodName = invocation.getName();
+    int arity = invocation.getArity();
+    if (invocation.isOnContext()) {
+      arity = arity + 1;
+    }
     List<String> classNames = new LinkedList<>();
-    int methodClassSeparatorIndex = name.lastIndexOf(".");
+    int methodClassSeparatorIndex = methodName.lastIndexOf(".");
     if (methodClassSeparatorIndex >= 0) {
-      String prefix = name.substring(0, methodClassSeparatorIndex);
+      String prefix = methodName.substring(0, methodClassSeparatorIndex);
       classNames.add(prefix);
       if (!prefix.endsWith(MACROCLASS)) {
         classNames.add(prefix + MACROCLASS);
       }
-      methodName = name.substring(methodClassSeparatorIndex + 1);
+      methodName = methodName.substring(methodClassSeparatorIndex + 1);
     }
     classNames.addAll(macroClasses);
     boolean vararg;
+    MethodHandle method = null;
     for (String className : classNames) {
       vararg = false;
       for (int i = arity; i >= 0; i--) {
         try {
-          return publicLookup().findStatic(
+          method = publicLookup().findStatic(
               Class.forName(className),
               methodName,
               genericMethodType(i, vararg));
+          if (invocation.isOnContext()) {
+            method = method.bindTo(elements.peek());
+          }
+          return method;
         } catch (Throwable ignored) { }
         if (!vararg) {
           vararg = true;
@@ -197,6 +205,7 @@ public class MacroExpansionIrVisitor extends AbstractGoloIrVisitor {
         }
       }
     }
-    throw new RuntimeException("failed to load macro: " + name);
+    throw new RuntimeException("failed to load macro: " + invocation
+        + " with arity " + arity);
   }
 }

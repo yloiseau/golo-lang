@@ -21,7 +21,7 @@ import java.util.List;
 
 import static java.util.Collections.unmodifiableList;
 
-public final class Block extends ExpressionStatement {
+public final class Block extends ExpressionStatement implements Scope {
 
   private final List<GoloStatement> statements = new LinkedList<>();
   private ReferenceTable referenceTable;
@@ -94,5 +94,10 @@ public final class Block extends ExpressionStatement {
    */
   public boolean isSimpleBlock() {
     return statements.size() == 1 && (statements.get(0) instanceof Block);
+  }
+
+  @Override
+  public void relink(ReferenceTable table) {
+    this.referenceTable.relink(table);
   }
 }

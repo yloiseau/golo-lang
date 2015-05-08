@@ -36,6 +36,11 @@ public final class Utils {
     }
   }
 
+  private static String cantConvert(Object value, String target) {
+    return String.format("%s is not a %s nor a IrNodeBuilder, but a %s",
+        value, target, value.getClass());
+  }
+
   public static ExpressionStatement toExpression(Object expression) {
     if (expression == null) { return null; }
     if (expression instanceof ExpressionStatement) {
@@ -44,7 +49,7 @@ public final class Utils {
     if (expression instanceof CodeBuilder.IrNodeBuilder) {
       return (ExpressionStatement) ((CodeBuilder.IrNodeBuilder) expression).build();
     }
-    throw new IllegalArgumentException(expression + " is not a ExpressionStatement nor a IrNodeBuilder");
+    throw new IllegalArgumentException(cantConvert(expression, "ExpressionStatement"));
   }
 
   public static GoloStatement toGoloStatement(Object statement) {
@@ -55,7 +60,7 @@ public final class Utils {
     if (statement instanceof CodeBuilder.IrNodeBuilder) {
       return (GoloStatement) ((CodeBuilder.IrNodeBuilder) statement).build();
     }
-    throw new IllegalArgumentException(statement + " is not a GoloStatement nor a IrNodeBuilder");
+    throw new IllegalArgumentException(cantConvert(statement, "GoloStatement"));
   }
 
   public static GoloElement toGoloElement(Object element) {
@@ -66,8 +71,7 @@ public final class Utils {
     if (element instanceof CodeBuilder.IrNodeBuilder) {
       return (GoloElement) ((CodeBuilder.IrNodeBuilder) element).build();
     }
-    throw new IllegalArgumentException(element + " is not a GoloElement nor a IrNodeBuilder");
-
+    throw new IllegalArgumentException(cantConvert(element, "GoloElement"));
   }
 
   public static Block toBlock(Object block) {
@@ -78,20 +82,13 @@ public final class Utils {
     if (block instanceof CodeBuilder.IrNodeBuilder) {
       return (Block) ((CodeBuilder.IrNodeBuilder) block).build();
     }
-    throw new IllegalArgumentException(block + " is not a Block nor a IrNodeBuilder");
+    throw new IllegalArgumentException(cantConvert(block, "Block"));
   }
 
-  // TODO: create an interface 'Linkable.relink' and use polymorphism
+  // TODO: create an interface 'Scope.relink' and use polymorphism
   public static void relinkReferenceTables(GoloElement element, ReferenceTable table) {
-    if (table == null) { return; }
-    if (element instanceof Block) {
-      ((Block) element).getReferenceTable().relink(table);
-    } else if (element instanceof ConditionalBranching) {
-      ((ConditionalBranching) element).relinkInnerBlocks(table);
-    } else if (element instanceof LoopStatement) {
-      ((LoopStatement) element).getBlock().getReferenceTable().relink(table);
-    } else if (element instanceof TryCatchFinally) {
-      ((TryCatchFinally) element).relinkInnerBlocks(table);
+    if (table != null && element instanceof Scope) {
+      ((Scope) element).relink(table);
     }
   }
 

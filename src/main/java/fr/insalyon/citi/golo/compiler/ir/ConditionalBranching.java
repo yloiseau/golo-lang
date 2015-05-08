@@ -16,7 +16,7 @@
 
 package fr.insalyon.citi.golo.compiler.ir;
 
-public final class ConditionalBranching extends GoloStatement {
+public final class ConditionalBranching extends GoloStatement implements Scope {
 
   private final ExpressionStatement condition;
   private final Block trueBlock;
@@ -39,13 +39,14 @@ public final class ConditionalBranching extends GoloStatement {
     this.falseBlock = null;
   }
 
-  public void relinkInnerBlocks(ReferenceTable table) {
-    getTrueBlock().getReferenceTable().relink(table);
+  @Override
+  public void relink(ReferenceTable table) {
+    getTrueBlock().relink(table);
     if (hasFalseBlock()) {
-      getFalseBlock().getReferenceTable().relink(table);
+      getFalseBlock().relink(table);
     }
     if (hasElseConditionalBranching()) {
-      getElseConditionalBranching().relinkInnerBlocks(table);
+      getElseConditionalBranching().relink(table);
     }
   }
 
