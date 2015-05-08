@@ -55,7 +55,7 @@ _golo ()
 			return 0
 			;;
 		--tool)
-			COMPREPLY=( $( compgen -W 'ast ir' -- "$cur" ) )
+			COMPREPLY=( $( compgen -W 'ast ir pp ppe' -- "$cur" ) )
 			return 0
 			;;
 		--type)
@@ -71,7 +71,7 @@ _golo ()
 	# We know a special, but we're looking to learn the flags.
 	case "${special}" in
 		compile)
-			COMPREPLY=( $( compgen -W '--output' -- "$cur" ) )
+			COMPREPLY=( $( compgen -W '--output --macros' -- "$cur" ) )
 			;;
 		version)
 			COMPREPLY=( $( compgen -W '--full' -- "$cur" ) )
@@ -80,10 +80,10 @@ _golo ()
 			COMPREPLY=( $( compgen -W '--module --classpath' -- "$cur" ) )
 			;;
 		golo)
-			COMPREPLY=( $( compgen -W '--files --args --classpath --module' -- "$cur" ) )
+			COMPREPLY=( $( compgen -W '--files --args --classpath --module --macros' -- "$cur" ) )
 			;;
 		diagnose)
-			COMPREPLY=( $( compgen -W '--tool' -- "$cur" ) )
+			COMPREPLY=( $( compgen -W '--tool --macros' -- "$cur" ) )
 			;;
 		new)
 			COMPREPLY=( $( compgen -W '--type --path' -- "$cur" ) )

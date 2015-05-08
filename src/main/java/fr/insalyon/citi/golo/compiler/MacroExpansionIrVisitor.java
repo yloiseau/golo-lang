@@ -34,12 +34,6 @@ import static gololang.macros.Utils.*;
 
 // TODO: use exception builder instead of throwing exceptions if user error
 // TODO: add a cache of the found macros ?
-// TODO: non FQN macro finder:
-// [x] current module
-// [x] imported modules
-// [x] special macros
-// [x] predefined macros
-// [~] compiler option
 
 /**
  * Visitor to expand macro calls.
@@ -58,16 +52,27 @@ public class MacroExpansionIrVisitor extends AbstractGoloIrVisitor {
   private Deque<Block> blockStack = new LinkedList<>();
   private boolean recur = true;
   private List<String> macroClasses = new LinkedList<>();
-  private List<String> globalMacroClasses = new LinkedList<>(asList(
+  private static List<String> globalMacroClasses = new LinkedList<>(asList(
     "gololang.macros.Predefined"
   ));
 
-  public void addGlobalMacroClass(String name) {
-    globalMacroClasses.add(name);
+  private static void addMacroClass(List<String> to, int index, String name) {
+    to.add(index, name);
+    if (!name.endsWith(MACROCLASS)) {
+      to.add(index + 1, name + MACROCLASS);
+    }
   }
 
-  public void addGlobalMacroClasses(Collection<String> names) {
-    globalMacroClasses.addAll(names);
+  public static void addGlobalMacroClass(String name) {
+    addMacroClass(globalMacroClasses, 0, name);
+  }
+
+  public static void addGlobalMacroClasses(Collection<String> names) {
+    int i = 0;
+    for (String name : names) {
+      addMacroClass(globalMacroClasses, i, name);
+      i += 2;
+    }
   }
 
   @Override
@@ -92,11 +97,9 @@ public class MacroExpansionIrVisitor extends AbstractGoloIrVisitor {
     macroClasses.clear();
     macroClasses.addAll(globalMacroClasses);
     for (ModuleImport mod : module.getImports()) {
-      macroClasses.add(0, mod.getPackageAndClass().toString());
-      macroClasses.add(0, mod.getPackageAndClass().toString() + MACROCLASS);
+      addMacroClass(macroClasses, 0, mod.getPackageAndClass().toString());
     }
-    macroClasses.add(0, module.getPackageAndClass().toString()  + MACROCLASS);
-    macroClasses.add(0, module.getPackageAndClass().toString());
+    addMacroClass(macroClasses, 0, module.getPackageAndClass().toString());
   }
 
   @Override
@@ -143,8 +146,7 @@ public class MacroExpansionIrVisitor extends AbstractGoloIrVisitor {
 
   private GoloElement useMacro(List<ExpressionStatement> args) {
     for (ExpressionStatement arg : args) {
-      macroClasses.add(0, ((ConstantStatement) arg).getValue().toString());
-      macroClasses.add(0, ((ConstantStatement) arg).getValue().toString() + MACROCLASS);
+      addMacroClass(macroClasses, 0, ((ConstantStatement) arg).getValue().toString());
     }
     return null;
   }
@@ -176,11 +178,7 @@ public class MacroExpansionIrVisitor extends AbstractGoloIrVisitor {
     List<String> classNames = new LinkedList<>();
     int methodClassSeparatorIndex = methodName.lastIndexOf(".");
     if (methodClassSeparatorIndex >= 0) {
-      String prefix = methodName.substring(0, methodClassSeparatorIndex);
-      classNames.add(prefix);
-      if (!prefix.endsWith(MACROCLASS)) {
-        classNames.add(prefix + MACROCLASS);
-      }
+      addMacroClass(classNames, 0, methodName.substring(0, methodClassSeparatorIndex));
       methodName = methodName.substring(methodClassSeparatorIndex + 1);
     }
     classNames.addAll(macroClasses);
@@ -206,6 +204,6 @@ public class MacroExpansionIrVisitor extends AbstractGoloIrVisitor {
       }
     }
     throw new RuntimeException("failed to load macro: " + invocation
-        + " with arity " + arity);
+        + " with arity " + arity + " in classes " + classNames);
   }
 }

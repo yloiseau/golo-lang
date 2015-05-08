@@ -22,6 +22,7 @@ import fr.insalyon.citi.golo.compiler.GoloClassLoader;
 import fr.insalyon.citi.golo.compiler.GoloCompilationException;
 import fr.insalyon.citi.golo.compiler.GoloCompiler;
 import fr.insalyon.citi.golo.compiler.GoloPrettyPrinter;
+import fr.insalyon.citi.golo.compiler.MacroExpansionIrVisitor;
 import fr.insalyon.citi.golo.compiler.ir.GoloModule;
 import fr.insalyon.citi.golo.compiler.ir.IrTreeDumper;
 import fr.insalyon.citi.golo.compiler.parser.ASTCompilationUnit;
@@ -42,6 +43,7 @@ import java.util.*;
 
 import static java.lang.invoke.MethodHandles.publicLookup;
 import static java.lang.invoke.MethodType.methodType;
+import static java.util.Arrays.asList;
 
 public class Main {
 
@@ -71,11 +73,19 @@ public class Main {
     boolean full = false;
   }
 
+  private static class MacrosOptions {
+    @Parameter(names = "--macros", description = "A list of additional classes to search macros into (module names, separated by [,;:], can be repeated)")
+    List<String> classes = new LinkedList<>();
+  }
+
   @Parameters(commandDescription = "Compiles Golo source files")
   static class CompilerCommand {
 
     @Parameter(names = "--output", description = "The compiled classes output directory")
     String output = ".";
+
+    @ParametersDelegate
+    MacrosOptions macrosOptions = new MacrosOptions();
 
     @Parameter(description = "Golo source files (*.golo)")
     List<String> sources = new LinkedList<>();
@@ -108,17 +118,22 @@ public class Main {
 
     @Parameter(names = "--classpath", variableArity = true, description = "Classpath elements (.jar and directories)")
     List<String> classpath = new LinkedList<>();
+
+    @ParametersDelegate
+    MacrosOptions macrosOptions = new MacrosOptions();
   }
 
   @Parameters(commandDescription = "Diagnosis for the Golo compiler internals")
   static class DiagnoseCommand {
 
-    // TODO: update de shell completion
     @Parameter(names = "--tool", description = "The diagnosis tool to use: {ast, ir, pp, ppe}", validateWith = DiagnoseModeValidator.class)
     String mode = "ir";
 
     @Parameter(description = "Golo source files (*.golo and directories)")
     List<String> files = new LinkedList<>();
+
+    @ParametersDelegate
+    MacrosOptions macrosOptions = new MacrosOptions();
   }
 
   @Parameters(commandDescription = "Generate new Golo projects")
@@ -243,7 +258,14 @@ public class Main {
     }
   }
 
+  private static void loadMacros(MacrosOptions options) {
+    for (String macros : options.classes) {
+      MacroExpansionIrVisitor.addGlobalMacroClasses(asList(macros.split("[,;:]")));
+    }
+  }
+
   private static void diagnose(DiagnoseCommand diagnose) {
+    loadMacros(diagnose.macrosOptions);
     try {
       switch (diagnose.mode) {
         case "ast":
@@ -485,6 +507,7 @@ public class Main {
   private static void compile(CompilerCommand options) {
     GoloCompiler compiler = new GoloCompiler();
     File outputDir = new File(options.output);
+    loadMacros(options.macrosOptions);
     for (String source : options.sources) {
       File file = new File(source);
       try (FileInputStream in = new FileInputStream(file)) {
@@ -528,6 +551,7 @@ public class Main {
   }
 
   private static void golo(GoloGoloCommand gologolo) throws Throwable {
+    loadMacros(gologolo.macrosOptions);
     URLClassLoader primaryClassLoader = primaryClassLoader(gologolo.classpath);
     Thread.currentThread().setContextClassLoader(primaryClassLoader);
     GoloClassLoader loader = new GoloClassLoader(primaryClassLoader);
