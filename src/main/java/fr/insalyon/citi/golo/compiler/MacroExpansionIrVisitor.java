@@ -44,7 +44,7 @@ import static gololang.macros.Utils.*;
  * Macros functions are looked up in the current module, in modules imported by the current one, in modules specified
  * via the {@code use} special macro and in modules in {@code globalMacroClasses}, in that order.
  */
-public class MacroExpansionIrVisitor extends AbstractGoloIrVisitor {
+public final class MacroExpansionIrVisitor extends AbstractGoloIrVisitor {
 
   private static final String MACROCLASS = ".Macros";
   public static final List<String> SPECIAL = java.util.Arrays.asList("use");
@@ -55,6 +55,16 @@ public class MacroExpansionIrVisitor extends AbstractGoloIrVisitor {
   private static List<String> globalMacroClasses = new LinkedList<>(asList(
     "gololang.macros.Predefined"
   ));
+
+
+  public MacroExpansionIrVisitor(boolean recur) {
+    this.recur = recur;
+    initLookUp(null);
+  }
+
+  public MacroExpansionIrVisitor() {
+    this(true);
+  }
 
   private static void addMacroClass(List<String> to, int index, String name) {
     to.add(index, name);
@@ -86,6 +96,7 @@ public class MacroExpansionIrVisitor extends AbstractGoloIrVisitor {
 
   @Override
   public void visitModule(GoloModule module) {
+    initLookUp(module);
     addImportsToMacros(module);
     elements.push(module);
     super.visitModule(module);
@@ -93,9 +104,15 @@ public class MacroExpansionIrVisitor extends AbstractGoloIrVisitor {
     module.internTypesAugmentations();
   }
 
-  private void addImportsToMacros(GoloModule module) {
+  private void initLookUp(GoloModule module) {
     macroClasses.clear();
     macroClasses.addAll(globalMacroClasses);
+    if (module != null) {
+      addImportsToMacros(module);
+    }
+  }
+
+  private void addImportsToMacros(GoloModule module) {
     for (ModuleImport mod : module.getImports()) {
       addMacroClass(macroClasses, 0, mod.getPackageAndClass().toString());
     }

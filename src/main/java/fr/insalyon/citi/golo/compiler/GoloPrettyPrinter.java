@@ -51,6 +51,7 @@ public class GoloPrettyPrinter implements GoloIrVisitor {
   public GoloPrettyPrinter(boolean expanded) {
     super();
     this.expanded = expanded;
+    this.buffer = this.body;
   }
 
   private void print(Object o) {
@@ -58,16 +59,25 @@ public class GoloPrettyPrinter implements GoloIrVisitor {
   }
 
   private void newline() {
-    buffer.append('\n');
+    this.buffer.append('\n');
+  }
+
+  private boolean endsWithNewline(int offset) {
+    return (this.buffer.length() > offset
+            && this.buffer.charAt(this.buffer.length() - (offset + 1)) != '\n');
   }
 
   private void newlineIfNeeded() {
-    if (buffer.length() > 0 && buffer.charAt(buffer.length() - 1) != '\n') { buffer.append('\n'); }
+    if (endsWithNewline(0)) {
+      newline();
+    }
   }
 
   private void blankLine() {
     newlineIfNeeded();
-    if (buffer.length() > 1 && buffer.charAt(buffer.length() - 2) != '\n') { buffer.append('\n'); }
+    if (endsWithNewline(1)) {
+      newline();
+    }
   }
 
   private void println(Object s) {
@@ -81,7 +91,7 @@ public class GoloPrettyPrinter implements GoloIrVisitor {
 
   private void space() {
     for (int i = 0; i < spacing; i++) {
-      buffer.append(' ');
+      print(' ');
     }
   }
 
@@ -147,13 +157,20 @@ public class GoloPrettyPrinter implements GoloIrVisitor {
   }
 
   public void prettyPrint(GoloModule module) {
-    this.body.delete(0, this.body.length());
-    this.header.delete(0, this.header.length());
+    initBuffers();
     this.visitModule(module);
     System.out.println(this.header);
     System.out.println(this.buffer);
   }
 
+  private void initBuffers() {
+    this.body.delete(0, this.body.length());
+    this.header.delete(0, this.header.length());
+  }
+
+  public StringBuilder getBuffer() {
+    return this.buffer;
+  }
 
   @Override
   public void visitModule(GoloModule module) {
@@ -361,8 +378,10 @@ public class GoloPrettyPrinter implements GoloIrVisitor {
         beginBlock("{");
       }
       for (GoloStatement s : block.getStatements()) {
-        newlineIfNeeded();
-        space();
+        if (willPrintStatement(s)) {
+          newlineIfNeeded();
+          space();
+        }
         s.accept(this);
       }
       if (!block.isSimpleBlock()) {
@@ -400,9 +419,18 @@ public class GoloPrettyPrinter implements GoloIrVisitor {
     );
   }
 
+  private boolean isReturnNull(GoloStatement statement) {
+    return (statement instanceof ReturnStatement) 
+      && isNull(((ReturnStatement) statement).getExpressionStatement());
+  }
+
+  private boolean willPrintStatement(GoloStatement statement) {
+    return expanded || !inFunctionRoot || !isReturnNull(statement);
+  }
+  
   @Override
   public void visitReturnStatement(ReturnStatement returnStatement) {
-    if (! (inFunctionRoot && isNull(returnStatement.getExpressionStatement()))) {
+    if (willPrintStatement(returnStatement)) {
       if (onlyReturn) {
         print("-> ");
       } else {

@@ -14,21 +14,28 @@
  * limitations under the License.
  */
 
-// TODO: parse command: str -> IR ?? how to do with incomplete code (just 1 expression)
-// TODO: expand / expand_one (ir -> ir)
-// TODO: dump (IR representation) and pretty print (source code)
+// TODO: parse command str -> IR ?? how to do with incomplete code (just 1 expression)
 // TODO: eval(ir, context) ? (cf. Dynamic Code Evaluation)
 
 package gololang.macros;
 
 import fr.insalyon.citi.golo.compiler.ir.*;
 import fr.insalyon.citi.golo.compiler.parser.GoloParser;
+import fr.insalyon.citi.golo.compiler.*;
+import static gololang.macros.CodeBuilder.externalRef;
 
 public final class Utils {
 
   private Utils() { }
 
-  public static void prettyPrint(Object node) {
+  /**
+   * Dumps a representation of the given node to System.out.
+   * <p>
+   * This function gives the same result as the {@code golo diagnose --tool ir} command.
+   * It is mainly useful for debugging.
+   * @param node The IR node to dump ({@link fr.insalyon.citi.golo.compiler.ir.GoloElement} or {@link gololang.macros.CodeBuilder.IrNodeBuilder}
+   */
+  public static void dump(Object node) {
     try {
       toGoloElement(node).accept(new IrTreeDumper());
     } catch (IllegalArgumentException e) {
@@ -36,12 +43,54 @@ public final class Utils {
     }
   }
 
+  /**
+   * Prints a golo code representation of the given node to System.out.
+   *  <p>
+   * This function is similar to the {@code golo diagnose --tool pp} command.
+   * It is mainly useful for debugging.
+   * @param node The IR node to dump ({@link fr.insalyon.citi.golo.compiler.ir.GoloElement} or {@link gololang.macros.CodeBuilder.IrNodeBuilder}
+   */
+  public static void prettyPrint(Object node) {
+    try {
+      GoloPrettyPrinter printer = new GoloPrettyPrinter(false);
+      toGoloElement(node).accept(printer);
+      System.out.println(printer.getBuffer());
+    } catch (IllegalArgumentException e) {
+      System.out.println(node);
+    }
+  }
+
+  /**
+   * Fully expand the macros found in the given IR node
+   * @param node The IR node to expand
+   * @return the same node expanded
+   */
+  public static GoloElement expand(Object node) {
+    return expand(node, true);
+  }
+
+  /**
+   * Expand the macros found in the given IR node, with only one level of expansion.
+   * @param node The IR node to expand
+   * @return the same node expanded
+   */
+  public static GoloElement expandOne(Object node) {
+    return expand(node, false);
+  }
+
+  public static GoloElement expand(Object node, boolean recur) {
+    GoloElement element = toGoloElement(node);
+    MacroExpansionIrVisitor visitor = new MacroExpansionIrVisitor(recur);
+    element.accept(visitor);
+    return element;
+  }
+
   private static String cantConvert(Object value, String target) {
     return String.format("%s is not a %s nor a IrNodeBuilder, but a %s",
         value, target, value.getClass());
   }
 
-  public static ExpressionStatement toExpression(Object expression) {
+  static ExpressionStatement toExpression(Object expression) {
     if (expression == null) { return null; }
     if (expression instanceof ExpressionStatement) {
       return (ExpressionStatement) expression;
@@ -52,7 +101,7 @@ public final class Utils {
     throw new IllegalArgumentException(cantConvert(expression, "ExpressionStatement"));
   }
 
-  public static GoloStatement toGoloStatement(Object statement) {
+  static GoloStatement toGoloStatement(Object statement) {
     if (statement == null) { return null; }
     if (statement instanceof GoloStatement) {
       return (GoloStatement) statement;
@@ -74,7 +123,7 @@ public final class Utils {
     throw new IllegalArgumentException(cantConvert(element, "GoloElement"));
   }
 
-  public static Block toBlock(Object block) {
+  static Block toBlock(Object block) {
     if (block == null) { return null; }
     if (block instanceof Block) {
       return (Block) block;
@@ -85,7 +134,6 @@ public final class Utils {
     throw new IllegalArgumentException(cantConvert(block, "Block"));
   }
 
-  // TODO: create an interface 'Scope.relink' and use polymorphism
   public static void relinkReferenceTables(GoloElement element, ReferenceTable table) {
     if (table != null && element instanceof Scope) {
       ((Scope) element).relink(table);
@@ -98,12 +146,11 @@ public final class Utils {
     }
   }
 
-  public static GoloParser.ParserClassRef toClassRef(Class<?> cls) {
+  static GoloParser.ParserClassRef toClassRef(Class<?> cls) {
     return toClassRef(cls.getCanonicalName());
   }
 
-  public static GoloParser.ParserClassRef toClassRef(String clsName) {
+  static GoloParser.ParserClassRef toClassRef(String clsName) {
     return new GoloParser.ParserClassRef(clsName);
   }
-
 }

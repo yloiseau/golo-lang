@@ -403,8 +403,14 @@ public final class CodeBuilder {
     private ExpressionStatement expr;
     private boolean declaring = false;
 
-    public AssignmentStatementBuilder localRef(LocalReferenceBuilder r) {
-      ref = r.build();
+    public AssignmentStatementBuilder localRef(Object r) {
+      if (r instanceof LocalReference) {
+        ref = (LocalReference) r;
+      } else if (r instanceof LocalReferenceBuilder) {
+        ref = ((LocalReferenceBuilder) r).build();
+      } else {
+        throw new IllegalArgumentException("invalid value for the local reference");
+      }
       return this;
     }
 
@@ -429,7 +435,7 @@ public final class CodeBuilder {
     return new AssignmentStatementBuilder();
   }
 
-  public static AssignmentStatementBuilder assignment(boolean declaring, LocalReferenceBuilder ref, Object expr) {
+  public static AssignmentStatementBuilder assignment(boolean declaring, Object ref, Object expr) {
     return assignment().declaring(declaring).expression(expr).localRef(ref);
   }
 
@@ -540,16 +546,16 @@ public final class CodeBuilder {
     return localRef(kind, name).index(index).synthetic(synthetic);
   }
 
-  public static LocalReferenceBuilder externalRef(Object ref) {
+  public static LocalReference externalRef(Object ref) {
     String refName;
     if (ref instanceof String) {
       refName = (String) ref;
     } else if (ref instanceof ReferenceLookup) {
       refName = ((ReferenceLookup) ref).getName();
     } else {
-      throw new IllegalArgumentException("invalid type for externalRef");
+      throw new IllegalArgumentException("invalid type (" + ref.getClass() + ") for externalRef");
     }
-    return localRef(LocalReference.Kind.VARIABLE, refName, -1, false);
+    return new LocalReference(LocalReference.Kind.VARIABLE, refName, false);
   }
 
   public static ReturnStatement returnsVoid() {
