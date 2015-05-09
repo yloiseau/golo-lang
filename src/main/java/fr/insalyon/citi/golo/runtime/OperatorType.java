@@ -16,7 +16,9 @@
 
 package fr.insalyon.citi.golo.runtime;
 
-public enum OperatorType {
+import fr.insalyon.citi.golo.compiler.ir.Operator;
+
+public enum OperatorType implements Operator {
 
   PLUS("+"),
   MINUS("-"),

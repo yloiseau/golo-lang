@@ -20,12 +20,12 @@ import fr.insalyon.citi.golo.runtime.OperatorType;
 
 public class UnaryOperation extends ExpressionStatement {
 
-  private final OperatorType type;
+  private final Operator operator;
   private ExpressionStatement expressionStatement;
 
-  public UnaryOperation(OperatorType type, ExpressionStatement expressionStatement) {
+  public UnaryOperation(Operator operator, ExpressionStatement expressionStatement) {
     super();
-    this.type = type;
+    this.operator = operator;
     this.expressionStatement = expressionStatement;
   }
 
@@ -38,11 +38,30 @@ public class UnaryOperation extends ExpressionStatement {
   }
 
   public OperatorType getType() {
-    return type;
+    return (operator instanceof OperatorType ? (OperatorType) operator : null);
+  }
+
+  public Operator getOperator() {
+    return operator;
+  }
+
+  public MacroOperator getMacro() {
+    return (operator instanceof MacroOperator ? (MacroOperator) operator : null);
+  }
+
+  public boolean isMacroOperation() {
+    return operator instanceof MacroOperator;
   }
 
   @Override
   public void accept(GoloIrVisitor visitor) {
     visitor.visitUnaryOperation(this);
+  }
+
+  @Override
+  public void replaceElement(GoloElement original, GoloElement replacement) {
+    if (expressionStatement == original) {
+      expressionStatement = (ExpressionStatement) replacement;
+    }
   }
 }

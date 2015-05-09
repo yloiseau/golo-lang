@@ -248,7 +248,7 @@ public class IrTreeDumper extends AbstractGoloIrVisitor {
   public void visitBinaryOperation(BinaryOperation binaryOperation) {
     incr();
     space();
-    System.out.println("Binary operator: " + binaryOperation.getType());
+    System.out.println("Binary operator: " + binaryOperation.getOperator());
     binaryOperation.getLeftExpression().accept(this);
     binaryOperation.getRightExpression().accept(this);
     decr();

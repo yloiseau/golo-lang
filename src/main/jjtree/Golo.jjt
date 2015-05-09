@@ -211,6 +211,9 @@ TOKEN :
   < UNQUOTE_LITERAL: "~" >
   |
   < MACRO: "macro" >
+  |
+  < MACRO_OPERATOR: "&" (["&", "~", "|", "^", "@", "=", "+", "<", ">", "?", "/",
+  ":", "!", "$", "*", "%", "."])+ >
 }
 
 // References
@@ -1077,7 +1080,7 @@ void UnaryExpression():
   Token token;
 }
 {
-  token=<UNARY_OPERATOR> ExpressionStatement()
+  (token=<UNARY_OPERATOR> | token=<MACRO_OPERATOR>) ExpressionStatement()
   {
     jjtThis.setOperator(token.image);
   }
@@ -1090,7 +1093,7 @@ void CommutativeExpression():
 {
   AssociativeExpression()
   (
-    LOOKAHEAD(2) (BlankLine())? token=<COMMUTATIVE_OPERATOR> (BlankLine())? AssociativeExpression()
+    LOOKAHEAD(2) (BlankLine())? (token=<COMMUTATIVE_OPERATOR> | token=<MACRO_OPERATOR>) (BlankLine())? AssociativeExpression()
     {
       jjtThis.addOperator(token.image);
     }
@@ -1113,7 +1116,7 @@ void AssociativeExpression():
   (
     LOOKAHEAD(2)
     (
-      token=<ASSOCIATIVE_OPERATOR> (BlankLine())? AssociativeExpression()
+      (token=<ASSOCIATIVE_OPERATOR>|token=<MACRO_OPERATOR>) (BlankLine())? AssociativeExpression()
       {
         jjtThis.addOperator(token.image);
       }

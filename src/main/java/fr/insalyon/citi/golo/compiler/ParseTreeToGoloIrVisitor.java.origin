@@ -17,7 +17,6 @@
 package fr.insalyon.citi.golo.compiler;
 
 import fr.insalyon.citi.golo.compiler.ir.*;
-import fr.insalyon.citi.golo.compiler.ir.builders.*;
 import fr.insalyon.citi.golo.compiler.parser.*;
 import fr.insalyon.citi.golo.runtime.OperatorType;
 
@@ -26,7 +25,7 @@ import java.util.LinkedList;
 import java.util.List;
 
 import static gololang.macros.CodeBuilder.*;
-import static gololang.macros.SymbolGenerator.gensym;
+import static gololang.macros.Utils.relinkReferenceTables;
 
 import static fr.insalyon.citi.golo.compiler.GoloCompilationException.Problem.Type.UNDECLARED_REFERENCE;
 import static fr.insalyon.citi.golo.compiler.ir.GoloFunction.Scope.*;
@@ -63,7 +62,6 @@ class ParseTreeToGoloIrVisitor implements GoloParserVisitor {
 
   private static class Context {
     GoloModule module;
-    Union currentUnion;
     boolean inNamedAugmentation;
     boolean inQuote = false;
     String augmentation;
@@ -87,7 +85,7 @@ class ParseTreeToGoloIrVisitor implements GoloParserVisitor {
   public Object visit(ASTCompilationUnit node, Object data) {
     Context context = (Context) data;
     Object ret = node.childrenAccept(this, data);
-    context.module.internTypesAugmentations();
+    context.module.internStructAugmentations();
     return ret;
   }
 
@@ -122,23 +120,6 @@ class ParseTreeToGoloIrVisitor implements GoloParserVisitor {
     Struct struct = new Struct(node.getName(), node.getMembers());
     struct.setASTNode(node);
     module.addStruct(struct);
-    return data;
-  }
-
-  @Override
-  public Object visit(ASTUnionDeclaration node, Object data) {
-    Context context = (Context) data;
-    GoloModule module = context.module;
-    Union currentUnion = new Union(node.getName());
-    context.currentUnion = currentUnion ;
-    module.addUnion(currentUnion);
-    return node.childrenAccept(this, data);
-  }
-
-  @Override
-  public Object visit(ASTUnionValue node, Object data) {
-    Context context = (Context) data;
-    context.currentUnion.addValue(node.getName(), node.getMembers());
     return data;
   }
 
@@ -358,19 +339,12 @@ class ParseTreeToGoloIrVisitor implements GoloParserVisitor {
     }
   }
 
-  private Operator createOperator(String symbol) {
-    if (symbol.startsWith("&")) {
-      return new MacroOperator(symbol.substring(1));
-    }
-    return OperatorType.fromString(symbol);
-  }
-  
   @Override
   public Object visit(ASTUnaryExpression node, Object data) {
     Context context = (Context) data;
     node.childrenAccept(this, data);
     UnaryOperation unaryOperation = new UnaryOperation(
-        createOperator(node.getOperator()),
+        OperatorType.fromString(node.getOperator()),
         (ExpressionStatement) context.objectStack.pop());
     context.objectStack.push(unaryOperation);
     node.setIrElement(unaryOperation);
@@ -379,17 +353,17 @@ class ParseTreeToGoloIrVisitor implements GoloParserVisitor {
 
   private void makeBinaryOperation(GoloASTNode node, List<String> symbols, Context context) {
     Deque<ExpressionStatement> expressions = new LinkedList<>();
-    Deque<Operator> operators = new LinkedList<>();
+    Deque<OperatorType> operators = new LinkedList<>();
     for (int i = 0; i < node.jjtGetNumChildren(); i++) {
       node.jjtGetChild(i).jjtAccept(this, context);
       expressions.push((ExpressionStatement) context.objectStack.pop());
     }
     for (String operatorSymbol : symbols) {
-      operators.push(createOperator(operatorSymbol));
+      operators.push(OperatorType.fromString(operatorSymbol));
     }
     ExpressionStatement right = expressions.pop();
     ExpressionStatement left = expressions.pop();
-    Operator operator = OperatorType.ANON_CALL;
+    OperatorType operator = OperatorType.ANON_CALL;
     if (!operators.isEmpty()) {
       operator = operators.pop();
     }
@@ -620,7 +594,6 @@ class ParseTreeToGoloIrVisitor implements GoloParserVisitor {
   public Object visit(ASTMacroInvocation node, Object data) {
     Context context = (Context) data;
     MacroInvocation macroInvocation = new MacroInvocation(node.getName());
-    macroInvocation.setOnContext(node.isOnContext());
     node.setIrElement(macroInvocation);
     final int numChildren = node.jjtGetNumChildren();
     for (int i = 0; i < numChildren; i++) {
@@ -740,7 +713,7 @@ class ParseTreeToGoloIrVisitor implements GoloParserVisitor {
     node.jjtGetChild(node.jjtGetNumChildren() - 1).jjtAccept(this, data);
     matchBuilder.otherwiseValue(context.objectStack.pop());
     Block block = matchBuilder.build();
-    block.relink(context.referenceTableStack.peek());
+    relinkReferenceTables(block, context.referenceTableStack.peek());
     context.objectStack.push(block);
     node.setIrElement(block);
     return data;
@@ -784,45 +757,17 @@ class ParseTreeToGoloIrVisitor implements GoloParserVisitor {
   @Override
   public Object visit(ASTForEachLoop node, Object data) {
     Context context = (Context) data;
-
-    LocalReferenceBuilder elementReference = localRef().name(node.getElementIdentifier()).variable();
-    LocalReferenceBuilder iteratorReference = localRef().name(gensym("iterator")).variable().synthetic(true);
-
-    ReferenceTable localTable = context.referenceTableStack.peek().fork();
-    localTable.add(elementReference.build());
-    localTable.add(iteratorReference.build());
-    context.referenceTableStack.push(localTable);
+    ForEachBuilder loopBuilder = forEachLoop(node.getElementIdentifier());
 
     node.jjtGetChild(0).jjtAccept(this, data);
-    ExpressionStatement iterableExpressionStatement = (ExpressionStatement) context.objectStack.pop();
+    loopBuilder.on(context.objectStack.pop());
     node.jjtGetChild(1).jjtAccept(this, data);
-    Block block = (Block) context.objectStack.pop();
+    loopBuilder.block(context.objectStack.pop());
 
-    AssignmentStatement next = assignment(true, elementReference,
-        methodCall(iteratorReference.lookup(), methodInvocation("next"))
-        ).build();
-    block.prependStatement(next);
-
-    LoopStatement loopStatement = loop()
-      .init(assignment(true, iteratorReference,
-        methodCall(iterableExpressionStatement, methodInvocation("iterator"))
-      ))
-      .condition(
-        methodCall(iteratorReference.lookup(), methodInvocation("hasNext"))
-      )
-      .block(block)
-      .build();
-
-    node.setIrElement(loopStatement);
-    loopStatement.getInitStatement().setASTNode(node);
-    loopStatement.getConditionStatement().setASTNode(node);
-    loopStatement.getBlock().getStatements().get(0).setASTNode(node);
-
-    Block localBlock = new Block(localTable);
-    localBlock.addStatement(loopStatement);
-    context.objectStack.push(localBlock);
-
-    context.referenceTableStack.pop();
+    Block loopBlock = loopBuilder.build();
+    loopBlock.getReferenceTable().relink(context.referenceTableStack.peek());
+    context.objectStack.push(loopBlock);
+    node.setIrElement(loopBlock);
     return data;
   }
 

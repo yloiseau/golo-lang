@@ -27,12 +27,9 @@ import java.util.LinkedList;
 import java.util.Set;
 import static java.util.Arrays.asList;
 
-/* TODO:
- * [ ] match pretty
- * [ ] stack for binary operators to correctly parenthesize them
- * [ ] struct constructor functions
- * [ ] decorators not inlined
- */
+// TODO: prettify match statements
+// TODO: deal with struct constructor functions (display them or not?)
+
 public class GoloPrettyPrinter implements GoloIrVisitor {
 
   // configuration: should be customizable
@@ -42,6 +39,7 @@ public class GoloPrettyPrinter implements GoloIrVisitor {
   private int spacing = 0;
   private boolean onlyReturn = false;
   private boolean inFunctionRoot = false;
+  private int binaryOperatorLevel = 0;
   private final StringBuilder header = new StringBuilder();
   private final StringBuilder body = new StringBuilder();
   private StringBuilder buffer;
@@ -345,13 +343,15 @@ public class GoloPrettyPrinter implements GoloIrVisitor {
 
   @Override
   public void visitDecorator(Decorator decorator) {
-    // TODO: not expanded version ?
-    /*if (!expanded) {
+    // TODO: prettyprint a decorator
+    /*
+    if (!expanded) {
       print("@");
       decorator.getExpressionStatement().accept(this);
       newline();
       space();
-    }*/
+    }
+    */
   }
 
   private void checkIsOnlyReturn(List<GoloStatement> statements) {
@@ -442,6 +442,7 @@ public class GoloPrettyPrinter implements GoloIrVisitor {
 
   @Override
   public void visitFunctionInvocation(FunctionInvocation functionInvocation) {
+    // TODO: deal with banged calls
     if (!functionInvocation.isAnonymous()) {
       print(functionInvocation.getName());
     }
@@ -512,13 +513,17 @@ public class GoloPrettyPrinter implements GoloIrVisitor {
 
   @Override
   public void visitBinaryOperation(BinaryOperation binaryOperation) {
+    if (binaryOperatorLevel > 0) { print("("); }
+    binaryOperatorLevel++;
     binaryOperation.getLeftExpression().accept(this);
     if (binaryOperation.getType() != OperatorType.METHOD_CALL
         && binaryOperation.getType() != OperatorType.ELVIS_METHOD_CALL) {
       print(" ");
     }
-    print(binaryOperation.getType() + " ");
+    print(binaryOperation.getOperator() + " ");
     binaryOperation.getRightExpression().accept(this);
+    binaryOperatorLevel--;
+    if (binaryOperatorLevel > 0) { print(")"); }
   }
 
   @Override
@@ -690,7 +695,7 @@ public class GoloPrettyPrinter implements GoloIrVisitor {
 
   @Override
   public void visitQuotedBlock(QuotedBlock qblock) {
-    // TODO: prettyPrint quoted block
+    // TODO: better display builders in expanded mode
     print("quote ");
     if (!(qblock.getStatement() instanceof Block)) { beginBlock("{"); }
     qblock.getStatement().accept(this);

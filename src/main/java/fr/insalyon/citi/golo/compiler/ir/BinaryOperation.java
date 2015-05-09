@@ -20,19 +20,31 @@ import fr.insalyon.citi.golo.runtime.OperatorType;
 
 public class BinaryOperation extends ExpressionStatement {
 
-  private final OperatorType type;
+  private final Operator operator;
   private ExpressionStatement leftExpression;
   private ExpressionStatement rightExpression;
 
-  public BinaryOperation(OperatorType type, ExpressionStatement leftExpression, ExpressionStatement rightExpression) {
+  public BinaryOperation(Operator operator, ExpressionStatement leftExpression, ExpressionStatement rightExpression) {
     super();
-    this.type = type;
+    this.operator = operator;
     this.leftExpression = leftExpression;
     this.rightExpression = rightExpression;
   }
 
+  public MacroOperator getMacro() {
+    return (operator instanceof MacroOperator ? (MacroOperator) operator : null);
+  }
+
   public OperatorType getType() {
-    return type;
+    return (operator instanceof OperatorType ? (OperatorType) operator : null);
+  }
+
+  public Operator getOperator() {
+    return operator;
+  }
+
+  public boolean isMacroOperation() {
+    return operator instanceof MacroOperator;
   }
 
   public ExpressionStatement getLeftExpression() {
@@ -58,7 +70,10 @@ public class BinaryOperation extends ExpressionStatement {
 
   @Override
   public String toString() {
-    return String.format("%s %s %s", leftExpression, type, rightExpression);
+    return String.format("%s %s %s", 
+        leftExpression, 
+        operator,
+        rightExpression);
   }
 
   public boolean isMethodCall() {

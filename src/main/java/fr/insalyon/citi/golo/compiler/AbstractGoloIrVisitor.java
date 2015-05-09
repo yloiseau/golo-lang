@@ -199,8 +199,7 @@ public abstract class AbstractGoloIrVisitor implements GoloIrVisitor {
 
   @Override
   public void visitClosureReference(ClosureReference closureReference) {
-    // TODO: visit closure references in AbstractGoloIrVisitor
-    //closureReference.getTarget().accept(this);
+    // Do nothing, too specific to be generalized.
   }
 
   @Override

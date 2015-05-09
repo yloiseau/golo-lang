@@ -23,6 +23,9 @@ import java.util.List;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.LinkedHashSet;
+import java.util.Map;
+import java.util.HashMap;
+
 import java.lang.invoke.MethodHandle;
 
 import static java.util.Arrays.asList;
@@ -47,7 +50,7 @@ import static gololang.macros.Utils.*;
 public final class MacroExpansionIrVisitor extends AbstractGoloIrVisitor {
 
   private static final String MACROCLASS = ".Macros";
-  public static final List<String> SPECIAL = java.util.Arrays.asList("use");
+  public static final List<String> SPECIAL = java.util.Arrays.asList("use", "operator");
   private Deque<GoloElement> elements = new LinkedList<>();
   private Deque<Block> blockStack = new LinkedList<>();
   private boolean recur = false;
@@ -55,6 +58,7 @@ public final class MacroExpansionIrVisitor extends AbstractGoloIrVisitor {
   private static List<String> globalMacroClasses = new LinkedList<>(asList(
     "gololang.macros.Predefined"
   ));
+  private Map<MacroOperator, ClosureReference> operators = new HashMap<>();
 
 
   public MacroExpansionIrVisitor(boolean recur) {
@@ -126,6 +130,35 @@ public final class MacroExpansionIrVisitor extends AbstractGoloIrVisitor {
     elements.pop();
   }
 
+  // TODO : expand macro unary operation
+  @Override
+  public void visitBinaryOperation(BinaryOperation binaryOperation) {
+    elements.push(binaryOperation);
+    super.visitBinaryOperation(binaryOperation);
+    elements.pop();
+    if (binaryOperation.isMacroOperation()) {
+      GoloElement expanded = expandMacroOperator(binaryOperation);
+      if (recur) {
+        expanded.accept(this);
+      }
+      elements.peek().replaceElement(binaryOperation, expanded);
+    }
+  }
+
+  @Override
+  public void visitUnaryOperation(UnaryOperation unaryOperation) {
+    elements.push(unaryOperation);
+    super.visitUnaryOperation(unaryOperation);
+    elements.pop();
+    if (unaryOperation.isMacroOperation()) {
+      GoloElement expanded = expandMacroOperator(unaryOperation);
+      if (recur) {
+        expanded.accept(this);
+      }
+      elements.peek().replaceElement(unaryOperation, expanded);
+    }
+  }
+
   @Override
   public void visitMacroInvocation(MacroInvocation macroInvocation) {
     super.visitMacroInvocation(macroInvocation);
@@ -157,6 +190,8 @@ public final class MacroExpansionIrVisitor extends AbstractGoloIrVisitor {
     switch (invocation.getName()) {
       case "use" :
         return useMacro(invocation.getArguments());
+      case "operator":
+        return operatorMacro(invocation.getArguments());
     }
     return null;
   }
@@ -165,6 +200,13 @@ public final class MacroExpansionIrVisitor extends AbstractGoloIrVisitor {
     for (ExpressionStatement arg : args) {
       addMacroClass(macroClasses, 0, ((ConstantStatement) arg).getValue().toString());
     }
+    return null;
+  }
+
+  private GoloElement operatorMacro(List<ExpressionStatement> args) {
+    String symbol = (String) ((ConstantStatement) args.get(0)).getValue();
+    ClosureReference function = (ClosureReference) args.get(1);
+    operators.put(new MacroOperator(symbol), function);
     return null;
   }
 
@@ -185,6 +227,36 @@ public final class MacroExpansionIrVisitor extends AbstractGoloIrVisitor {
     }
     return result;
   }
+
+  private FunctionInvocation expandMacroOperator(BinaryOperation operation) {
+    MacroOperator operator = operation.getMacro();
+    if (!operators.containsKey(operator)) {
+      throw new RuntimeException("No operator " + operator + " registered");
+    }
+    GoloFunction function = operators.get(operator).getTarget();
+    if (function.getArity() != 2) {
+      throw new RuntimeException("Binary operator functions must be binary");
+    }
+    FunctionInvocation invocation = new FunctionInvocation(function.getName());
+    invocation.addArgument(operation.getLeftExpression());
+    invocation.addArgument(operation.getRightExpression());
+    return invocation;
+  }
+
+  private FunctionInvocation expandMacroOperator(UnaryOperation operation) {
+    MacroOperator operator = operation.getMacro();
+    if (!operators.containsKey(operator)) {
+      throw new RuntimeException("No operator " + operator + " registered");
+    }
+    GoloFunction function = operators.get(operator).getTarget();
+    if (function.getArity() != 1) {
+      throw new RuntimeException("Unary operator functions must be binary");
+    }
+    FunctionInvocation invocation = new FunctionInvocation(function.getName());
+    invocation.addArgument(operation.getExpressionStatement());
+    return invocation;
+  }
+
 
   private MethodHandle findMacro(MacroInvocation invocation) {
     String methodName = invocation.getName();
