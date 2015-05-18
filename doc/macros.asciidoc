@@ -1,0 +1,211 @@
+== Macros
+
+Golo provides a macro system that allows to extend the language and reduce
+boilerplate code relatively easily.
+
+=== Principle
+
+First, lets remind some basis of the compilation process. Here is a simplified
+view of the way Golo compiles a program:
+
+1. read the source code text and parse it,
+2. generate a intermediate representation tree (IR) that reflects the code
+   structure,
+3. do some checks and magic on the IR,
+4. generate JVM bytecode from the final IR.
+
+The IR tree is a logical representation of the program structure, independently
+of the text (and even the concrete syntax). You can compare it to the DOM of a
+HTML document, but at a higher and more specific level. A representation of this 
+tree can be seen using the `diagnose` golo command with the `--tool ir`
+option.
+
+As an example, the following Golo code
+[source,golo]
+----
+module Simple
+
+function main = |args| {
+  println("hello")
+}
+----
+
+gives the following IR
+
+----
+# Simple
+#   Function main = |args|
+#     Block
+#        - LocalReference{kind=CONSTANT, name='args', index=0}
+#       Function call: println, on reference? -> false, on module state? -> false, anonymous? -> false
+#       #         Constant = hello
+#       Return
+#         Constant = null
+----
+
+Macros are functions that manipulate the IR tree between the steps 2 and 3 above,
+that is at compile time. They are similar to C preprocessing macros, but much
+more powerful. To keep the DOM analogy, you can compare them to Javascript code
+that manipulate the DOM.
+
+Using macros, one can then generate functions and types and inject them in the
+program, create alternatives control structures that will be transformed into
+regular ones, or create instructions computed at compile time according to some
+criteria (e.g. display debug messages if a environment variable is set).
+
+=== Creating macros
+
+
+==== Code builder
+
+==== Quote and unquote
+
+To ease the creation or an IR tree to return, Golo provides a `quote` keyword,
+which converts the following block into calls to builder functions that create
+a tree equivalent to the said block. As an example, the code
+[source,golo]
+----
+let q = quote { 1 + 2 }
+----
+
+is equivalent to
+
+[source,golo]
+----
+let q = block(binaryOperation(PLUS(), constant(1), constant(2)))
+----
+
+Any block-level statements, that is statements that can be used inside
+function definition, can be quoted.
+
+The `unquote` command is the oposite of `quote`, since it allows to inject
+an IR node into a quoted block. This node can be build or obtained from the
+macro arguments. You can see `unquote` as an equivalent of string interpolation
+for IR trees.
+The `~` prefix is synctactic sugar for `unquote` that can be used where
+expressions (but not statements) are expected.
+
+The three following quotes are equivalent:
+[source,golo]
+----
+let a = constant(1)
+
+let q1 = quote { unquote(a) + 2 }
+let q2 = quote { (~a) + 2 }
+let q3 = block(binaryOperation(PLUS(), a, constant(2)))
+----
+
+If `a` where not unquoted, the expression whould have been
+equivalent to 
+[source,golo]
+----
+block(binaryOperation(PLUS(), refLookup("a"), constant(2)))
+----
+
+As an example, a `swapVars` macro, that swap the values of two variables, could
+be written:
+
+[source,golo]
+----
+macro swapVars = |first, second| -> quote {
+  var tmp = ~first
+  ~first = ~second
+  ~second = tmp
+}
+----
+
+A call to this macro:
+[source,golo]
+----
+var a = 42
+var b = "foo"
+&swapVars(a, b)
+----
+
+would result in code roughtly equivalent to:
+[source,golo]
+----
+var a = 42
+var b = "foo"
+var tmp = a
+a = b
+b = tmp
+----
+
+==== About hygiene
+
+renaming
+scopes
+
+=== Calling macros
+
+==== Substituting macros
+
+==== Contextual macros
+
+==== Debuging
+
+Since macros are expanded at compile time, and the code they generate is
+injected into the IR tree, they can be cumbersome to debug. Indeed, a macro can
+compile and execute correctly, but produce a code that is not valid when
+expanded in a given context, which will be discovered by testing the code using the macro.
+
+Several tools are provided to ease the creation and debuging of macros. First,
+the `--expanded` option of the `golo diagnose` command will print the code or
+IR representation of the result of macro expansions, so that you can inspect
+the produced code.
+
+Since macros are regular functions returning an IR node, if they are called
+“normally” (without the `&` prefix), the result can be obtained and inspected.
+The module `gololang.macros.Utils` provides some utility functions to inspect
+IR nodes (see the corresponding javadoc for a complete list):
+* the `prettyPrint` and `dump` functions, that are similar to the
+  `golo diagnose` command
+* the `expand` command is similar to the `--expanded` option
+
+For instance, given the following macros:
+[source,golo]
+----
+module MyMacros
+
+macro testMacro = -> quote {
+  println("in the macro...")
+}
+
+macro mainMacro = ->  quote {
+  let foo = "bar"
+  $a = 42
+  &testMacro()
+}
+----
+
+the code
+
+[source,golo]
+----
+prettyPrint(mainMacro())
+println("#======")
+prettyPrint(expand(mainMacro()))
+----
+
+will print
+
+[source,golo]
+----
+let __$$_MyMacros_foo_1431325611436 = "bar"
+a = 42
+&testMacro()
+#======
+let __$$_MyMacros_foo_1431325611436 = "bar"
+a = 42
+println("in the macro...")
+----
+
+=== Predefined macros
+
+=== Examples
+
+[source,golo]
+----
+
+----
