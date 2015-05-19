@@ -374,7 +374,7 @@ public class GoloPrettyPrinter implements GoloIrVisitor {
     if (onlyReturn || isLoopBlock(statements)) {
       statements.get(0).accept(this);
     } else {
-      if (!block.isSimpleBlock()) {
+      if (expanded || inFunctionRoot) {
         beginBlock("{");
       }
       for (GoloStatement s : block.getStatements()) {
@@ -384,7 +384,7 @@ public class GoloPrettyPrinter implements GoloIrVisitor {
         }
         s.accept(this);
       }
-      if (!block.isSimpleBlock()) {
+      if (expanded || inFunctionRoot) {
         endBlock("}");
       }
     }
@@ -674,7 +674,7 @@ public class GoloPrettyPrinter implements GoloIrVisitor {
   public void visitMacroInvocation(MacroInvocation macroInvocation) {
     LinkedList<ExpressionStatement> arguments = new LinkedList<>(macroInvocation.getArguments());
     Block blockArgument = null;
-    if (arguments.getLast() instanceof Block) {
+    if (!arguments.isEmpty() && arguments.getLast() instanceof Block) {
       blockArgument = (Block) arguments.removeLast();
     }
     print("&" + macroInvocation.getName());
