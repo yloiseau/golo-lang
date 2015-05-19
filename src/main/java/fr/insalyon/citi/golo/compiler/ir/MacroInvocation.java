@@ -33,6 +33,11 @@ public class MacroInvocation extends AbstractInvocation {
   }
 
   @Override
+  public int getArity() {
+    return super.getArity() + (onContext ? 1 : 0);
+  }
+
+  @Override
   public void accept(GoloIrVisitor visitor) {
     visitor.visitMacroInvocation(this);
   }

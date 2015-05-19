@@ -551,10 +551,11 @@ public class Main {
   }
 
   private static void golo(GoloGoloCommand gologolo) throws Throwable {
-    loadMacros(gologolo.macrosOptions);
+    gologolo.classpath.add(".");
     URLClassLoader primaryClassLoader = primaryClassLoader(gologolo.classpath);
     Thread.currentThread().setContextClassLoader(primaryClassLoader);
     GoloClassLoader loader = new GoloClassLoader(primaryClassLoader);
+    loadMacros(gologolo.macrosOptions);
     Class<?> lastClass = null;
     for (String goloFile : gologolo.files) {
       lastClass = loadGoloFile(goloFile, gologolo.module, loader);

@@ -22,6 +22,7 @@ import java.util.Deque;
 import java.util.List;
 import java.util.Collection;
 import java.util.LinkedList;
+import java.util.LinkedHashSet;
 import java.lang.invoke.MethodHandle;
 
 import static java.util.Arrays.asList;
@@ -189,9 +190,6 @@ public final class MacroExpansionIrVisitor extends AbstractGoloIrVisitor {
   private MethodHandle findMacro(MacroInvocation invocation) {
     String methodName = invocation.getName();
     int arity = invocation.getArity();
-    if (invocation.isOnContext()) {
-      arity = arity + 1;
-    }
     List<String> classNames = new LinkedList<>();
     int methodClassSeparatorIndex = methodName.lastIndexOf(".");
     if (methodClassSeparatorIndex >= 0) {
@@ -201,7 +199,7 @@ public final class MacroExpansionIrVisitor extends AbstractGoloIrVisitor {
     classNames.addAll(macroClasses);
     boolean vararg;
     MethodHandle method = null;
-    for (String className : classNames) {
+    for (String className : new LinkedHashSet<>(classNames)) {
       vararg = false;
       for (int i = arity; i >= 0; i--) {
         try {

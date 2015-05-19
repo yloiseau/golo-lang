@@ -66,6 +66,7 @@ public class GoloClassLoader extends ClassLoader {
     return lastClassIsModule;
   }
 
+  // FIXME
   public synchronized void loadMacros(String goloSourceFilename, InputStream sourceCodeInputStream) throws GoloCompilationException {
     List<CodeGenerationResult> results = compiler.compileMacros(goloSourceFilename, sourceCodeInputStream);
     for (CodeGenerationResult result : results) {
