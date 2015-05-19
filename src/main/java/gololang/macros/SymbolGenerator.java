@@ -18,7 +18,9 @@ package gololang.macros;
 
 import java.util.Map;
 import java.util.HashMap;
+import java.util.LinkedList;
 import static java.util.Collections.unmodifiableMap;
+import static java.util.Arrays.asList;
 
 import fr.insalyon.citi.golo.compiler.ir.ReferenceLookup;
 
@@ -26,8 +28,14 @@ public class SymbolGenerator {
   private static final String FORMAT = "__$$_%s_%d";
   private static final String DEFAULT_NAME = "symbol";
   private int counter = 0;
-  private String name;
   private final Map<String, String> symbols = new HashMap<>();
+  private LinkedList<String> prefixes = new LinkedList<>();
+
+  public SymbolGenerator reset() {
+    counter = 0;
+    symbols.clear();
+    return this;
+  }
 
   public static String gensym(String name, long suffix) {
     return String.format(FORMAT, name, suffix);
@@ -42,11 +50,25 @@ public class SymbolGenerator {
   }
 
   public String name() {
-    return name;
+    if (prefixes.isEmpty()) {
+      return DEFAULT_NAME;
+    }
+    return String.join("_", prefixes);
   }
 
   public SymbolGenerator name(String n) {
-    name = n;
+    prefixes.clear();
+    prefixes.addAll(asList(n.split("[_.]")));
+    return this;
+  }
+
+  public SymbolGenerator pushScope(String n) {
+    prefixes.add(n);
+    return this;
+  }
+
+  public SymbolGenerator popScope() {
+    prefixes.removeLast();
     return this;
   }
 
@@ -64,18 +86,18 @@ public class SymbolGenerator {
   }
 
   public String next(String localName) {
-    return gensym(name + (localName == null ? "" : ("_" + localName)), counter++);
+    return gensym(name() + (localName == null ? "" : ("_" + localName)), counter++);
   }
 
   public String current() {
-    return gensym(name, counter);
+    return gensym(name(), counter);
   }
 
   public String get(String localName) {
     if (localName.startsWith("$")) {
       return localName.substring(1);
     }
-    symbols.putIfAbsent(localName, gensym(name + "_" + localName));
+    symbols.putIfAbsent(localName, gensym(name() + "_" + localName));
     return symbols.get(localName);
   }
 

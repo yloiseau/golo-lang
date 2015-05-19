@@ -65,16 +65,6 @@ class QuotedIrExpander extends AbstractGoloIrVisitor {
   public void visitQuotedBlock(QuotedBlock qblock) {
     inQuotedBlock = true;
     qblock.getStatement().accept(this);
-    /*
-    FunctionInvocation element = functionInvocation()
-      .name(UTILS + "toGoloElement")
-      .arg(expandedBlocks.pop())
-      .build();
-    if (qblock.hasASTNode()) {
-      element.setASTNode(qblock.getASTNode());
-    }
-    expandedBlocks.push(element);
-    */
     inQuotedBlock = false;
   }
 
@@ -378,7 +368,9 @@ class QuotedIrExpander extends AbstractGoloIrVisitor {
 
   @Override
   public void visitFunction(GoloFunction function) {
+    //symbols.reset().pushScope(function.getName());
     super.visitFunction(function);
+    //symbols.popScope();
     if (inQuotedBlock) {
       throw new IllegalStateException("functions can't be quoted yet");
     }
@@ -386,6 +378,7 @@ class QuotedIrExpander extends AbstractGoloIrVisitor {
 
   @Override
   public void visitModule(GoloModule module) {
+    symbols.reset().name(module.getPackageAndClass().toString().replace(".", "_"));
     super.visitModule(module);
     if (inQuotedBlock) {
       throw new IllegalStateException("modules can't be quoted yet");
