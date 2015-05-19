@@ -153,4 +153,18 @@ public final class Utils {
   static GoloParser.ParserClassRef toClassRef(String clsName) {
     return new GoloParser.ParserClassRef(clsName);
   }
+
+  public static AssignmentStatement lookupToVarAssignment(ReferenceLookup ref, ExpressionStatement value, boolean declaring) {
+    AssignmentStatement assign = new AssignmentStatement(
+        new LocalReference(LocalReference.Kind.VARIABLE, ref.getName()), value);
+    assign.setDeclaring(declaring);
+    return assign;
+  }
+
+  public static AssignmentStatement lookupToLetAssignment(ReferenceLookup ref, ExpressionStatement value, boolean declaring) {
+    AssignmentStatement assign = new AssignmentStatement(
+        new LocalReference(LocalReference.Kind.CONSTANT, ref.getName()), value);
+    assign.setDeclaring(declaring);
+    return assign;
+  }
 }

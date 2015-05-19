@@ -42,4 +42,12 @@ public class ReferenceLookup extends ExpressionStatement {
   public String toString() {
     return String.format("Ref{name=%s}", getName());
   }
+
+  public LocalReference varRef() {
+    return new LocalReference(LocalReference.Kind.VARIABLE, name);
+  }
+
+  public LocalReference letRef() {
+    return new LocalReference(LocalReference.Kind.CONSTANT, name);
+  }
 }

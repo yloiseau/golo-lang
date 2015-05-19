@@ -97,4 +97,8 @@ public final class LocalReference {
     return result;
   }
 
+  public ReferenceLookup lookup() {
+    return new ReferenceLookup(name);
+  }
+
 }
