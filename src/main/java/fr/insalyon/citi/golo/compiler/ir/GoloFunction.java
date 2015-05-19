@@ -120,6 +120,10 @@ public final class GoloFunction extends GoloElement {
     return visibility;
   }
 
+  public boolean isLocal() {
+    return visibility == Visibility.LOCAL;
+  }
+
   public int getArity() {
     return parameterNames.size() + syntheticParameterCount;
   }

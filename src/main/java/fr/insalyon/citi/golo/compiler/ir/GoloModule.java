@@ -165,7 +165,7 @@ public final class GoloModule extends GoloElement {
 
   public void addFunction(GoloFunction function) {
     if (function.getBlock() == null) {
-      // XXX: This happens while compiling golo itself... but how could it be possible?
+      // FIXME: This happens while compiling golo itself... but how could it be possible?
       function.setBlock(new Block(globalReferences.fork()));
     } else {
       function.getBlock().getReferenceTable().relinkTopLevel(globalReferences);
@@ -272,5 +272,28 @@ public final class GoloModule extends GoloElement {
     internTypesAugmentations(typesNames, augmentations);
     internTypesAugmentations(typesNames, augmentationApplications);
     typesNames.clear();
+  }
+
+  private boolean hasOnlyFunctions() {
+    return this.unions.isEmpty() &&
+           this.structs.isEmpty() &&
+           this.augmentations.isEmpty() &&
+           this.augmentationApplications.isEmpty() &&
+           this.moduleState.isEmpty();
+  }
+  
+  public boolean isMacroOnly() {
+    if (!hasOnlyFunctions()) { 
+      return false;
+    }
+    if (macros.isEmpty()) {
+      return false;
+    }
+    for (GoloFunction f : functions) {
+      if (!f.isLocal()) {
+        return false;
+      }
+    }
+    return true;
   }
 }
