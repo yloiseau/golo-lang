@@ -51,7 +51,7 @@ public final class MacroExpansionIrVisitor extends AbstractGoloIrVisitor {
   public static final List<String> SPECIAL = java.util.Arrays.asList("use");
   private Deque<GoloElement> elements = new LinkedList<>();
   private Deque<Block> blockStack = new LinkedList<>();
-  private boolean recur = true;
+  private boolean recur = false;
   private List<String> macroClasses = new LinkedList<>();
   private static List<String> globalMacroClasses = new LinkedList<>(asList(
     "gololang.macros.Predefined"
@@ -220,5 +220,12 @@ public final class MacroExpansionIrVisitor extends AbstractGoloIrVisitor {
     }
     throw new RuntimeException("failed to load macro: " + invocation
         + " with arity " + arity + " in classes " + classNames);
+  }
+
+  @Override
+  public void visitBinaryOperation(BinaryOperation operation) {
+    elements.push(operation);
+    super.visitBinaryOperation(operation);
+    elements.pop();
   }
 }

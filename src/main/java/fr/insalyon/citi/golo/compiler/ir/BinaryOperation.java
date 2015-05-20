@@ -66,4 +66,13 @@ public class BinaryOperation extends ExpressionStatement {
       || this.getType() == OperatorType.ELVIS_METHOD_CALL
       || this.getType() == OperatorType.ANON_CALL;
   }
+
+  @Override
+  public void replaceElement(GoloElement original, GoloElement newElement) {
+    if (leftExpression == original) {
+      leftExpression = (ExpressionStatement) newElement;
+    } else if (rightExpression == original) {
+      rightExpression = (ExpressionStatement) newElement;
+    }
+  }
 }

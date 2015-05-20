@@ -149,7 +149,7 @@ public class GoloCompiler {
    */
   public GoloModule expand(GoloModule goloModule) {
      goloModule.accept(new QuotedIrExpander());
-     goloModule.accept(new MacroExpansionIrVisitor());
+     goloModule.accept(new MacroExpansionIrVisitor(true));
      return goloModule;
   }
 
