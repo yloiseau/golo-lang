@@ -21,6 +21,7 @@ import java.util.Deque;
 import java.util.LinkedList;
 
 import fr.insalyon.citi.golo.compiler.ir.*;
+import fr.insalyon.citi.golo.compiler.ir.builders.*;
 
 import gololang.macros.SymbolGenerator;
 

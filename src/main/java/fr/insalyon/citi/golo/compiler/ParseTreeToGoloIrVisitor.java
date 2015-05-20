@@ -17,6 +17,7 @@
 package fr.insalyon.citi.golo.compiler;
 
 import fr.insalyon.citi.golo.compiler.ir.*;
+import fr.insalyon.citi.golo.compiler.ir.builders.*;
 import fr.insalyon.citi.golo.compiler.parser.*;
 import fr.insalyon.citi.golo.runtime.OperatorType;
 
@@ -791,16 +792,16 @@ class ParseTreeToGoloIrVisitor implements GoloParserVisitor {
     Block block = (Block) context.objectStack.pop();
 
     AssignmentStatement next = assignment(true, elementReference,
-        Operations.methodCall(iteratorReference.lookup(), methodInvocation("next"))
+        methodCall(iteratorReference.lookup(), methodInvocation("next"))
         ).build();
     block.prependStatement(next);
 
     LoopStatement loopStatement = loop()
       .init(assignment(true, iteratorReference,
-        Operations.methodCall(iterableExpressionStatement, methodInvocation("iterator"))
+        methodCall(iterableExpressionStatement, methodInvocation("iterator"))
       ))
       .condition(
-        Operations.methodCall(iteratorReference.lookup(), methodInvocation("hasNext"))
+        methodCall(iteratorReference.lookup(), methodInvocation("hasNext"))
       )
       .block(block)
       .build();

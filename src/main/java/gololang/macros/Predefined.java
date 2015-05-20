@@ -19,8 +19,8 @@ package gololang.macros;
 import java.util.regex.Pattern;
 import java.util.regex.Matcher;
 import fr.insalyon.citi.golo.compiler.ir.*;
+import fr.insalyon.citi.golo.compiler.ir.builders.*;
 import static gololang.macros.CodeBuilder.*;
-import static gololang.macros.CodeBuilder.Operations.*;
 import fr.insalyon.citi.golo.compiler.parser.GoloParser;
 
 public final class Predefined {

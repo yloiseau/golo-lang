@@ -23,6 +23,7 @@ import static java.util.Collections.unmodifiableMap;
 import static java.util.Arrays.asList;
 
 import fr.insalyon.citi.golo.compiler.ir.ReferenceLookup;
+import fr.insalyon.citi.golo.compiler.ir.builders.LocalReferenceBuilder;
 
 public class SymbolGenerator {
   private static final String FORMAT = "__$$_%s_%d";
@@ -109,7 +110,7 @@ public class SymbolGenerator {
     return symbols.containsKey(name);
   }
 
-  public CodeBuilder.LocalReferenceBuilder ref(String name) {
+  public LocalReferenceBuilder ref(String name) {
     return CodeBuilder.localRef().name(get(name)).synthetic(true);
   }
 

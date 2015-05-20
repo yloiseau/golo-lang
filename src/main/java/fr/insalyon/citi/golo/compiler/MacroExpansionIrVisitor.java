@@ -29,7 +29,6 @@ import static java.util.Arrays.asList;
 import static java.lang.invoke.MethodHandles.publicLookup;
 import static java.lang.reflect.Modifier.isStatic;
 import static java.lang.invoke.MethodType.genericMethodType;
-import static gololang.macros.CodeBuilder.quoted;
 import static gololang.macros.CodeBuilder.block;
 import static gololang.macros.Utils.*;
 

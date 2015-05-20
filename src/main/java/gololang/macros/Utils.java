@@ -20,6 +20,7 @@
 package gololang.macros;
 
 import fr.insalyon.citi.golo.compiler.ir.*;
+import fr.insalyon.citi.golo.compiler.ir.builders.*;
 import fr.insalyon.citi.golo.compiler.parser.GoloParser;
 import fr.insalyon.citi.golo.compiler.*;
 import static gololang.macros.CodeBuilder.externalRef;
@@ -90,24 +91,24 @@ public final class Utils {
         value, target, value.getClass());
   }
 
-  static ExpressionStatement toExpression(Object expression) {
+  public static ExpressionStatement toExpression(Object expression) {
     if (expression == null) { return null; }
     if (expression instanceof ExpressionStatement) {
       return (ExpressionStatement) expression;
     } 
-    if (expression instanceof CodeBuilder.IrNodeBuilder) {
-      return (ExpressionStatement) ((CodeBuilder.IrNodeBuilder) expression).build();
+    if (expression instanceof IrNodeBuilder) {
+      return (ExpressionStatement) ((IrNodeBuilder) expression).build();
     }
     throw new IllegalArgumentException(cantConvert(expression, "ExpressionStatement"));
   }
 
-  static GoloStatement toGoloStatement(Object statement) {
+  public static GoloStatement toGoloStatement(Object statement) {
     if (statement == null) { return null; }
     if (statement instanceof GoloStatement) {
       return (GoloStatement) statement;
     } 
-    if (statement instanceof CodeBuilder.IrNodeBuilder) {
-      return (GoloStatement) ((CodeBuilder.IrNodeBuilder) statement).build();
+    if (statement instanceof IrNodeBuilder) {
+      return (GoloStatement) ((IrNodeBuilder) statement).build();
     }
     throw new IllegalArgumentException(cantConvert(statement, "GoloStatement"));
   }
@@ -117,19 +118,19 @@ public final class Utils {
     if (element instanceof GoloElement) {
       return (GoloElement) element;
     } 
-    if (element instanceof CodeBuilder.IrNodeBuilder) {
-      return (GoloElement) ((CodeBuilder.IrNodeBuilder) element).build();
+    if (element instanceof IrNodeBuilder) {
+      return (GoloElement) ((IrNodeBuilder) element).build();
     }
     throw new IllegalArgumentException(cantConvert(element, "GoloElement"));
   }
 
-  static Block toBlock(Object block) {
+  public static Block toBlock(Object block) {
     if (block == null) { return null; }
     if (block instanceof Block) {
       return (Block) block;
     } 
-    if (block instanceof CodeBuilder.IrNodeBuilder) {
-      return (Block) ((CodeBuilder.IrNodeBuilder) block).build();
+    if (block instanceof IrNodeBuilder) {
+      return (Block) ((IrNodeBuilder) block).build();
     }
     throw new IllegalArgumentException(cantConvert(block, "Block"));
   }
@@ -146,11 +147,11 @@ public final class Utils {
     }
   }
 
-  static GoloParser.ParserClassRef toClassRef(Class<?> cls) {
+  public static GoloParser.ParserClassRef toClassRef(Class<?> cls) {
     return toClassRef(cls.getCanonicalName());
   }
 
-  static GoloParser.ParserClassRef toClassRef(String clsName) {
+  public static GoloParser.ParserClassRef toClassRef(String clsName) {
     return new GoloParser.ParserClassRef(clsName);
   }
 

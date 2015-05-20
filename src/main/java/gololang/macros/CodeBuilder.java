@@ -16,6 +16,7 @@
 
 package gololang.macros;
 
+import fr.insalyon.citi.golo.compiler.ir.builders.*;
 import fr.insalyon.citi.golo.compiler.ir.*;
 import fr.insalyon.citi.golo.runtime.OperatorType;
 import fr.insalyon.citi.golo.compiler.parser.GoloParser;
@@ -38,397 +39,12 @@ import static gololang.macros.SymbolGenerator.gensym;
 
 public final class CodeBuilder {
 
-  public static interface IrNodeBuilder<T> {
-    T build();
-  }
-
-  public static final class BlockBuilder implements IrNodeBuilder<Block> {
-    private ReferenceTable ref = new ReferenceTable();
-    private final List<GoloStatement> statements = new LinkedList<>();
-
-    public BlockBuilder ref(ReferenceTable rt) {
-      this.ref = rt;
-      return this;
-    }
-
-    public BlockBuilder merge(Block block) {
-      for (GoloStatement innerStatement : block.getStatements()) {
-        this.add(innerStatement);
-      }
-      return this; 
-    }
-
-    private void updateRefs(GoloStatement statement) {
-      if (statement instanceof AssignmentStatement) {
-        AssignmentStatement assign = (AssignmentStatement) statement;
-        if (assign.isDeclaring()) {
-          ref.add(assign.getLocalReference());
-        }
-      }
-      if (statement instanceof LoopStatement) {
-        LoopStatement loop = (LoopStatement) statement;
-        if (loop.hasInitStatement()) {
-          ref.add(loop.getInitStatement().getLocalReference());
-        }
-      } 
-    }
-    
-    public BlockBuilder add(Object statement) {
-      GoloStatement stat = toGoloStatement(statement);
-      updateRefs(stat);
-      relinkReferenceTables(stat, ref);
-      statements.add(stat);
-      return this;
-    }
-
-    public Block build() {
-      Block block = new Block(ref);
-      for (GoloStatement s : statements) {
-        block.addStatement(s);
-      }
-      return block;
-    }
-
-  }
-
-  public static final class LocalReferenceBuilder implements IrNodeBuilder<LocalReference> {
-    private String name;
-    private boolean synthetic = false;
-    private int index = -1;
-    private boolean moduleLevel = false;
-    private boolean variable = false;
-
-    private LocalReference.Kind kind() {
-      if (!moduleLevel && !variable) { return LocalReference.Kind.CONSTANT; }
-      if (!moduleLevel && variable) { return LocalReference.Kind.VARIABLE; }
-      if (moduleLevel && !variable) { return LocalReference.Kind.MODULE_CONSTANT; }
-      if (moduleLevel && variable) { return LocalReference.Kind.MODULE_VARIABLE; }
-      return null;
-    }
-
-    public LocalReferenceBuilder kind(LocalReference.Kind k) {
-      switch (k) {
-        case CONSTANT:
-          moduleLevel = false;
-          variable = false;
-          break;
-        case VARIABLE:
-          moduleLevel = false;
-          variable = true;
-          break;
-        case MODULE_VARIABLE:
-          moduleLevel = true;
-          variable = true;
-          break;
-        case MODULE_CONSTANT:
-          moduleLevel = true;
-          variable = false;
-          break;
-      }
-      return this;
-    }
-
-    public LocalReferenceBuilder variable() {
-      variable = true;
-      return this;
-    }
-
-    public LocalReferenceBuilder moduleLevel() {
-      moduleLevel = true;
-      return this;
-    }
-
-    public LocalReferenceBuilder name(String n) {
-      this.name = n;
-      return this;
-    }
-
-    public LocalReferenceBuilder synthetic(boolean s) {
-      this.synthetic = s;
-      return this;
-    }
-
-    public LocalReferenceBuilder index(int i) {
-      this.index = i;
-      return this;
-    }
-
-    @Override
-    public LocalReference build() {
-      LocalReference ref = new LocalReference(kind(), name, synthetic);
-      ref.setIndex(index);
-      return ref;
-    }
-
-    public ReferenceLookup lookup() {
-      return refLookup(name);
-    }
-  }
-
-  public static final class MethodInvocationBuilder implements IrNodeBuilder<MethodInvocation> {
-
-    private String name;
-    private boolean nullSafe = false;
-    private final List<ExpressionStatement> args = new LinkedList<>();
-    private final List<FunctionInvocation> anonCalls = new LinkedList<>();
-
-    private MethodInvocationBuilder() { }
-
-    public MethodInvocationBuilder name(String n) {
-      name = n;
-      return this;
-    }
-
-    public MethodInvocationBuilder nullSafe(boolean safe) {
-      nullSafe = safe;
-      return this;
-    }
-
-    public MethodInvocationBuilder arg(Object expression) {
-      args.add(toExpression(expression));
-      return this;
-    }
-
-    public MethodInvocationBuilder anon(FunctionInvocationBuilder inv) {
-      anonCalls.add(inv.build());
-      return this;
-    }
-
-    public MethodInvocation build() {
-      MethodInvocation meth = new MethodInvocation(name);
-      meth.setNullSafeGuarded(nullSafe);
-      for (ExpressionStatement arg : args) {
-        meth.addArgument(arg);
-      }
-      for (FunctionInvocation inv : anonCalls) {
-        meth.addAnonymousFunctionInvocation(inv);
-      }
-      return meth;
-    }
-  }
-
   public static MethodInvocationBuilder methodInvocation(String name) {
-    return new MethodInvocationBuilder().name(name);
-  }
-
-  public static MethodInvocationBuilder methodInvocation(String name, boolean safe) {
-    return new MethodInvocationBuilder().name(name).nullSafe(safe);
-  }
-
-  public static final class FunctionInvocationBuilder implements IrNodeBuilder<FunctionInvocation> {
-
-    private String name;
-    private boolean onRef = false;
-    private boolean onModule = false;
-    private boolean constant = false;
-    private final List<ExpressionStatement> args = new LinkedList<>();
-    private final List<FunctionInvocation> anonCalls = new LinkedList<>();
-
-    public FunctionInvocationBuilder onReference(boolean v) {
-      onRef = v;
-      return this;
-    }
-
-    public FunctionInvocationBuilder onModuleState(boolean v) {
-      onModule = v;
-      return this;
-    }
-
-    public FunctionInvocationBuilder constant(boolean v) {
-      constant = v;
-      return this;
-    }
-
-    public FunctionInvocationBuilder name(String n) {
-      name = n;
-      return this;
-    }
-
-    public FunctionInvocationBuilder arg(Object expression) {
-      args.add(toExpression(expression));
-      return this;
-    }
-
-    public FunctionInvocationBuilder anon(FunctionInvocationBuilder inv) {
-      anonCalls.add(inv.build());
-      return this;
-    }
-
-    public FunctionInvocation build() {
-      FunctionInvocation func;
-      if (name == null || "".equals(name) || "anonymous".equals(name)) {
-        func = new FunctionInvocation();
-      } else {
-        func = new FunctionInvocation(name);
-      }
-      func.setOnReference(onRef);
-      func.setOnModuleState(onModule);
-      func.setConstant(constant);
-      for (ExpressionStatement arg : args) {
-        func.addArgument(arg);
-      }
-      for (FunctionInvocation inv : anonCalls) {
-        func.addAnonymousFunctionInvocation(inv);
-      }
-      return func;
-    }
-  }
-
-  public static final class ConditionalBranchingBuilder implements IrNodeBuilder<ConditionalBranching> {
-
-    private ExpressionStatement condition = constant(false);
-    private Block trueBlock = new Block(new ReferenceTable());
-    private ConditionalBranching elseConditionalBranching;
-    private Block falseBlock;
-
-    public ConditionalBranchingBuilder condition(Object cond) {
-      if (cond == null) {
-        condition = constant(false);
-      } else {
-        condition = toExpression(cond);
-      }
-      return this;
-    }
-
-    public ConditionalBranchingBuilder whenTrue(Object block) {
-      if (block == null) {
-        trueBlock = new Block(new ReferenceTable());
-      } else {
-        trueBlock = toBlock(block);
-      }
-      return this;
-    }
-
-    public ConditionalBranchingBuilder whenFalse(Object block) {
-      falseBlock = toBlock(block);
-      return this;
-    }
-
-    public ConditionalBranchingBuilder elseBranch(ConditionalBranchingBuilder branch) {
-      if (branch == null) {
-        elseConditionalBranching = null;
-      } else {
-        elseConditionalBranching = branch.build();
-      }
-      return this;
-    }
-
-    public ConditionalBranching build() {
-      if (elseConditionalBranching != null) {
-        return new ConditionalBranching(condition, trueBlock, elseConditionalBranching);
-      }
-      return new ConditionalBranching(condition, trueBlock, falseBlock);
-    }
-  }
-
-  public static final class LoopBuilder implements IrNodeBuilder<LoopStatement> {
-    private ExpressionStatement cond;
-    private Block block;
-    private AssignmentStatement init;
-    private GoloStatement post;
-
-    LoopBuilder() {
-      this.condition(null);
-      this.block((BlockBuilder) null);
-    }
-
-    private static final Deque<LoopBuilder> currentLoop = new LinkedList<>();;
-
-    public static LoopBuilder currentLoop() {
-      return currentLoop.peekFirst();
-    }
-
-    public static void currentLoop(LoopBuilder l) {
-      currentLoop.addFirst(l);
-    }
-
-    public LoopBuilder init(AssignmentStatementBuilder s) {
-      if (s == null) {
-        init = null;
-      } else {
-        init = s.build();
-      }
-      return this;
-    }
-
-    public LoopBuilder condition(Object s) {
-      if (s == null) {
-        cond = constant(false);
-      } else
-        cond = toExpression(s);
-      return this;
-    }
-
-    public LoopBuilder post(Object s) {
-      if (s == null) {
-        post = null;
-      } else {
-        post = toGoloStatement(s);
-      }
-      return this;
-    }
-
-    public LoopBuilder block(Object b) {
-      if (b == null) {
-        block = new Block(new ReferenceTable());
-      } else {
-        block = toBlock(b);
-      }
-      return this;
-    }
-
-    public LoopBuilder block(Object... statements) {
-      return block(CodeBuilder.block(statements));
-    }
-
-    public LoopStatement build() {
-      currentLoop.pollFirst();
-      return new LoopStatement(init, cond, block, post);
-    }
+    return new MethodInvocationBuilder(name);
   }
 
   public static LoopBuilder loop() {
     return new LoopBuilder();
-  }
-
-  public static LoopBuilder loop(AssignmentStatementBuilder init,
-                                 Object condition,
-                                 Object post,
-                                 BlockBuilder block) {
-    return loop().init(init).condition(condition).post(post).block(block);
-  }
-
-  public static final class AssignmentStatementBuilder implements IrNodeBuilder<AssignmentStatement> {
-    private LocalReference ref;
-    private ExpressionStatement expr;
-    private boolean declaring = false;
-
-    public AssignmentStatementBuilder localRef(Object r) {
-      if (r instanceof LocalReference) {
-        ref = (LocalReference) r;
-      } else if (r instanceof LocalReferenceBuilder) {
-        ref = ((LocalReferenceBuilder) r).build();
-      } else {
-        throw new IllegalArgumentException("invalid value for the local reference");
-      }
-      return this;
-    }
-
-    public AssignmentStatementBuilder expression(Object e) {
-      expr = toExpression(e);
-      return this;
-    }
-
-    public AssignmentStatementBuilder declaring(boolean d) {
-      declaring = d;
-      return this;
-    }
-
-    public AssignmentStatement build() {
-      AssignmentStatement as = new AssignmentStatement(ref, expr);
-      as.setDeclaring(declaring);
-      return as;
-    }
   }
 
   public static AssignmentStatementBuilder assignment() {
@@ -439,41 +55,6 @@ public final class CodeBuilder {
     return assignment().declaring(declaring).expression(expr).localRef(ref);
   }
 
-  public static final class BinaryOperationBuilder implements IrNodeBuilder<BinaryOperation> {
-    private OperatorType type;
-    private ExpressionStatement left;
-    private ExpressionStatement right;
-
-    public BinaryOperationBuilder type(OperatorType type) {
-      this.type = type;
-      return this;
-    }
-
-    public BinaryOperationBuilder left(Object left) {
-      this.left = toExpression(left);
-      return this;
-    }
-
-    public ExpressionStatement left() {
-      return left;
-    }
-
-    public BinaryOperationBuilder right(Object right) {
-      this.right = toExpression(right);
-      return this;
-    }
-
-    public ExpressionStatement right() {
-      return right;
-    }
-
-    public BinaryOperation build() {
-      if (type == null || left == null || right == null) {
-        throw new IllegalStateException("builder not initialized");
-      }
-      return new BinaryOperation(type, left, right);
-    }
-  }
 
   public static BinaryOperation binaryOperation(OperatorType type, Object left, Object right) {
     return new BinaryOperationBuilder().type(type).left(left).right(right).build();
@@ -493,10 +74,6 @@ public final class CodeBuilder {
       block.add(st);
     }
     return block;
-  }
-
-  public static QuotedBlock quoted(Object expr) {
-    return new QuotedBlock(toGoloStatement(expr));
   }
 
   public static ConstantStatement constant(Object value) {
@@ -534,16 +111,12 @@ public final class CodeBuilder {
     return new ReturnStatement(toExpression(expr));
   }
 
-  public static LocalReferenceBuilder localRef(LocalReference.Kind kind, String name) {
-    return new LocalReferenceBuilder().kind(kind).name(name);
-  }
-
   public static LocalReferenceBuilder localRef() {
     return new LocalReferenceBuilder();
   }
 
   public static LocalReferenceBuilder localRef(LocalReference.Kind kind, String name, int index, boolean synthetic) {
-    return localRef(kind, name).index(index).synthetic(synthetic);
+    return localRef().kind(kind).name(name).index(index).synthetic(synthetic);
   }
 
   public static LocalReference externalRef(Object ref) {
@@ -576,33 +149,6 @@ public final class CodeBuilder {
     return functionInvocation().name(name).onReference(onRef).onModuleState(onModule).constant(constant);
   }
 
-  public static final class MacroInvocationBuilder implements IrNodeBuilder<MacroInvocation> {
-
-    private String name;
-    private final List<ExpressionStatement> args = new LinkedList<>();
-
-    public MacroInvocationBuilder name(String n) {
-      name = n;
-      return this;
-    }
-
-    public MacroInvocationBuilder arg(Object expression) {
-      args.add(toExpression(expression));
-      return this;
-    }
-
-    public MacroInvocation build() {
-      if (name == null || "".equals(name)) {
-        throw new IllegalStateException("unnamed macro");
-      }
-      MacroInvocation macro = new MacroInvocation(name);
-      for (ExpressionStatement arg : args) {
-        macro.addArgument(arg);
-      }
-      return macro;
-    }
-  }
-
   public static MacroInvocationBuilder macroInvocation() {
     return new MacroInvocationBuilder();
   }
@@ -633,46 +179,6 @@ public final class CodeBuilder {
     return new ThrowStatement(toExpression(expr));
   }
 
-  public static final class LoopBreakBuilder implements IrNodeBuilder<LoopBreakFlowStatement> {
-    private LoopBreakFlowStatement.Type type;
-    private LoopStatement enclosingLoop = null;
-    private LoopBuilder enclosingLoopBuilder = null;
-
-    public LoopBreakBuilder type(LoopBreakFlowStatement.Type t) {
-      type = t;
-      return this;
-    }
-
-    public LoopBreakBuilder loop(LoopStatement l) {
-      enclosingLoop = l;
-      return this;
-    }
-
-    public LoopBreakBuilder loop(LoopBuilder l) {
-      enclosingLoopBuilder = l;
-      return this;
-    }
-
-    public LoopBreakFlowStatement build() {
-      LoopBreakFlowStatement st;
-      switch (type) {
-        case CONTINUE:
-          st = LoopBreakFlowStatement.newContinue();
-          break;
-        case BREAK:
-          st = LoopBreakFlowStatement.newBreak();
-          break;
-        default:
-          throw new IllegalStateException("Unknown break type");
-      }
-      if (enclosingLoop != null) {
-        st.setEnclosingLoop(enclosingLoop);
-      } else if (enclosingLoopBuilder != null) {
-        st.setEnclosingLoop(enclosingLoopBuilder.build());
-      }
-      return st;
-    }
-  }
 
   public static LoopBreakBuilder loopExit(LoopBreakFlowStatement.Type type) {
     return new LoopBreakBuilder().type(type).loop(LoopBuilder.currentLoop());
@@ -686,39 +192,6 @@ public final class CodeBuilder {
     return loopExit(LoopBreakFlowStatement.Type.CONTINUE);
   }
 
-  public static final class TryCatchBuilder implements IrNodeBuilder<TryCatchFinally> {
-    private String exceptionId;
-    private Object tryBlock;
-    private Object catchBlock;
-    private Object finallyBlock;
-
-    public TryCatchBuilder exception(String id) {
-      this.exceptionId = id;
-      return this;
-    }
-
-    public TryCatchBuilder tryBlock(Object b) {
-      this.tryBlock = b;
-      return this;
-    }
-
-    public TryCatchBuilder catchBlock(Object b) {
-      this.catchBlock = b;
-      return this;
-    }
-
-    public TryCatchBuilder finallyBlock(Object b) {
-      this.finallyBlock = b;
-      return this;
-    }
-
-    public TryCatchFinally build() {
-      return new TryCatchFinally(exceptionId,
-          toBlock(tryBlock),
-          toBlock(catchBlock),
-          toBlock(finallyBlock));
-    }
-  }
 
   public static TryCatchBuilder tryCatchFinally() {
     return new TryCatchBuilder();
@@ -732,168 +205,82 @@ public final class CodeBuilder {
       .finallyBlock(finallyBlock);
   }
 
-  public static class Operations {
-    public static BinaryOperation plus(Object left, Object right) {
-      return binaryOperation(OperatorType.PLUS, toExpression(left), toExpression(right));
-    }
-
-    public static BinaryOperation minus(Object left, Object right) {
-      return binaryOperation(OperatorType.MINUS, toExpression(left), toExpression(right));
-    }
-
-    public static BinaryOperation times(Object left, Object right) {
-      return binaryOperation(OperatorType.TIMES, toExpression(left), toExpression(right));
-    }
-
-    public static BinaryOperation divide(Object left, Object right) {
-      return binaryOperation(OperatorType.DIVIDE, toExpression(left), toExpression(right));
-    }
-
-    public static BinaryOperation modulo(Object left, Object right) {
-      return binaryOperation(OperatorType.MODULO, toExpression(left), toExpression(right));
-    }
-
-    public static BinaryOperation equals(Object left, Object right) {
-      return binaryOperation(OperatorType.EQUALS, toExpression(left), toExpression(right));
-    }
-
-    public static BinaryOperation notEquals(Object left, Object right) {
-      return binaryOperation(OperatorType.NOTEQUALS, toExpression(left), toExpression(right));
-    }
-
-    public static BinaryOperation less(Object left, Object right) {
-      return binaryOperation(OperatorType.LESS, toExpression(left), toExpression(right));
-    }
-
-    public static BinaryOperation lessOrEquals(Object left, Object right) {
-      return binaryOperation(OperatorType.LESSOREQUALS, toExpression(left), toExpression(right));
-    }
-
-    public static BinaryOperation more(Object left, Object right) {
-      return binaryOperation(OperatorType.MORE, toExpression(left), toExpression(right));
-    }
-
-    public static BinaryOperation moreOrEquals(Object left, Object right) {
-      return binaryOperation(OperatorType.MOREOREQUALS, toExpression(left), toExpression(right));
-    }
-
-    public static BinaryOperation logicalAnd(Object left, Object right) {
-      return binaryOperation(OperatorType.AND, toExpression(left), toExpression(right));
-    }
-
-    public static BinaryOperation logicalOr(Object left, Object right) {
-      return binaryOperation(OperatorType.OR, toExpression(left), toExpression(right));
-    }
-
-    public static UnaryOperation logicalNot(Object expr) {
-      return unaryOperation(OperatorType.NOT, toExpression(expr));
-    }
-
-    public static BinaryOperation identity(Object left, Object right) {
-      return binaryOperation(OperatorType.IS, toExpression(left), toExpression(right));
-    }
-
-    public static BinaryOperation difference(Object left, Object right) {
-      return binaryOperation(OperatorType.ISNT, toExpression(left), toExpression(right));
-    }
-
-    public static BinaryOperation ofType(Object left, Object right) {
-      return binaryOperation(OperatorType.OFTYPE, toExpression(left), toExpression(right));
-    }
-
-    public static BinaryOperation nullSafe(Object left, Object right) {
-      return binaryOperation(OperatorType.ORIFNULL, toExpression(left), toExpression(right));
-    }
-
-    public static BinaryOperation methodCall(Object left, Object right) {
-      return binaryOperation(OperatorType.METHOD_CALL, toExpression(left), toExpression(right));
-    }
+  public static BinaryOperation plus(Object left, Object right) {
+    return binaryOperation(OperatorType.PLUS, toExpression(left), toExpression(right));
   }
 
-  public static final class FunctionDeclarationBuilder implements IrNodeBuilder<GoloFunction> {
-    private String name = "anonymous";
-    private GoloFunction.Visibility visibility = GoloFunction.Visibility.PUBLIC ;
-    private GoloFunction.Scope scope = GoloFunction.Scope.MODULE;
-    private boolean macro = false;
-    private final List<String> parameters = new LinkedList<>();
-    private final List<String> syntheticParameters = new LinkedList<>();
-    private Block block = CodeBuilder.block(returns(constant(null))).build();
-    private boolean varargs = false;
-
-    @Override
-    public GoloFunction build() {
-      GoloFunction f = new GoloFunction(name, visibility, scope, macro);
-      f.setParameterNames(parameters);
-      f.setVarargs(varargs);
-      f.setBlock(block);
-      ReferenceTable referenceTable = block.getReferenceTable();
-      for (String parameter : parameters) {
-        referenceTable.add(new LocalReference(LocalReference.Kind.CONSTANT, parameter));
-      }
-      if (!block.hasReturn()) {
-        ReturnStatement missingReturnStatement = new ReturnStatement(new ConstantStatement(null));
-        if (f.isMain()) {
-          missingReturnStatement.returningVoid();
-        }
-        block.addStatement(missingReturnStatement);
-      }
-      return f;
-    }
-
-    public FunctionDeclarationBuilder name(String n) {
-      name = n;
-      return this;
-    }
-
-    public FunctionDeclarationBuilder macro(boolean m) {
-      macro = m;
-      return this;
-    }
-
-    public FunctionDeclarationBuilder visibility(GoloFunction.Visibility v) {
-      visibility = v;
-      return this;
-    }
-
-    public FunctionDeclarationBuilder inAugment() {
-      scope = GoloFunction.Scope.AUGMENT;
-      return this;
-    }
-
-    public FunctionDeclarationBuilder asClosure() {
-      scope = GoloFunction.Scope.CLOSURE;
-      return this;
-    }
-
-    public FunctionDeclarationBuilder inModule() {
-      scope = GoloFunction.Scope.MODULE;
-      return this;
-    }
-
-    public FunctionDeclarationBuilder param(String... params) {
-      parameters.addAll(asList(params));
-      return this;
-    }
-
-    public FunctionDeclarationBuilder block(Object... statements) {
-      return block(CodeBuilder.block(statements));
-    }
-
-    public FunctionDeclarationBuilder block(BlockBuilder blockBuilder) {
-      this.block = blockBuilder.build();
-      return this;
-    }
-
-    public FunctionDeclarationBuilder varargs() {
-      varargs = true;
-      return this;
-    }
-
-    // TODO: synthetic params
-    // TODO: synthetic - selfname
-    // TODO: decorators
-
+  public static BinaryOperation minus(Object left, Object right) {
+    return binaryOperation(OperatorType.MINUS, toExpression(left), toExpression(right));
   }
+
+  public static BinaryOperation times(Object left, Object right) {
+    return binaryOperation(OperatorType.TIMES, toExpression(left), toExpression(right));
+  }
+
+  public static BinaryOperation divide(Object left, Object right) {
+    return binaryOperation(OperatorType.DIVIDE, toExpression(left), toExpression(right));
+  }
+
+  public static BinaryOperation modulo(Object left, Object right) {
+    return binaryOperation(OperatorType.MODULO, toExpression(left), toExpression(right));
+  }
+
+  public static BinaryOperation equals(Object left, Object right) {
+    return binaryOperation(OperatorType.EQUALS, toExpression(left), toExpression(right));
+  }
+
+  public static BinaryOperation notEquals(Object left, Object right) {
+    return binaryOperation(OperatorType.NOTEQUALS, toExpression(left), toExpression(right));
+  }
+
+  public static BinaryOperation less(Object left, Object right) {
+    return binaryOperation(OperatorType.LESS, toExpression(left), toExpression(right));
+  }
+
+  public static BinaryOperation lessOrEquals(Object left, Object right) {
+    return binaryOperation(OperatorType.LESSOREQUALS, toExpression(left), toExpression(right));
+  }
+
+  public static BinaryOperation more(Object left, Object right) {
+    return binaryOperation(OperatorType.MORE, toExpression(left), toExpression(right));
+  }
+
+  public static BinaryOperation moreOrEquals(Object left, Object right) {
+    return binaryOperation(OperatorType.MOREOREQUALS, toExpression(left), toExpression(right));
+  }
+
+  public static BinaryOperation logicalAnd(Object left, Object right) {
+    return binaryOperation(OperatorType.AND, toExpression(left), toExpression(right));
+  }
+
+  public static BinaryOperation logicalOr(Object left, Object right) {
+    return binaryOperation(OperatorType.OR, toExpression(left), toExpression(right));
+  }
+
+  public static UnaryOperation logicalNot(Object expr) {
+    return unaryOperation(OperatorType.NOT, toExpression(expr));
+  }
+
+  public static BinaryOperation identity(Object left, Object right) {
+    return binaryOperation(OperatorType.IS, toExpression(left), toExpression(right));
+  }
+
+  public static BinaryOperation difference(Object left, Object right) {
+    return binaryOperation(OperatorType.ISNT, toExpression(left), toExpression(right));
+  }
+
+  public static BinaryOperation ofType(Object left, Object right) {
+    return binaryOperation(OperatorType.OFTYPE, toExpression(left), toExpression(right));
+  }
+
+  public static BinaryOperation nullSafe(Object left, Object right) {
+    return binaryOperation(OperatorType.ORIFNULL, toExpression(left), toExpression(right));
+  }
+
+  public static BinaryOperation methodCall(Object left, Object right) {
+    return binaryOperation(OperatorType.METHOD_CALL, toExpression(left), toExpression(right));
+  }
+
 
   public static FunctionDeclarationBuilder publicFunction() {
     return new FunctionDeclarationBuilder();
@@ -909,59 +296,11 @@ public final class CodeBuilder {
       .visibility(GoloFunction.Visibility.LOCAL).asClosure();
   }
 
-  public static final class StructBuilder implements IrNodeBuilder<Struct> {
-    private Set<String> members = new LinkedHashSet<>();
-    private String name;
-
-    public StructBuilder name(String n) {
-      this.name = n;
-      return this;
-    }
-
-    public StructBuilder members(String... members) {
-      this.members.addAll(asList(members));
-      return this;
-    }
-
-    @Override
-    public Struct build() {
-      if (name == null || members.isEmpty()) {
-        throw new IllegalStateException("StructBuilder not initialized");
-      }
-      return new Struct(name, members);
-    }
-  }
 
   public static StructBuilder structure() {
     return new StructBuilder();
   }
 
-  public static final class UnionBuilder implements IrNodeBuilder<Union> {
-    private Map<String, List<String>> values = new LinkedHashMap<>();
-    private String name;
-
-    public UnionBuilder name(String name) {
-      this.name = name;
-      return this;
-    }
-
-    public UnionBuilder value(String name, String... members) {
-      values.put(name, asList(members));
-      return this;
-    }
-
-    @Override
-    public Union build() {
-      if (name == null || values.isEmpty()) {
-        throw new IllegalStateException("UnionBuilder not initialized");
-      }
-      Union union = new Union(name);
-      for (String value : values.keySet()) {
-        union.addValue(value, values.get(value));
-      }
-      return union;
-    }
-  }
 
   public static UnionBuilder unionType() {
     return new UnionBuilder();
@@ -975,151 +314,21 @@ public final class CodeBuilder {
     return topLevel;
   }
 
-  public static final class AugmentationBuilder implements IrNodeBuilder<Augmentation> {
-    private String target;
-    private Set<FunctionDeclarationBuilder> functions = new LinkedHashSet<>();
-    private Set<String> names = new LinkedHashSet<>();
-
-    public AugmentationBuilder target(String name) {
-      target = name;
-      return this;
-    }
-
-    public AugmentationBuilder withFunction(FunctionDeclarationBuilder func) {
-      functions.add(func);
-      return this;
-    }
-
-    public AugmentationBuilder withAugmentation(String name) {
-      names.add(name);
-      return this;
-    }
-
-    @Override
-    public Augmentation build() {
-      Augmentation augment = new Augmentation(target);
-      for (FunctionDeclarationBuilder func : functions) {
-        augment.addFunction(func.build());
-      }
-      augment.addNames(names);
-      return augment;
-    }
-  }
 
   public static AugmentationBuilder augmentType(String targetName) {
     return new AugmentationBuilder().target(targetName);
   }
 
-  public static final class CaseBuilder implements IrNodeBuilder<ConditionalBranching> {
-    private final Deque<ExpressionStatement> conditions = new LinkedList<>();
-    private final Deque<Block> blocks = new LinkedList<>();
-    private Block otherwiseBlock;
-
-    public CaseBuilder otherwiseBlock(Object block) {
-      otherwiseBlock = toBlock(block);
-      return this;
-    }
-
-    public CaseBuilder whenCase(Object condition, Object block) {
-      conditions.push(toExpression(condition));
-      blocks.push(toBlock(block));
-      return this;
-    }
-
-    @Override
-    public ConditionalBranching build() {
-      if (otherwiseBlock == null) { throw new IllegalStateException("No otherwise clause"); }
-      if (conditions.isEmpty()) { throw new IllegalStateException("No when clause"); }
-      ConditionalBranchingBuilder caseBranch = branch().whenFalse(otherwiseBlock);
-      while (conditions.size() > 1) {
-        caseBranch = branch().elseBranch(caseBranch.condition(conditions.pop()).whenTrue(blocks.pop()));
-      }
-      return caseBranch.condition(conditions.pop()).whenTrue(blocks.pop()).build();
-    }
-  }
 
   public static CaseBuilder caseBranch() {
     return new CaseBuilder();
   }
   
-  public static final class MatchBuilder implements IrNodeBuilder<Block> {
-
-    private CaseBuilder caseBuilder = caseBranch();
-    private LocalReferenceBuilder matchVar = localRef().variable().synthetic(true).name(gensym("match"));
-
-    public MatchBuilder otherwiseValue(Object expression) {
-      caseBuilder.otherwiseBlock(assign(expression));
-      return this;
-    }
-
-    public MatchBuilder whenValue(Object condition, Object expression) {
-      caseBuilder.whenCase(condition, assign(expression));
-      return this;
-    }
-
-    private BlockBuilder assign(Object expression) {
-      return block(assignment().localRef(matchVar).expression(expression));
-    }
-
-    @Override
-    public Block build() {
-      return block()
-        .add(assignment(true, matchVar, constant(null)))
-        .add(caseBuilder)
-        .add(matchVar.lookup())
-        .build();
-    }
-  }
 
   public static MatchBuilder matching() {
     return new MatchBuilder();
   }
 
-  public static final class ForEachBuilder implements IrNodeBuilder<Block> {
-
-    private LocalReferenceBuilder elementVar = localRef().variable();
-    private LocalReferenceBuilder iteratorVar = localRef().variable().synthetic(true).name(gensym("iterator"));
-    private Block block;
-    private ExpressionStatement iterable;
-
-    public ForEachBuilder variable(String name) {
-      this.elementVar.name(name);
-      return this;
-    }
-
-    public ForEachBuilder on(Object expression) {
-      this.iterable = toExpression(expression);
-      return this;
-    }
-
-    public ForEachBuilder block(Object block) {
-      this.block = toBlock(block);
-      return this;
-    }
-
-    private BinaryOperation nextCall() {
-      return Operations.methodCall(this.iteratorVar.lookup(), methodInvocation("next"));
-    }
-
-    private BinaryOperation hasNextCall() {
-      return Operations.methodCall(this.iteratorVar.lookup(), methodInvocation("hasNext"));
-    }
-
-    private BinaryOperation iteratorCall() {
-      return Operations.methodCall(this.iterable, methodInvocation("iterator"));
-    }
-    
-    @Override
-    public Block build() {
-      return CodeBuilder.block(loop()
-        .init(assignment(true, iteratorVar, iteratorCall()))
-        .condition(hasNextCall())
-        .block(CodeBuilder.block()
-          .add(assignment(true, elementVar, nextCall()))
-          .add(this.block)
-        )).build();
-    }
-  }
 
   public static ForEachBuilder forEachLoop(String name) {
     return new ForEachBuilder().variable(name);
