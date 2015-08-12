@@ -909,3 +909,64 @@ augment gololang.FunctionReference {
   function accept = |this, args...| -> this: invoke(args)
 }
 
+
+# ............................................................................................... #
+----
+Augmentations for Golo structs.
+----
+augment gololang.GoloStruct {
+
+  ----
+  Apply the given function to each fields, and return a new {@code struct}.
+  The function takes an single parameter, the field value, and return a new
+  value. Since the same function is applyied to each field, it should
+  discriminate on types if necessary. For instance:
+
+      struct Person = {givenName, familyName, age}
+
+      let trimIfString = |v| -> match {
+        when v oftype String.class then v: trim()
+        otherwise v
+      }
+
+      aPerson: map(trimIfString)
+
+  to trim all string fieds of a struct, an don't change others.
+  ----
+  function map = |this, func| {
+    let new = this: copy()
+    foreach k, v in this {
+      new: set(k, func(v))
+    }
+    return new
+  }
+
+  ----
+  Apply the given function to the struct values tuple.
+  The function should return a new struct initialized with the transformed
+  values (hence the name). However, since Golo is dynamically typed, any object
+  can be returned. For instance:
+
+      struct Person = {givenName, familyName, age}
+
+      let cleanedYounger = |gn, fn, a| -> Person(gn: trim(), fn:trim(), a / 2)
+
+      aPerson: flatMap(cleanedYounger)
+
+  ----
+  function flatMap = |this, func| -> func: invoke(this: values():toArray())
+
+  ----
+  Return a copy of this struct with the given field modified. The following
+  expressions are equivalent:
+
+      struct Person = {givenName, familyName, age}
+
+      let newPerson = aPerson: with("age", 21)
+
+      let newPerson = aPerson: copy(): set("age", 21)
+
+      let newPerson = Person(aPerson: givenName(), aPerson: familyName(), 21)
+  ----
+  function with = |this, name, value| -> this: copy(): set(name, value)
+}
