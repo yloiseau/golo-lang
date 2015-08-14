@@ -11,6 +11,7 @@ package fr.insalyon.citi.golo.runtime;
 
 import java.lang.invoke.*;
 import java.lang.reflect.Method;
+import java.util.*;
 
 import static java.lang.invoke.MethodHandles.*;
 import static java.lang.reflect.Modifier.*;
@@ -21,10 +22,6 @@ class AugmentationMethodFinder implements MethodFinder {
 
   private final Class<?> receiverClass;
   private final Class<?> callerClass;
-  private final String methodName;
-  private final int arity;
-  private final Lookup lookup;
-  private final MethodType type;
   private final Object[] args;
   private final ClassLoader classLoader;
   private MethodHandle methodHandle;
@@ -34,24 +31,18 @@ class AugmentationMethodFinder implements MethodFinder {
     new ExternalFQNAugmentationStrategy(),
     new ImportedExternalNamedAugmentationStrategy()
   };
-  private final String[] argumentNames;
+  private MethodGraber methodGraber;
 
   public AugmentationMethodFinder(MethodInvocationSupport.InlineCache inlineCache, Class<?> receiverClass, Object[] args) {
     this.receiverClass = receiverClass;
     this.args = args;
-    this.methodName = inlineCache.name;
-    this.lookup = inlineCache.callerLookup;
-    this.type = inlineCache.type();
-    this.arity = type.parameterCount();
     this.callerClass = inlineCache.callerLookup.lookupClass();
     this.classLoader = callerClass.getClassLoader();
     this.methodHandle = null;
-    this.argumentNames = new String[inlineCache.argumentNames.length + 1];
-    this.argumentNames[0] = "this";
-    System.arraycopy(inlineCache.argumentNames,0, argumentNames, 1, inlineCache.argumentNames.length);
+    this.methodGraber = MethodGraber.fromCallSite(inlineCache, args)
+                              .onlyPublic()
+                              .addThisParameterName();
   }
-
-
 
   /**
    * Search strategy for augmentation methods.
@@ -153,51 +144,10 @@ class AugmentationMethodFinder implements MethodFinder {
     }
   }
 
-  private boolean isCandidate(Method method) {
-    return (
-        method.getName().equals(methodName)
-        && isPublic(method.getModifiers())
-        && !isAbstract(method.getModifiers())
-        && (matchesArity(method) || isMethodDecorated(method))
-    );
-  }
-
-  private boolean matchesArity(Method method) {
-    int parameterCount = method.getParameterTypes().length;
-    return (parameterCount == arity) || (method.isVarArgs() && (parameterCount <= arity));
-  }
-
-  private MethodHandle toMethodHandle(Method method) {
-    try {
-      MethodHandle target = null;
-      if (isMethodDecorated(method)) {
-        target = getDecoratedMethodHandle(lookup, method, arity);
-      } else {
-        target = lookup.unreflect(method);
-        if (argumentNames.length > 1) {
-          target = FunctionCallSupport.reorderArguments(method, target, argumentNames);
-        }
-        if (target.isVarargsCollector() && isLastArgumentAnArray(arity, args)) {
-          target = target.asFixedArity().asType(type);
-        } else {
-          target = target.asType(type);
-        }
-      }
-      return target;
-    } catch (IllegalAccessException e) {
-      return null;
-    }
-  }
-
   private MethodHandle findMethod(String className) {
     try {
-      Class<?> theClass = classLoader.loadClass(className);
-      for (Method method : theClass.getMethods()) {
-        if (isCandidate(method)) {
-          return toMethodHandle(method);
-        }
-      }
-    } catch (ClassNotFoundException ignored) {}
+      return methodGraber.getMethodHandle(classLoader.loadClass(className));
+    } catch (ClassNotFoundException|IllegalAccessException|NoSuchMethodException|AmbiguousFunctionReferenceException ignored) {}
     return null;
   }
 

@@ -29,8 +29,7 @@ class RegularMethodFinder implements MethodFinder {
   private final String methodName;
   private final Lookup lookup;
   private final boolean makeAccessible;
-  private final int arity;
-  private final String[] argumentNames;
+  private final MethodGraber methodGraber;
 
   public RegularMethodFinder(MethodInvocationSupport.InlineCache inlineCache, Class<?> receiverClass, Object[] args) {
     this.args = args;
@@ -39,10 +38,28 @@ class RegularMethodFinder implements MethodFinder {
     this.methodName = inlineCache.name;
     this.lookup = inlineCache.callerLookup;
     this.makeAccessible = !isPublic(receiverClass.getModifiers());
-    this.arity = type.parameterArray().length;
-    this.argumentNames = new String[inlineCache.argumentNames.length + 1];
-    this.argumentNames[0] = "this";
-    System.arraycopy(inlineCache.argumentNames,0, argumentNames, 1, inlineCache.argumentNames.length);
+
+    this.methodGraber = new MethodGraber(methodName) {
+      @Override
+      protected boolean isCandidate(Method method) {
+        return super.isCandidate(method)
+               || isValidPrivateStructAccess(method);
+      }
+
+      @Override
+      public MethodHandle toMethodHandle(Method method) throws IllegalAccessException {
+        if (makeAccessible || isValidPrivateStructAccess(method)) {
+          method.setAccessible(true);
+        }
+        MethodHandle target = super.toMethodHandle(method);
+        return FunctionCallSupport.insertSAMFilter(target, lookup, method.getParameterTypes(), 1);
+      }
+    };
+    this.methodGraber
+      .withLookup(inlineCache.callerLookup)
+      .withType(inlineCache.type())
+      .calledWith(args, inlineCache.argumentNames)
+      .addThisParameterName();
   }
 
   @Override
@@ -75,26 +92,6 @@ class RegularMethodFinder implements MethodFinder {
     return target;
   }
 
-  private MethodHandle toMethodHandle(Method method) throws IllegalAccessException {
-    MethodHandle target = null;
-    if (makeAccessible || isValidPrivateStructAccess(method)) {
-      method.setAccessible(true);
-    }
-    if (isMethodDecorated(method)) {
-      target = getDecoratedMethodHandle(method, arity);
-    } else {
-      if ((method.isVarArgs() && isLastArgumentAnArray(type.parameterCount(), args))) {
-        target = lookup.unreflect(method).asFixedArity().asType(type);
-      } else {
-        target = lookup.unreflect(method).asType(type);
-      }
-    }
-    if(argumentNames.length > 1) {
-      target = FunctionCallSupport.reorderArguments(method, target, argumentNames);
-    }
-    return FunctionCallSupport.insertSAMFilter(target, lookup, method.getParameterTypes(), 1);
-  }
-
   private boolean isValidPrivateStructAccess(Method method) {
     Object receiver = args[0];
     if (!(receiver instanceof GoloStruct)) {
@@ -112,43 +109,31 @@ class RegularMethodFinder implements MethodFinder {
     return receiverClassName.substring(0, receiverClassName.indexOf(".types")) + "$" + receiverClassName.replace('.', '$');
   }
 
-  private List<Method> getCandidates() {
-    List<Method> candidates = new LinkedList<>();
-    HashSet<Method> methods = new HashSet<>();
-    Collections.addAll(methods, receiverClass.getMethods());
-    Collections.addAll(methods, receiverClass.getDeclaredMethods());
-    for (Method method : methods) {
-      if (isCandidateMethod(method)) {
-        candidates.add(method);
-      } else if (isValidPrivateStructAccess(method)) {
-        candidates.add(method);
-      }
-    }
-    return candidates;
-  }
-
   private MethodHandle findInMethods() throws IllegalAccessException {
-    List<Method> candidates = getCandidates();
+    List<Method> candidates = methodGraber.getCandidates(receiverClass);
     if (candidates.isEmpty()) { return null; }
-    if (candidates.size() == 1) { return toMethodHandle(candidates.get(0)); }
+    if (candidates.size() == 1) { return methodGraber.toMethodHandle(candidates.get(0)); }
 
+    System.err.println("## ambiguous: " + candidates);
     for (Method method : candidates) {
-      if (isMethodDecorated(method)) {
-        return toMethodHandle(method);
-      }
-      Class<?>[] parameterTypes = method.getParameterTypes();
-      Object[] argsWithoutReceiver = copyOfRange(args, 1, args.length);
-      if (haveSameNumberOfArguments(argsWithoutReceiver, parameterTypes) || haveEnoughArgumentsForVarargs(argsWithoutReceiver, method, parameterTypes)) {
-        if (canAssign(parameterTypes, argsWithoutReceiver, method.isVarArgs())) {
-          return toMethodHandle(method);
-        }
+      if (isMethodDecorated(method) || canAssignVarArgs(method)) {
+        return methodGraber.toMethodHandle(method);
       }
     }
     return null;
   }
 
+  private boolean canAssignVarArgs(Method method) {
+    Class<?>[] parameterTypes = method.getParameterTypes();
+    Object[] argsWithoutReceiver = copyOfRange(args, 1, args.length);
+    return
+      (haveSameNumberOfArguments(argsWithoutReceiver, parameterTypes)
+       || haveEnoughArgumentsForVarargs(argsWithoutReceiver, method, parameterTypes))
+      && canAssign(parameterTypes, argsWithoutReceiver, method.isVarArgs());
+  }
+
   private MethodHandle findInFields() throws IllegalAccessException {
-    if (arity > 3) { return null; }
+    if (type.parameterCount() > 3) { return null; }
 
     for (Field field : receiverClass.getDeclaredFields()) {
       if (isMatchingField(field)) {
@@ -165,9 +150,5 @@ class RegularMethodFinder implements MethodFinder {
 
   private boolean isMatchingField(Field field) {
     return field.getName().equals(methodName) && !isStatic(field.getModifiers());
-  }
-
-  private boolean isCandidateMethod(Method method) {
-    return method.getName().equals(methodName) && isPublic(method.getModifiers()) && !isAbstract(method.getModifiers());
   }
 }
