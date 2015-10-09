@@ -16,6 +16,26 @@ public final class StringUnescaping {
     //utility class
   }
 
+  public static String escape(String str) {
+    StringBuilder sb = new StringBuilder(str.length());
+    for (int i = 0; i < str.length(); i++) {
+      char ch = str.charAt(i);
+      switch (ch) {
+        case '\\':
+        case '\b':
+        case '\f':
+        case '\n':
+        case '\r':
+        case '\t':
+        case '\"':
+        case '\'':
+          sb.append('\\');
+      }
+      sb.append(ch);
+    }
+    return sb.toString();
+  }
+
   public static String unescape(String str) {
     StringBuilder sb = new StringBuilder(str.length());
     for (int i = 0; i < str.length(); i++) {

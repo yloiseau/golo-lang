@@ -13,6 +13,7 @@ package org.eclipse.golo.compiler.utils;
 import org.testng.annotations.Test;
 
 import static org.eclipse.golo.compiler.utils.StringUnescaping.unescape;
+import static org.eclipse.golo.compiler.utils.StringUnescaping.escape;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 
@@ -34,5 +35,19 @@ public class StringUnescapingTest {
     assertThat(unescape("plop\\\""), is("plop\""));
     assertThat(unescape("plop\\\\"), is("plop\\"));
     assertThat(unescape("plop\\\\\\n\\\""), is("plop\\\n\""));
+  }
+
+  @Test
+  public void check_escape() {
+    assertThat(escape("plop"), is("plop"));
+    assertThat(escape("plop\n"), is("plop\\n"));
+    assertThat(escape("plop\t"), is("plop\\t"));
+    assertThat(escape("plop\b"), is("plop\\b"));
+    assertThat(escape("plop\r"), is("plop\\r"));
+    assertThat(escape("plop\f"), is("plop\\f"));
+    assertThat(escape("plop\'"), is("plop\\'"));
+    assertThat(escape("plop\""), is("plop\\\""));
+    assertThat(escape("plop\\"), is("plop\\\\"));
+    assertThat(escape("plop\\\n\""), is("plop\\\\\\n\\\""));
   }
 }
