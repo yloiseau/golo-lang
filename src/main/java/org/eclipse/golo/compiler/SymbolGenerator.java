@@ -106,7 +106,8 @@ public final class SymbolGenerator {
   /**
    * Mangles the given name.
    *
-   * <p>Mangling is escaped for names beginning by {@code ESCAPE_MANGLE}.
+   * <p>This can be used in macros to provide hygiene by mangling the local variable names. Mangling is escaped for
+   * names beginning by {@code ESCAPE_MANGLE}.
    *
    * <p>For instance:
    * <pre class="listing"><code class="lang-golo" data-lang="golo">

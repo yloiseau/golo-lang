@@ -35,6 +35,10 @@ public class CtagsProcessor extends AbstractProcessor {
     ctagsFunction(funct, "", false);
   }
 
+  private void ctagsMacro(FunctionDocumentation macro) {
+    ctagsFunction(macro, "", false, "macro", "d");
+  }
+
   private void ctagsFunction(FunctionDocumentation funct, String parent, boolean named) {
     ctagsFunction(funct, parent, named, "function", "f");
   }
@@ -175,6 +179,9 @@ public class CtagsProcessor extends AbstractProcessor {
     }
     for (FunctionDocumentation funct : documentation.functions(true)) {
       ctagsFunction(funct);
+    }
+    for (FunctionDocumentation funct : documentation.macros()) {
+      ctagsMacro(funct);
     }
     return ctagsAsString();
   }

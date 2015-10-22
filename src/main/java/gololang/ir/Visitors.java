@@ -301,6 +301,11 @@ public final class Visitors {
     }
 
     @Override
+    public void visitMacroInvocation(MacroInvocation elt) {
+      dispatch(elt);
+    }
+
+    @Override
     public void visitNoop(Noop elt) {
       dispatch(elt);
     }

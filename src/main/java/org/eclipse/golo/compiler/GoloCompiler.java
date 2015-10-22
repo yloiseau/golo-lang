@@ -11,6 +11,7 @@
 package org.eclipse.golo.compiler;
 
 import gololang.ir.GoloModule;
+import org.eclipse.golo.compiler.macro.MacroExpansionIrVisitor;
 import org.eclipse.golo.compiler.parser.ASTCompilationUnit;
 import org.eclipse.golo.compiler.parser.GoloOffsetParser;
 import org.eclipse.golo.compiler.parser.GoloParser;
@@ -39,7 +40,15 @@ public class GoloCompiler {
 
   private GoloParser parser;
   private GoloCompilationException.Builder exceptionBuilder = null;
+  private final ClassLoader classloader;
 
+  public GoloCompiler() {
+    this(Thread.currentThread().getContextClassLoader());
+  }
+
+  public GoloCompiler(ClassLoader loader) {
+    this.classloader = loader;
+  }
 
   /**
    * Initializes an ExceptionBuilder to collect errors instead of throwing immediately.
@@ -212,7 +221,7 @@ public class GoloCompiler {
    * @throws GoloCompilationException if an error exists in the source represented by the input parse tree.
    */
   public final GoloModule check(ASTCompilationUnit compilationUnit) {
-    return refine(transform(compilationUnit));
+    return refine(expand(transform(compilationUnit)));
   }
 
   public final List<CodeGenerationResult> generate(GoloModule goloModule, String goloSourceFilename) {
@@ -222,6 +231,20 @@ public class GoloCompiler {
 
   public final GoloModule transform(ASTCompilationUnit compilationUnit) {
     return new ParseTreeToGoloIrVisitor().transform(compilationUnit, exceptionBuilder);
+  }
+
+  public final GoloModule expand(GoloModule goloModule, boolean recurse) {
+    goloModule.accept(new MacroExpansionIrVisitor(exceptionBuilder, classloader, recurse));
+    throwIfErrorEncountered();
+    return goloModule;
+  }
+
+  public final GoloModule expand(GoloModule goloModule) {
+    return expand(goloModule, true);
+  }
+
+  public final GoloModule expandOnce(GoloModule goloModule) {
+    return expand(goloModule, false);
   }
 
   public final GoloModule refine(GoloModule goloModule) {

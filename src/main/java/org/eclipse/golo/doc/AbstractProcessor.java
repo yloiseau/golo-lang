@@ -115,7 +115,6 @@ public abstract class AbstractProcessor {
    * Returns the link to the given filename from the given filename.
    */
   public String linkToFile(String src, String dst) {
-    //
     Path out = outputFile(src);
     if (out.getParent() != null) {
       out = out.getParent();

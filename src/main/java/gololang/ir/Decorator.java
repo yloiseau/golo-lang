@@ -126,6 +126,18 @@ public final class Decorator extends GoloElement<Decorator> {
     return wrapAnonymousCall(expressionStatement, expression);
   }
 
+  public MacroInvocation asMacroInvocation() {
+    if (expressionStatement instanceof ReferenceLookup) {
+      return MacroInvocation.call(((ReferenceLookup) expressionStatement).getName())
+        .positionInSourceCode(this.positionInSourceCode());
+    } else if (expressionStatement instanceof FunctionInvocation) {
+      FunctionInvocation f = (FunctionInvocation) expressionStatement;
+      return MacroInvocation.create(f.getName(), f.getArguments().toArray())
+        .positionInSourceCode(this.positionInSourceCode());
+    }
+    throw new IllegalArgumentException("Can't convert this decorator into a macro invocation");
+  }
+
   /**
    * {@inheritDoc}
    */

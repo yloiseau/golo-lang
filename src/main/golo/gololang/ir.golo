@@ -677,6 +677,15 @@ function invoke = |meth| -> MethodInvocation.invoke(meth)
 
 
 ----
+Call a macro.
+
+- *param* `name`: the name of the macro
+- *returns* a [`MacroInvocation`](../../javadoc/gololang/ir/MacroInvocation.html)
+----
+function macroCall = |name| -> MacroInvocation.call(name)
+
+
+----
 Creates a named argument in a call.
 
 For instance:

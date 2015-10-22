@@ -56,6 +56,13 @@ public class IrTreeDumper implements GoloIrVisitor {
     this.out.print(" [Local References: ");
     this.out.print(System.identityHashCode(module.getReferenceTable()));
     this.out.println("]");
+    if (module.decoratorMacro().isPresent()) {
+      incr();
+      space();
+      this.out.println("Decorator macro:");
+      module.decoratorMacro().get().accept(this);
+      decr();
+    }
     module.walk(this);
   }
 
@@ -141,7 +148,15 @@ public class IrTreeDumper implements GoloIrVisitor {
   public void visitFunction(GoloFunction function) {
     incr();
     space();
-    this.out.print("Function ");
+    if (function.isSpecialMacro()) {
+      this.out.print("Special macro ");
+    } else if (function.isContextualMacro()) {
+      this.out.print("Contextual macro ");
+    } else if (function.isMacro()) {
+      this.out.print("Macro ");
+    } else {
+      this.out.print("Function ");
+    }
     this.out.append(function.getName()).append(" = ");
     visitFunctionDefinition(function);
     decr();
@@ -240,6 +255,17 @@ public class IrTreeDumper implements GoloIrVisitor {
     this.out.append(", named arguments? -> ").println(functionInvocation.usesNamedArguments());
     functionInvocation.walk(this);
     printLocalDeclarations(functionInvocation);
+    decr();
+  }
+
+  @Override
+  public void visitMacroInvocation(MacroInvocation macroInvocation) {
+    incr();
+    space();
+    this.out.append("Macro call: ").println(macroInvocation.getName());
+    for (GoloElement<?> argument : macroInvocation.getArguments()) {
+      argument.accept(this);
+    }
     decr();
   }
 
