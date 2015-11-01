@@ -47,7 +47,7 @@ _golo ()
 			return 0
 			;;
 		--tool)
-			COMPREPLY=( $( compgen -W 'ast ir' -- "$cur" ) )
+			COMPREPLY=( $( compgen -W 'ast ir src' -- "$cur" ) )
 			return 0
 			;;
     --stage)

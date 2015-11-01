@@ -20,6 +20,8 @@ import org.eclipse.golo.compiler.GoloCompilationException;
 import org.eclipse.golo.compiler.GoloCompiler;
 import gololang.ir.GoloModule;
 import gololang.ir.IrTreeDumper;
+import gololang.ir.GoloIrVisitor;
+import org.eclipse.golo.compiler.GoloPrettyPrinter;
 import org.eclipse.golo.compiler.parser.ASTCompilationUnit;
 
 import java.io.File;
@@ -61,6 +63,7 @@ public class DiagnoseCommand implements CliCommand {
           dumpASTs(this.files);
           break;
         case "ir":
+        case "src":
           dumpIRs(this.files);
           break;
         default:
@@ -88,6 +91,7 @@ public class DiagnoseCommand implements CliCommand {
         }
       }
     } else if (file.getName().endsWith(".golo")) {
+      // TODO: move into the visitor
       System.out.println(">>> AST: " + goloFile);
       try {
         ASTCompilationUnit ast = compiler.parse(goloFile);
@@ -100,13 +104,15 @@ public class DiagnoseCommand implements CliCommand {
   }
 
   private void dumpIRs(List<String> files) {
-    IrTreeDumper dumper = new IrTreeDumper();
+    GoloIrVisitor dumper = "src".equals(this.mode)
+      ? new GoloPrettyPrinter("refined".equals(this.stage))
+      : new IrTreeDumper();
     for (String file : files) {
       dumpIR(file, dumper);
     }
   }
 
-  private void dumpIR(String goloFile, IrTreeDumper dumper) {
+  private void dumpIR(String goloFile, GoloIrVisitor dumper) {
     File file = new File(goloFile);
     if (file.isDirectory()) {
       File[] directoryFiles = file.listFiles();
@@ -116,7 +122,10 @@ public class DiagnoseCommand implements CliCommand {
         }
       }
     } else if (file.getName().endsWith(".golo")) {
-      System.out.println(">>> IR: " + file);
+      if ("ir".equals(this.mode)) {
+        // TODO: move into the visitor
+        System.out.println(">>> IR: " + file);
+      }
       try {
         GoloModule module = compiler.transform(compiler.parse(goloFile));
         switch (this.stage) {
@@ -144,9 +153,10 @@ public class DiagnoseCommand implements CliCommand {
       switch (value) {
         case "ast":
         case "ir":
+        case "src":
           return;
         default:
-          throw new ParameterException(message("diagnose_tool_error", "{ast, ir}"));
+          throw new ParameterException(message("diagnose_tool_error", "{ast, ir, src}"));
       }
     }
   }
