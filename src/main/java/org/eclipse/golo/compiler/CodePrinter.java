@@ -16,7 +16,10 @@ import gololang.ir.GoloIrVisitor;
 
 import static java.util.Arrays.asList;
 
-class CodePrinter {
+// TODO: replace StringBuilder with a Writer/PrintStream
+// TODO: return this from methods to chain calls
+
+public class CodePrinter {
   // TODO: configurable
   private int indent_size = 2;
   private char indent_char = ' ';
@@ -31,6 +34,11 @@ class CodePrinter {
 
   public void linePrefix(String prefix) {
     this.linePrefix = prefix;
+  }
+
+  public void reset() {
+    spacing = 0;
+    buffer = new StringBuilder();
   }
 
   public void print(Object o) {
@@ -48,7 +56,9 @@ class CodePrinter {
   }
 
   private char lastChar(int offset) {
-    return this.buffer.charAt(this.buffer.length() - (offset + 1));
+    if (this.buffer.length() == 0) { return Character.MIN_VALUE; }
+    int idx = Math.max(0, this.buffer.length() - (offset + 1));
+    return this.buffer.charAt(idx);
   }
 
   private boolean endsWith(int offset, char c) {
@@ -71,7 +81,7 @@ class CodePrinter {
 
   public void space() {
     char last = lastChar(0);
-    if (last == '\n') { indent(); }
+    if (last == Character.MIN_VALUE || last == '\n') { indent(); }
     else if (!noSpaceAfter.contains(last)) { print(' '); }
   }
 
@@ -92,16 +102,17 @@ class CodePrinter {
   }
 
   private void indent() {
+    buffer.append(linePrefix);
     for (int i = 0; i < spacing; i++) {
-      print(indent_char);
+      buffer.append(indent_char);
     }
   }
 
-  private void incr() {
+  public void incr() {
     spacing = spacing + indent_size;
   }
 
-  private void decr() {
+  public void decr() {
     spacing = Math.max(0, spacing - indent_size);
   }
 
@@ -130,9 +141,9 @@ class CodePrinter {
     }
   }
 
-  public void joinedVisit(GoloIrVisitor visitor, Iterable<? extends GoloElement> elements, String separator) {
+  public void joinedVisit(GoloIrVisitor visitor, Iterable<? extends GoloElement<?>> elements, String separator) {
     boolean first = true;
-    for (GoloElement element : elements) {
+    for (GoloElement<?> element : elements) {
       if (first) {
         first = false;
       } else {

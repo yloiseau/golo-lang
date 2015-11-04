@@ -10,12 +10,13 @@
 
 package gololang.ir;
 
+import org.eclipse.golo.compiler.CodePrinter;
 import java.io.PrintStream;
 
 public class IrTreeDumper implements GoloIrVisitor {
 
   private final PrintStream out;
-  private int spacing = 0;
+  private CodePrinter printer = new CodePrinter();
   private GoloModule currentModule;
 
   public IrTreeDumper() {
@@ -24,496 +25,517 @@ public class IrTreeDumper implements GoloIrVisitor {
 
   public IrTreeDumper(PrintStream out) {
     this.out = out;
-  }
-
-  private void space() {
-    this.out.print("# ");
-    for (int i = 0; i < spacing; i++) {
-      this.out.print(" ");
-    }
-  }
-
-  private void incr() {
-    spacing += 2;
-  }
-
-  private void decr() {
-    spacing -= 2;
+    printer.linePrefix("# ");
   }
 
   @Override
   public void visitModule(GoloModule module) {
     if (currentModule == module) {
-      incr();
-      space();
-      this.out.println("current module");
-      decr();
+      printer.incr();
+      printer.space();
+      printer.println("current module");
+      printer.decr();
       return;
     }
     currentModule = module;
-    space();
-    this.out.print(module.getPackageAndClass());
-    this.out.print(" [Local References: ");
-    this.out.print(System.identityHashCode(module.getReferenceTable()));
-    this.out.println("]");
+    printer.reset();
+    printer.space();
+    printer.println(module.getPackageAndClass());
+    printer.print(" [Local References: ");
+    printer.print(System.identityHashCode(module.getReferenceTable()));
+    printer.println("]");
     module.walk(this);
+    out.print(printer);
   }
 
   @Override
   public void visitModuleImport(ModuleImport moduleImport) {
-    incr();
-    space();
-    this.out.append(" - ").println(moduleImport);
+    printer.incr();
+    printer.space();
+    printer.print(" - ");
+    printer.println(moduleImport);
     moduleImport.walk(this);
-    decr();
+    printer.decr();
   }
 
   @Override
   public void visitNamedAugmentation(NamedAugmentation namedAugmentation) {
-    incr();
-    space();
-    this.out.append("Named Augmentation ").println(namedAugmentation.getName());
+    printer.incr();
+    printer.space();
+    printer.print("Named Augmentation ");
+    printer.println(namedAugmentation.getName());
     namedAugmentation.walk(this);
-    decr();
+    printer.decr();
   }
 
   @Override
   public void visitAugmentation(Augmentation augmentation) {
-    incr();
-    space();
-    this.out.append("Augmentation on ").println(augmentation.getTarget());
+    printer.incr();
+    printer.space();
+    printer.print("Augmentation on ");
+    printer.println(augmentation.getTarget());
     if (augmentation.hasNames()) {
-      incr();
+      printer.incr();
       for (String name : augmentation.getNames()) {
-        space();
-        this.out.append("Named Augmentation ").println(name);
+        printer.space();
+        printer.print("Named Augmentation ");
+        printer.println(name);
       }
-      decr();
+      printer.decr();
     }
     augmentation.walk(this);
-    decr();
+    printer.decr();
   }
 
   @Override
   public void visitStruct(Struct struct) {
-    incr();
-    space();
-    this.out.append("Struct ").println(struct.getPackageAndClass().className());
-    space();
-    this.out.append(" - target class = ").println(struct.getPackageAndClass());
-    incr();
-    space();
-    this.out.println("Members: ");
+    printer.incr();
+    printer.space();
+    printer.print("Struct ");
+    printer.println(struct.getPackageAndClass().className());
+    printer.space();
+    printer.print(" - target class = ");
+    printer.println(struct.getPackageAndClass());
+    printer.incr();
+    printer.space();
+    printer.println("Members: ");
     struct.walk(this);
-    decr();
-    decr();
+    printer.decr();
+    printer.decr();
   }
 
   @Override
   public void visitUnion(Union union) {
-    incr();
-    space();
-    this.out.append("Union ").println(union.getPackageAndClass().className());
-    space();
-    this.out.append(" - target class = ").println(union.getPackageAndClass());
+    printer.incr();
+    printer.space();
+    printer.print("Union ");
+    printer.println(union.getPackageAndClass().className());
+    printer.space();
+    printer.print(" - target class = ");
+    printer.println(union.getPackageAndClass());
     union.walk(this);
-    decr();
+    printer.decr();
   }
 
   @Override
   public void visitUnionValue(UnionValue value) {
-    incr();
-    space();
-    this.out.append("Value ").println(value.getPackageAndClass().className());
-    space();
-    this.out.append(" - target class = ").println(value.getPackageAndClass());
+    printer.incr();
+    printer.space();
+    printer.print("Value ");
+    printer.println(value.getPackageAndClass().className());
+    printer.space();
+    printer.print(" - target class = ");
+    printer.println(value.getPackageAndClass());
     if (value.hasMembers()) {
-      incr();
-      space();
-      this.out.println("Members: ");
+      printer.incr();
+      printer.space();
+      printer.println("Members: ");
       value.walk(this);
-      decr();
+      printer.decr();
     }
-    decr();
+    printer.decr();
   }
 
   @Override
   public void visitFunction(GoloFunction function) {
-    incr();
-    space();
+    printer.incr();
+    printer.space();
     if (function.isLocal()) {
-      this.out.print("Local function ");
+      printer.print("Local function ");
     } else {
-      this.out.print("Function ");
+      printer.print("Function ");
     }
-    this.out.append(function.getName()).append(" = ");
+    printer.print(function.getName());
+    printer.print(" = ");
     visitFunctionDefinition(function);
-    decr();
+    printer.decr();
   }
 
   private void visitFunctionDefinition(GoloFunction function) {
-    this.out.print("|");
+    printer.print("|");
     boolean first = true;
     for (String param : function.getParameterNames()) {
       if (first) {
         first = false;
       } else {
-        this.out.print(", ");
+        printer.print(", ");
       }
-      this.out.print(param);
+      printer.print(param);
     }
-    this.out.print("|");
+    printer.print("|");
     if (function.isVarargs()) {
-      this.out.print(" (varargs)");
+      printer.print(" (varargs)");
     }
     if (function.isSynthetic()) {
-      this.out.format(" (synthetic, %s synthetic parameters)",
-          function.getSyntheticParameterCount());
+      printer.print(" (synthetic, ");
+      printer.print(function.getSyntheticParameterCount());
+      printer.print(" synthetic parameters)");
       if (function.getSyntheticSelfName() != null) {
-        this.out.append(" (selfname: ")
-          .append(function.getSyntheticSelfName()).append(")");
+        printer.print(" (selfname: ");
+        printer.print(function.getSyntheticSelfName());
+        printer.print(")");
       }
     }
-    this.out.println();
+    printer.newline();
     function.walk(this);
   }
 
   @Override
   public void visitDecorator(Decorator decorator) {
-    incr();
-    space();
-    this.out.println("@Decorator");
+    printer.incr();
+    printer.space();
+    printer.println("@Decorator");
     decorator.walk(this);
-    decr();
+    printer.decr();
   }
 
   @Override
   public void visitBlock(Block block) {
     if (block.isEmpty()) { return; }
-    incr();
-    space();
-    this.out.print("Block");
-    this.out.print(" [Local References: ");
-    this.out.print(System.identityHashCode(block.getReferenceTable()));
-    this.out.print(" -> ");
-    this.out.print(System.identityHashCode(block.getReferenceTable().parent()));
-    this.out.println("]");
+    printer.incr();
+    printer.space();
+    printer.println("Block");
+    printer.print(" [Local References: ");
+    printer.print(System.identityHashCode(block.getReferenceTable()));
+    printer.print(" -> ");
+    printer.print(System.identityHashCode(block.getReferenceTable().parent()));
+    printer.println("]");
     block.walk(this);
-    decr();
+    printer.decr();
   }
 
   @Override
   public void visitLocalReference(LocalReference ref) {
-    incr();
-    space();
-    this.out.append(" - ").println(ref);
-    decr();
+    printer.incr();
+    printer.space();
+    printer.print(" - ");
+    printer.println(ref);
+    printer.decr();
   }
 
   @Override
   public void visitConstantStatement(ConstantStatement constantStatement) {
-    incr();
-    space();
+    printer.incr();
+    printer.space();
     Object v = constantStatement.value();
-    this.out.append("Constant = ").print(v);
+    printer.print("Constant = ");
+    printer.print(v);
     if (v != null) {
-      this.out.append(" (").append(v.getClass().getName()).append(")");
+      printer.print(" (");
+      printer.print(v.getClass().getName());
+      printer.print(")");
     }
-    this.out.println();
-    decr();
+    printer.newline();
+    printer.decr();
   }
 
   @Override
   public void visitReturnStatement(ReturnStatement returnStatement) {
-    incr();
-    space();
-    this.out.println("Return");
+    printer.incr();
+    printer.space();
+    printer.println("Return");
     returnStatement.walk(this);
-    decr();
+    printer.decr();
   }
 
   @Override
   public void visitFunctionInvocation(FunctionInvocation functionInvocation) {
-    incr();
-    space();
-    this.out.append("Function call: ").print(functionInvocation.getName());
-    this.out.append(", on reference? -> ").print(functionInvocation.isOnReference());
-    this.out.append(", on module state? -> ").print(functionInvocation.isOnModuleState());
-    this.out.append(", anonymous? -> ").print(functionInvocation.isAnonymous());
-    this.out.append(", constant? -> ").print(functionInvocation.isConstant());
-    this.out.append(", named arguments? -> ").println(functionInvocation.usesNamedArguments());
+    printer.incr();
+    printer.space();
+    printer.print("Function call: ");
+    printer.print(functionInvocation.getName());
+    printer.print(", on reference? -> ");
+    printer.print(functionInvocation.isOnReference());
+    printer.print(", on module state? -> ");
+    printer.print(functionInvocation.isOnModuleState());
+    printer.print(", anonymous? -> ");
+    printer.print(functionInvocation.isAnonymous());
+    printer.print(", constant? -> ");
+    printer.print(functionInvocation.isConstant());
+    printer.print(", named arguments? -> ");
+    printer.println(functionInvocation.usesNamedArguments());
     functionInvocation.walk(this);
     printLocalDeclarations(functionInvocation);
-    decr();
+    printer.decr();
   }
 
   @Override
   public void visitAssignmentStatement(AssignmentStatement assignmentStatement) {
-    incr();
-    space();
-    this.out.append("Assignment: ")
-      .append(assignmentStatement.getLocalReference().toString())
-      .println(assignmentStatement.isDeclaring() ? " (declaring)" : "");
+    printer.incr();
+    printer.space();
+    printer.print("Assignment: ");
+    printer.print(assignmentStatement.getLocalReference().toString());
+    printer.println(assignmentStatement.isDeclaring() ? " (declaring)" : "");
     assignmentStatement.walk(this);
-    decr();
+    printer.decr();
   }
 
   @Override
   public void visitDestructuringAssignment(DestructuringAssignment assignment) {
-    incr();
-    space();
-    this.out.format(
+    printer.incr();
+    printer.space();
+    printer.printf(
         "Destructuring assignement: {declaring=%s, varargs=%s}%n",
         assignment.isDeclaring(),
         assignment.isVarargs());
     assignment.walk(this);
-    decr();
+    printer.decr();
   }
 
   @Override
   public void visitReferenceLookup(ReferenceLookup referenceLookup) {
-    incr();
-    space();
-    this.out.append("Reference lookup: ").println(referenceLookup.getName());
+    printer.incr();
+    printer.space();
+    printer.print("Reference lookup: ");
+    printer.println(referenceLookup.getName());
     printLocalDeclarations(referenceLookup);
-    decr();
+    printer.decr();
   }
 
   @Override
   public void visitConditionalBranching(ConditionalBranching conditionalBranching) {
-    incr();
-    space();
-    this.out.println("Conditional");
+    printer.incr();
+    printer.space();
+    printer.println("Conditional");
     conditionalBranching.walk(this);
-    decr();
+    printer.decr();
   }
 
   @Override
   public void visitCaseStatement(CaseStatement caseStatement) {
-    incr();
-    space();
-    this.out.println("Case");
-    incr();
+    printer.incr();
+    printer.space();
+    printer.println("Case");
+    printer.incr();
     for (WhenClause<Block> c : caseStatement.getClauses()) {
       c.accept(this);
     }
-    space();
-    this.out.println("Otherwise");
+    printer.space();
+    printer.println("Otherwise");
     caseStatement.getOtherwise().accept(this);
-    decr();
+    printer.decr();
   }
 
   @Override
   public void visitMatchExpression(MatchExpression matchExpression) {
-    incr();
-    space();
-    this.out.println("Match");
-    incr();
+    printer.incr();
+    printer.space();
+    printer.println("Match");
+    printer.incr();
     for (WhenClause<?> c : matchExpression.getClauses()) {
       c.accept(this);
     }
-    space();
-    this.out.println("Otherwise");
+    printer.space();
+    printer.println("Otherwise");
     matchExpression.getOtherwise().accept(this);
     printLocalDeclarations(matchExpression);
-    decr();
+    printer.decr();
   }
 
   @Override
   public void visitWhenClause(WhenClause<?> whenClause) {
-    space();
-    this.out.println("When");
-    incr();
+    printer.space();
+    printer.println("When");
+    printer.incr();
     whenClause.walk(this);
-    decr();
+    printer.decr();
   }
 
   @Override
   public void visitBinaryOperation(BinaryOperation binaryOperation) {
-    incr();
-    space();
-    this.out.append("Binary operator: ").println(binaryOperation.getType());
+    printer.incr();
+    printer.space();
+    printer.print("Binary operator: ");
+    printer.println(binaryOperation.getType());
     binaryOperation.walk(this);
     printLocalDeclarations(binaryOperation);
-    decr();
+    printer.decr();
   }
 
   @Override
   public void visitUnaryOperation(UnaryOperation unaryOperation) {
-    incr();
-    space();
-    this.out.append("Unary operator: ").println(unaryOperation.getType());
+    printer.incr();
+    printer.space();
+    printer.print("Unary operator: ");
+    printer.println(unaryOperation.getType());
     unaryOperation.walk(this);
     printLocalDeclarations(unaryOperation);
-    decr();
+    printer.decr();
   }
 
   @Override
   public void visitLoopStatement(LoopStatement loopStatement) {
-    incr();
-    space();
-    this.out.println("Loop");
+    printer.incr();
+    printer.space();
+    printer.println("Loop");
     loopStatement.walk(this);
-    decr();
+    printer.decr();
   }
 
   @Override
   public void visitForEachLoopStatement(ForEachLoopStatement foreachStatement) {
-    incr();
-    space();
-    this.out.println("Foreach");
-    incr();
+    printer.incr();
+    printer.space();
+    printer.println("Foreach");
+    printer.incr();
     for (LocalReference ref : foreachStatement.getReferences()) {
       ref.accept(this);
     }
     foreachStatement.getIterable().accept(this);
     if (foreachStatement.hasWhenClause()) {
-      space();
-      this.out.println("When:");
+      printer.space();
+      printer.println("When:");
       foreachStatement.getWhenClause().accept(this);
     }
     foreachStatement.getBlock().accept(this);
-    decr();
-    decr();
+    printer.decr();
+    printer.decr();
   }
 
   @Override
   public void visitMethodInvocation(MethodInvocation methodInvocation) {
-    incr();
-    space();
-    this.out.format("Method invocation: %s, null safe? -> %s%n",
+    printer.incr();
+    printer.space();
+    printer.printf("Method invocation: %s, null safe? -> %s%n",
         methodInvocation.getName(),
         methodInvocation.isNullSafeGuarded());
     methodInvocation.walk(this);
     printLocalDeclarations(methodInvocation);
-    decr();
+    printer.decr();
   }
 
   @Override
   public void visitThrowStatement(ThrowStatement throwStatement) {
-    incr();
-    space();
-    this.out.println("Throw");
+    printer.incr();
+    printer.space();
+    printer.println("Throw");
     throwStatement.walk(this);
-    decr();
+    printer.decr();
   }
 
   @Override
   public void visitTryCatchFinally(TryCatchFinally tryCatchFinally) {
-    incr();
-    space();
-    this.out.println("Try");
+    printer.incr();
+    printer.space();
+    printer.println("Try");
     tryCatchFinally.getTryBlock().accept(this);
     if (tryCatchFinally.hasCatchBlock()) {
-      space();
-      this.out.append("Catch: ").println(tryCatchFinally.getExceptionId());
+      printer.space();
+      printer.print("Catch: ");
+      printer.println(tryCatchFinally.getExceptionId());
       tryCatchFinally.getCatchBlock().accept(this);
     }
     if (tryCatchFinally.hasFinallyBlock()) {
-      space();
-      this.out.println("Finally");
+      printer.space();
+      printer.println("Finally");
       tryCatchFinally.getFinallyBlock().accept(this);
     }
-    decr();
+    printer.decr();
   }
 
   @Override
   public void visitClosureReference(ClosureReference closureReference) {
     GoloFunction target = closureReference.getTarget();
-    incr();
-    space();
+    printer.incr();
+    printer.space();
     if (target.isAnonymous()) {
-      this.out.print("Closure: ");
-      incr();
+      printer.print("Closure: ");
+      printer.incr();
       visitFunctionDefinition(target);
-      decr();
+      printer.decr();
     } else {
-      this.out.printf(
+      printer.printf(
           "Closure reference: %s, regular arguments at index %d%n",
           target.getName(),
           target.getSyntheticParameterCount());
-      incr();
+      printer.incr();
       for (String refName : closureReference.getCapturedReferenceNames()) {
-        space();
-        this.out.append("- capture: ").println(refName);
+        printer.space();
+        printer.print("- capture: ");
+        printer.println(refName);
       }
-      decr();
+      printer.decr();
     }
-    decr();
+    printer.decr();
   }
 
   @Override
   public void visitLoopBreakFlowStatement(LoopBreakFlowStatement loopBreakFlowStatement) {
-    incr();
-    space();
-    this.out.append("Loop break flow: ").println(loopBreakFlowStatement.getType().name());
-    decr();
+    printer.incr();
+    printer.space();
+    printer.print("Loop break flow: ");
+    printer.println(loopBreakFlowStatement.getType().name());
+    printer.decr();
   }
 
   @Override
   public void visitCollectionLiteral(CollectionLiteral collectionLiteral) {
-    incr();
-    space();
-    this.out.append("Collection literal of type: ").println(collectionLiteral.getType());
+    printer.incr();
+    printer.space();
+    printer.print("Collection literal of type: ");
+    printer.println(collectionLiteral.getType());
     collectionLiteral.walk(this);
     printLocalDeclarations(collectionLiteral);
-    decr();
+    printer.decr();
   }
 
   @Override
   public void visitCollectionComprehension(CollectionComprehension collectionComprehension) {
-    incr();
-    space();
-    this.out.append("Collection comprehension of type: ").println(collectionComprehension.getType());
-    incr();
-    space();
-    this.out.println("Expression: ");
+    printer.incr();
+    printer.space();
+    printer.print("Collection comprehension of type: ");
+    printer.println(collectionComprehension.getType());
+    printer.incr();
+    printer.space();
+    printer.println("Expression: ");
     collectionComprehension.expression().accept(this);
-    space();
-    this.out.println("Comprehension: ");
+    printer.space();
+    printer.println("Comprehension: ");
     for (GoloStatement<?> b : collectionComprehension.loops()) {
       b.accept(this);
     }
     printLocalDeclarations(collectionComprehension);
-    decr();
-    decr();
+    printer.decr();
+    printer.decr();
   }
 
   @Override
   public void visitNamedArgument(NamedArgument namedArgument) {
-    incr();
-    space();
-    this.out.append("Named argument: ").println(namedArgument.getName());
-    namedArgument.expression().accept(this);
-    decr();
+    printer.incr();
+    printer.space();
+    printer.print("Named argument: ");
+    printer.println(namedArgument.getName());
+    namedArgument.walk(this);
+    printer.decr();
   }
 
   @Override
   public void visitMember(Member member) {
-    space();
-    this.out.print(" - ");
-    this.out.print(member.getName());
-    this.out.println();
+    printer.space();
+    printer.print(" - ");
+    printer.print(member.getName());
+    printer.newline();
   }
 
   private void printLocalDeclarations(ExpressionStatement<?> expr) {
     if (expr.hasLocalDeclarations()) {
-      incr();
-      space();
-      System.out.println("Local declaration:");
+      printer.incr();
+      printer.space();
+      printer.println("Local declaration:");
       for (GoloAssignment<?> a : expr.declarations()) {
         a.accept(this);
       }
-      decr();
+      printer.decr();
     }
   }
 
   @Override
   public void visitNoop(Noop noop) {
-    incr();
-    space();
-    this.out.append("Noop: ").println(noop.comment());
-    decr();
+    printer.incr();
+    printer.space();
+    printer.print("Noop: ");
+    printer.println(noop.comment());
+    printer.decr();
   }
 
   @Override

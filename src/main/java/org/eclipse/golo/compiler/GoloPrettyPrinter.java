@@ -23,8 +23,6 @@ import java.util.function.Function;
 import static java.util.Arrays.asList;
 
 /* TODO:
- * - 1 line if 1 statement in block
- * - decorators
  * - keep comments
  * - line wrapping!
  */
