@@ -45,7 +45,7 @@ public class StringUnescapingTest {
     assertThat(escape("plop\b"), is("plop\\b"));
     assertThat(escape("plop\r"), is("plop\\r"));
     assertThat(escape("plop\f"), is("plop\\f"));
-    assertThat(escape("plop\'"), is("plop\\'"));
+    assertThat(escape("plop\'"), is("plop\'"));
     assertThat(escape("plop\""), is("plop\\\""));
     assertThat(escape("plop\\"), is("plop\\\\"));
     assertThat(escape("plop\\\n\""), is("plop\\\\\\n\\\""));

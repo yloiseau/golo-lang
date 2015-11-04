@@ -22,16 +22,30 @@ public final class StringUnescaping {
       char ch = str.charAt(i);
       switch (ch) {
         case '\\':
+          sb.append("\\\\");
+          break;
         case '\b':
+          sb.append("\\b");
+          break;
         case '\f':
+          sb.append("\\f");
+          break;
         case '\n':
+          sb.append("\\n");
+          break;
         case '\r':
+          sb.append("\\r");
+          break;
         case '\t':
+          sb.append("\\t");
+          break;
         case '\"':
-        case '\'':
-          sb.append('\\');
+          sb.append("\\\"");
+          break;
+        default:
+          sb.append(ch);
+          break;
       }
-      sb.append(ch);
     }
     return sb.toString();
   }
