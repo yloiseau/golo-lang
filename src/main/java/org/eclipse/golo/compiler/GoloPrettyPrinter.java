@@ -23,7 +23,6 @@ import java.util.function.Function;
 import static java.util.Arrays.asList;
 
 /* TODO:
- * - extract a CodePrinter class
  * - 1 line if 1 statement in block
  * - decorators
  * - keep comments
@@ -33,7 +32,8 @@ public class GoloPrettyPrinter implements GoloIrVisitor {
 
   // configuration: should be customizable
   private static final int COLLECTION_WRAPPING_THRESHOLD = 5;
-  private static final int INDENT = 2;
+
+  private final CodePrinter printer = new CodePrinter();
 
   private static final List<String> RESERVED = asList(
     "module", "import", "function", "local", "return", "if", "else", "while", "for", "foreach",
@@ -41,122 +41,14 @@ public class GoloPrettyPrinter implements GoloIrVisitor {
     "augment", "pimp", "augmentation", "with", "break", "continue", "struct", "union", "oftype",
     "is", "isnt", "and", "or", "orIfNull", "not", "var", "let", "null", "true", "false");
 
-  private int spacing = 0;
   private Deque<Boolean> compactReturn = new LinkedList<>();
-  private StringBuilder buffer = new StringBuilder();
   private boolean expanded = false;
 
   private GoloModule module;
 
   public GoloPrettyPrinter(boolean expanded) {
     this.expanded = expanded;
-  }
-
-  private void print(Object o) {
-    this.buffer.append(o);
-  }
-
-  private void newline() {
-    this.buffer.append('\n');
-  }
-
-  private char lastChar(int offset) {
-    return this.buffer.charAt(this.buffer.length() - (offset + 1));
-  }
-
-  private boolean endsWith(int offset, char c) {
-    return (this.buffer.length() > offset
-            && lastChar(offset) == c);
-  }
-
-  private void newlineIfNeeded() {
-    if (!endsWith(0, '\n')) {
-      newline();
-    }
-  }
-
-  private void blankLine() {
-    newlineIfNeeded();
-    if (!endsWith(1, '\n')) {
-      newline();
-    }
-  }
-
-  private void space() {
-    char last = lastChar(0);
-    switch (last) {
-      case '\n':
-        indent();
-        break;
-      case ' ':
-      case '[':
-      case '(':
-      case '|':
-        break;
-      default:
-        print(' ');
-    }
-  }
-
-  private void println(Object s) {
-    print(s);
-    newline();
-  }
-
-  private void printf(String format, Object... values) {
-    print(String.format(format, values));
-  }
-
-  private void indent() {
-    for (int i = 0; i < spacing; i++) {
-      print(' ');
-    }
-  }
-
-  private void incr() {
-    spacing = spacing + INDENT;
-  }
-
-  private void decr() {
-    spacing = Math.max(0, spacing - INDENT);
-  }
-
-  private void beginBlock(String delim) {
-    println(delim);
-    incr();
-  }
-
-  private void endBlock(String delim) {
-    newlineIfNeeded();
-    decr();
-    indent();
-    print(delim);
-  }
-
-  private void join(Iterable<? extends Object> elements, String separator) {
-    boolean first = true;
-    for (Object elt : elements) {
-      if (first) {
-        first = false;
-      } else {
-        print(separator);
-      }
-      space();
-      print(elt);
-    }
-  }
-
-  private void joinedVisit(Iterable<? extends GoloElement<?>> elements, String separator) {
-    boolean first = true;
-    for (GoloElement<?> element : elements) {
-      if (first) {
-        first = false;
-      } else {
-        print(separator);
-      }
-      space();
-      element.accept(this);
-    }
+    printer.noSpaceAfter(' ', '[', '(', '|');
   }
 
   private static String quoteReserved(String name) {
@@ -167,16 +59,13 @@ public class GoloPrettyPrinter implements GoloIrVisitor {
   }
 
   private void printDocumentation(GoloElement<?> element) {
-    if (element.documentation() != null) {
-      blankLine();
-      space();
-      println("----");
-      for (String line : asList(element.documentation().trim().split("\r\n|\r|\n"))) {
-        space();
-        println(line.trim());
-      }
-      space();
-      println("----");
+    if (element.documentation() != null && !element.documentation().isEmpty()) {
+      printer.blankLine();
+      printer.space();
+      printer.println("----");
+      printer.printMultiline(element.documentation());
+      printer.space();
+      printer.println("----");
     }
   }
 
@@ -184,10 +73,11 @@ public class GoloPrettyPrinter implements GoloIrVisitor {
   public void visitModule(GoloModule module) {
     this.module = module;
     printDocumentation(module);
-    println("module " + module.getPackageAndClass());
-    blankLine();
+    printer.println("module " + module.getPackageAndClass());
+    printer.blankLine();
     module.walk(this);
-    System.out.println(this.buffer);
+    // TODO: don't print, create a specific method
+    System.out.println(printer);
   }
 
   @Override
@@ -196,77 +86,77 @@ public class GoloPrettyPrinter implements GoloIrVisitor {
     if (!expanded && (module.getPackageAndClass().toString() + ".types").equals(augment.getTarget().packageName())) {
       target = augment.getTarget().className();
     }
-    blankLine();
+    printer.blankLine();
     printDocumentation(augment);
     if (augment.hasNames()) {
-      printf("augment %s with ", target);
-      join(augment.getNames(), ", ");
-      newline();
+      printer.printf("augment %s with ", target);
+      printer.join(augment.getNames(), ", ");
+      printer.newline();
     }
     if (augment.hasFunctions()) {
-      printf("augment %s ", target);
-      beginBlock("{");
+      printer.printf("augment %s ", target);
+      printer.beginBlock("{");
       for (GoloFunction func : augment.getFunctions()) {
         func.accept(this);
       }
-      endBlock("}");
+      printer.endBlock("}");
     }
   }
 
   @Override
   public void visitNamedAugmentation(NamedAugmentation augmentation) {
-    blankLine();
+    printer.blankLine();
     printDocumentation(augmentation);
     if (augmentation.hasFunctions()) {
-      printf("augmentation %s = ", quoteReserved(augmentation.getName()));
-      beginBlock("{");
+      printer.printf("augmentation %s = ", quoteReserved(augmentation.getName()));
+      printer.beginBlock("{");
       for (GoloFunction func : augmentation.getFunctions()) {
         func.accept(this);
       }
-      endBlock("}");
+      printer.endBlock("}");
     }
   }
 
   @Override
   public void visitModuleImport(ModuleImport moduleImport) {
     if (expanded || !moduleImport.isImplicit()) {
-      println("import " + moduleImport.getPackageAndClass().toString());
+      printer.println("import " + moduleImport.getPackageAndClass().toString());
     }
   }
 
   @Override
   public void visitStruct(Struct struct) {
-    blankLine();
-    print("struct " + struct.getPackageAndClass().className() + " = ");
+    printer.blankLine();
+    printer.print("struct " + struct.getPackageAndClass().className() + " = ");
     if (struct.getMembers().size() > COLLECTION_WRAPPING_THRESHOLD) {
-      beginBlock("{");
-      join(struct.getMembers(), ",\n");
-      endBlock("}");
+      printer.beginBlock("{");
+      printer.join(struct.getMembers(), ",\n");
+      printer.endBlock("}");
     } else {
-      print("{ ");
-      join(struct.getMembers(), ", ");
-      println(" }");
+      printer.print("{ ");
+      printer.join(struct.getMembers(), ", ");
+      printer.println(" }");
     }
   }
 
   @Override
   public void visitUnion(Union union) {
-    blankLine();
-    print("union " + union.getPackageAndClass().className() + " = ");
-    beginBlock("{");
+    printer.blankLine();
+    printer.print("union " + union.getPackageAndClass().className() + " = ");
+    printer.beginBlock("{");
     union.walk(this);
-    endBlock("}");
+    printer.endBlock("}");
   }
 
   @Override
   public void visitUnionValue(UnionValue value) {
-    newlineIfNeeded();
-    indent();
-    print(quoteReserved(value.getName()));
+    printer.newlineIfNeeded();
+    printer.space();
+    printer.print(quoteReserved(value.getName()));
     if (value.hasMembers()) {
-      print(" = { ");
-      join(value.getMembers(), ", ");
-      println(" }");
+      printer.print(" = { ");
+      printer.join(value.getMembers(), ", ");
+      printer.println(" }");
     }
   }
 
@@ -286,16 +176,16 @@ public class GoloPrettyPrinter implements GoloIrVisitor {
     }
     int realArity = function.getArity() - startArguments;
     if (realArity != 0) {
-      print("|");
+      printer.print("|");
     }
-    join(function.getParameterNames().subList(
+    printer.join(function.getParameterNames().subList(
         startArguments,
         function.getArity()), ", ");
     if (function.isVarargs()) {
-      print("...");
+      printer.print("...");
     }
     if (realArity != 0) {
-      print("| ");
+      printer.print("| ");
     }
   }
 
@@ -308,40 +198,38 @@ public class GoloPrettyPrinter implements GoloIrVisitor {
     if (expanded) {
       printFunctionDefinition(function);
     } else {
-      blankLine();
-      joinedVisit(function.getBlock().getStatements(), "\n");
+      printer.blankLine();
+      printer.joinedVisit(this, function.getBlock().getStatements(), "\n");
     }
   }
 
   private void printFunctionDefinition(GoloFunction function) {
-    blankLine();
+    printer.blankLine();
     printDocumentation(function);
     List<Decorator> decorators = new ArrayList<>(function.getDecorators());
     Collections.reverse(decorators);
     for (Decorator decorator : decorators) {
       decorator.accept(this);
     }
-    indent();
+    printer.space();
     if (function.isLocal()) {
-      print("local ");
+      printer.print("local ");
     }
-    print("function ");
-    print(quoteReserved(function.getName()));
-    print(" = ");
+    printer.printf("function %s = ", quoteReserved(function.getName()));
     printFunctionExpression(function);
   }
 
   @Override
   public void visitDecorator(Decorator decorator) {
     if (!expanded) {
-      indent();
-      print('@');
+      printer.space();
+      printer.print('@');
       if (decorator.isConstant()) {
-        print('!');
+        printer.print('!');
       }
       decorator.walk(this);
-      newline();
-      indent();
+      printer.newline();
+      printer.space();
     }
   }
 
@@ -366,26 +254,26 @@ public class GoloPrettyPrinter implements GoloIrVisitor {
   public void visitBlock(Block block) {
     List<GoloStatement<?>> statements = block.getStatements();
     checkForCompactReturn(block);
-    space();
+    printer.space();
     if (compactReturn() || isLoopBlock(statements)) {
       statements.get(0).accept(this);
     } else if (isCompact(block)) {
-      print("{ ");
+      printer.print("{ ");
       if (!block.isEmpty()) {
         statements.get(0).accept(this);
       }
-      space();
-      print("}");
+      printer.space();
+      printer.print("}");
     } else {
-      beginBlock("{");
+      printer.beginBlock("{");
       for (GoloStatement<?> s : block.getStatements()) {
         if (willPrint(s)) {
-          newlineIfNeeded();
-          space();
+          printer.newlineIfNeeded();
+          printer.space();
         }
         s.accept(this);
       }
-      endBlock("}");
+      printer.endBlock("}");
     }
     compactReturn.pop();
   }
@@ -408,9 +296,9 @@ public class GoloPrettyPrinter implements GoloIrVisitor {
 
   private void printString(String value) {
     if (isLongString(value)) {
-      print("\"\"\"" + value + "\"\"\"");
+      printer.print("\"\"\"" + value + "\"\"\"");
     } else {
-      print("\"" + escape(value) + "\"");
+      printer.print("\"" + escape(value) + "\"");
     }
   }
 
@@ -420,21 +308,21 @@ public class GoloPrettyPrinter implements GoloIrVisitor {
     if (value instanceof String) {
       printString((String) value);
     } else if (value instanceof Character) {
-      print("'" + escape(value.toString()) + "'");
+      printer.print("'" + escape(value.toString()) + "'");
     } else if (value instanceof Long) {
-      print(value + "_L");
+      printer.print(value + "_L");
     } else if (value instanceof Float) {
-      print(value + "_F");
+      printer.print(value + "_F");
     } else if (value instanceof ClassReference) {
-      print(((ClassReference) value).getName() + ".class");
+      printer.print(((ClassReference) value).getName() + ".class");
     } else if (value instanceof FunctionRef) {
-      print("^"
+      printer.print("^"
           + ((((FunctionRef) value).module() != null)
               ? (((FunctionRef) value).module() + "::")
               : "")
           + ((FunctionRef) value).name());
     } else {
-      print(constantStatement.value());
+      printer.print(constantStatement.value());
     }
   }
 
@@ -452,13 +340,13 @@ public class GoloPrettyPrinter implements GoloIrVisitor {
   @Override
   public void visitReturnStatement(ReturnStatement returnStatement) {
     if (compactReturn()) {
-      print("-> ");
+      printer.print("-> ");
       returnStatement.walk(this);
     } else {
       if (!returnStatement.isSynthetic() || expanded) {
-        print("return");
+        printer.print("return");
         if (!returnStatement.isReturningVoid()) {
-          space();
+          printer.space();
           returnStatement.walk(this);
         }
       }
@@ -468,23 +356,23 @@ public class GoloPrettyPrinter implements GoloIrVisitor {
   @Override
   public void visitFunctionInvocation(FunctionInvocation functionInvocation) {
     if (!functionInvocation.isAnonymous()) {
-      print(quoteReserved(functionInvocation.getName()));
+      printer.print(quoteReserved(functionInvocation.getName()));
     }
     if (functionInvocation.isConstant()) {
-      print('!');
+      printer.print('!');
     }
     printInvocationArguments(functionInvocation.getArguments());
   }
 
   private void printInvocationArguments(List<GoloElement<?>> arguments) {
     if (arguments.size() < COLLECTION_WRAPPING_THRESHOLD) {
-      print("(");
-      joinedVisit(arguments, ",");
-      print(")");
+      printer.print("(");
+      printer.joinedVisit(this, arguments, ",");
+      printer.print(")");
     } else {
-      beginBlock("(");
-      joinedVisit(arguments, ",\n");
-      endBlock(")");
+      printer.beginBlock("(");
+      printer.joinedVisit(this, arguments, ",\n");
+      printer.endBlock(")");
     }
   }
 
@@ -492,12 +380,12 @@ public class GoloPrettyPrinter implements GoloIrVisitor {
     switch (kind) {
       case CONSTANT:
       case MODULE_CONSTANT:
-        print("let ");
+        printer.print("let ");
         break;
       case VARIABLE:
       case MODULE_VARIABLE:
         if (declaring) {
-          print("var ");
+          printer.print("var ");
         }
         break;
       default:
@@ -508,26 +396,26 @@ public class GoloPrettyPrinter implements GoloIrVisitor {
   public void visitAssignmentStatement(AssignmentStatement assignmentStatement) {
     LocalReference ref = assignmentStatement.getLocalReference();
     printAssignementKind(ref.getKind(), assignmentStatement.isDeclaring());
-    print(quoteReserved(ref.getName()) + " = ");
+    printer.print(quoteReserved(ref.getName()) + " = ");
     assignmentStatement.expression().accept(this);
   }
 
   @Override
   public void visitReferenceLookup(ReferenceLookup referenceLookup) {
-    print(quoteReserved(referenceLookup.getName()));
+    printer.print(quoteReserved(referenceLookup.getName()));
   }
 
   @Override
   public void visitConditionalBranching(ConditionalBranching conditionalBranching) {
-    print("if ");
+    printer.print("if ");
     conditionalBranching.getCondition().accept(this);
-    space();
+    printer.space();
     conditionalBranching.getTrueBlock().accept(this);
     if (conditionalBranching.hasFalseBlock()) {
-      print(" else ");
+      printer.print(" else ");
       conditionalBranching.getFalseBlock().accept(this);
     } else if (conditionalBranching.hasElseConditionalBranching()) {
-      print(" else ");
+      printer.print(" else ");
       conditionalBranching.getElseConditionalBranching().accept(this);
     }
   }
@@ -546,44 +434,44 @@ public class GoloPrettyPrinter implements GoloIrVisitor {
   private void printOpSide(BinaryOperation op, Function<BinaryOperation, ExpressionStatement<?>> side) {
     ExpressionStatement<?> sideExpr = side.apply(op);
     boolean brackets = hasBrackets(op, sideExpr);
-    if (brackets) { print("("); }
+    if (brackets) { printer.print("("); }
     sideExpr.accept(this);
-    if (brackets) { print(")"); }
+    if (brackets) { printer.print(")"); }
   }
 
   @Override
   public void visitBinaryOperation(BinaryOperation binaryOperation) {
     printOpSide(binaryOperation, BinaryOperation::left);
-    if (!binaryOperation.isMethodCall()) { space(); }
-    print(binaryOperation.getType());
-    if (!binaryOperation.isMethodCall()) { space(); }
+    if (!binaryOperation.isMethodCall()) { printer.space(); }
+    printer.print(binaryOperation.getType());
+    if (!binaryOperation.isMethodCall()) { printer.space(); }
     printOpSide(binaryOperation, BinaryOperation::right);
   }
 
   @Override
   public void visitUnaryOperation(UnaryOperation unaryOperation) {
-    print(unaryOperation.getType());
-    space();
+    printer.print(unaryOperation.getType());
+    printer.space();
     ExpressionStatement<?> expr = unaryOperation.expression();
     boolean brackets = expr instanceof BinaryOperation && !((BinaryOperation) expr).isMethodCall();
-    if (brackets) { print("("); }
+    if (brackets) { printer.print("("); }
     expr.accept(this);
-    if (brackets) { print(")"); }
+    if (brackets) { printer.print(")"); }
   }
 
   @Override
   public void visitForEachLoopStatement(ForEachLoopStatement loop) {
-    space();
-    print("foreach ");
-    joinedVisit(asList(loop.getReferences()), ", ");
+    printer.space();
+    printer.print("foreach ");
+    printer.joinedVisit(this, asList(loop.getReferences()), ", ");
     if (loop.isVarargs()) {
-      print("...");
+      printer.print("...");
     }
-    print(" in ");
+    printer.print(" in ");
     loop.getIterable().accept(this);
     if (loop.hasWhenClause()) {
-      space();
-      print("when ");
+      printer.space();
+      printer.print("when ");
       loop.getWhenClause().accept(this);
     }
     if (!loop.getBlock().isEmpty()) {
@@ -592,18 +480,18 @@ public class GoloPrettyPrinter implements GoloIrVisitor {
   }
 
   private void visitForLoopStatement(LoopStatement loop) {
-    print("for (");
+    printer.print("for (");
     if (loop.hasInitStatement()) {
       loop.init().accept(this);
     }
-    print(", ");
+    printer.print(", ");
     loop.condition().accept(this);
-    print(",");
+    printer.print(",");
     if (loop.hasPostStatement()) {
-      print(" ");
+      printer.space();
       loop.post().accept(this);
     }
-    print(")");
+    printer.print(")");
     if (!loop.getBlock().isEmpty()) {
       loop.getBlock().accept(this);
     }
@@ -612,12 +500,12 @@ public class GoloPrettyPrinter implements GoloIrVisitor {
   private void visitWhileLoopStatement(LoopStatement loop) {
     if (loop.hasInitStatement()) {
       loop.init().accept(this);
-      newline();
-      indent();
+      printer.newline();
+      printer.space();
     }
-    print("while ");
+    printer.print("while ");
     loop.condition().accept(this);
-    print(" ");
+    printer.space();
     loop.getBlock().accept(this);
   }
 
@@ -632,27 +520,27 @@ public class GoloPrettyPrinter implements GoloIrVisitor {
 
   @Override
   public void visitMethodInvocation(MethodInvocation methodInvocation) {
-    space();
-    print(quoteReserved(methodInvocation.getName()));
+    printer.space();
+    printer.print(quoteReserved(methodInvocation.getName()));
     printInvocationArguments(methodInvocation.getArguments());
   }
 
   @Override
   public void visitThrowStatement(ThrowStatement throwStatement) {
-    print("throw ");
+    printer.print("throw ");
     throwStatement.expression().accept(this);
   }
 
   @Override
   public void visitTryCatchFinally(TryCatchFinally tryCatchFinally) {
-    print("try ");
+    printer.print("try ");
     tryCatchFinally.getTryBlock().accept(this);
     if (tryCatchFinally.hasCatchBlock()) {
-      print(" catch (" + tryCatchFinally.getExceptionId() + ")");
+      printer.print(" catch (" + tryCatchFinally.getExceptionId() + ")");
       tryCatchFinally.getCatchBlock().accept(this);
     }
     if (tryCatchFinally.hasFinallyBlock()) {
-      print(" finally ");
+      printer.print(" finally ");
       tryCatchFinally.getFinallyBlock().accept(this);
     }
   }
@@ -660,11 +548,11 @@ public class GoloPrettyPrinter implements GoloIrVisitor {
   @Override
   public void visitClosureReference(ClosureReference closureReference) {
     if (expanded) {
-      print("^" + closureReference.getTarget().getName());
+      printer.print("^" + closureReference.getTarget().getName());
       if (closureReference.getTarget().getSyntheticParameterCount() > 0) {
-        print(": insertArguments(0, ");
-        join(closureReference.getTarget().getSyntheticParameterNames(), ", ");
-        print(")");
+        printer.print(": insertArguments(0, ");
+        printer.join(closureReference.getTarget().getSyntheticParameterNames(), ", ");
+        printer.print(")");
       }
     } else {
       printFunctionExpression(closureReference.getTarget());
@@ -673,29 +561,29 @@ public class GoloPrettyPrinter implements GoloIrVisitor {
 
   @Override
   public void visitLoopBreakFlowStatement(LoopBreakFlowStatement loopBreakFlowStatement) {
-    space();
-    println(loopBreakFlowStatement.getType().name().toLowerCase());
+    printer.space();
+    printer.println(loopBreakFlowStatement.getType().name().toLowerCase());
   }
 
   @Override
   public void visitCollectionLiteral(CollectionLiteral collectionLiteral) {
     if (collectionLiteral.getType() == CollectionLiteral.Type.range) {
-      print("[");
-      joinedVisit(collectionLiteral.getExpressions(), "..");
-      print("]");
+      printer.print("[");
+      printer.joinedVisit(this, collectionLiteral.getExpressions(), "..");
+      printer.print("]");
     } else {
       if (collectionLiteral.getType() != CollectionLiteral.Type.tuple || expanded) {
-        print(collectionLiteral.getType());
+        printer.print(collectionLiteral.getType());
       }
       if (collectionLiteral.getExpressions().size() > COLLECTION_WRAPPING_THRESHOLD) {
-        beginBlock("[");
-        indent();
-        joinedVisit(collectionLiteral.getExpressions(), ",\n");
-        endBlock("]");
+        printer.beginBlock("[");
+        printer.space();
+        printer.joinedVisit(this, collectionLiteral.getExpressions(), ",\n");
+        printer.endBlock("]");
       } else {
-        print("[");
-        joinedVisit(collectionLiteral.getExpressions(), ",");
-        print("]");
+        printer.print("[");
+        printer.joinedVisit(this, collectionLiteral.getExpressions(), ",");
+        printer.print("]");
       }
     }
   }
@@ -703,29 +591,29 @@ public class GoloPrettyPrinter implements GoloIrVisitor {
   @Override
   public void visitLocalReference(LocalReference localRef) {
     if (!localRef.isModuleState()) {
-      space();
-      print(quoteReserved(localRef.getName()));
+      printer.space();
+      printer.print(quoteReserved(localRef.getName()));
     }
   }
 
   @Override
   public void visitNamedArgument(NamedArgument namedArgument) {
-    print(namedArgument.getName() + '=');
+    printer.print(namedArgument.getName() + '=');
     namedArgument.walk(this);
   }
 
   @Override
   public void visitCollectionComprehension(CollectionComprehension collection) {
-    print(collection.getType().toString());
-    print("[");
+    printer.print(collection.getType().toString());
+    printer.print("[");
     collection.walk(this);
-    print("]");
+    printer.print("]");
   }
 
   @Override
   public void visitWhenClause(WhenClause<?> whenClause) {
-    space();
-    print("when ");
+    printer.space();
+    printer.print("when ");
     whenClause.condition().accept(this);
     Object action = whenClause.action();
     if (action instanceof Block) {
@@ -735,46 +623,46 @@ public class GoloPrettyPrinter implements GoloIrVisitor {
       }
     } else if (action instanceof ExpressionStatement) {
       ExpressionStatement<?> expr = (ExpressionStatement) action;
-      space();
-      print("then ");
+      printer.space();
+      printer.print("then ");
       expr.accept(this);
     }
   }
 
   @Override
   public void visitMatchExpression(MatchExpression expr) {
-    space();
-    print("match ");
+    printer.space();
+    printer.print("match ");
     visitAlternatives(expr);
   }
 
   @Override
   public void visitCaseStatement(CaseStatement caseStatement) {
-    space();
-    print("case ");
+    printer.space();
+    printer.print("case ");
     visitAlternatives(caseStatement);
   }
 
   private void visitAlternatives(Alternatives<?> alt) {
-    beginBlock("{");
-    joinedVisit(alt.getClauses(), "\n");
-    newline();
-    space();
-    print("otherwise ");
+    printer.beginBlock("{");
+    printer.joinedVisit(this, alt.getClauses(), "\n");
+    printer.newline();
+    printer.space();
+    printer.print("otherwise ");
     alt.getOtherwise().accept(this);
-    endBlock("}");
+    printer.endBlock("}");
   }
 
   @Override
   public void visitDestructuringAssignment(DestructuringAssignment destruct) {
-    space();
+    printer.space();
     printAssignementKind(destruct.getReferences()[0].getKind(), destruct.isDeclaring());
-    joinedVisit(asList(destruct.getReferences()), ",");
+    printer.joinedVisit(this, asList(destruct.getReferences()), ",");
     if (destruct.isVarargs()) {
-      print("...");
+      printer.print("...");
     }
-    space();
-    print("= ");
+    printer.space();
+    printer.print("= ");
     destruct.expression().accept(this);
   }
 
