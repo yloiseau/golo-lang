@@ -13,12 +13,10 @@ import static org.eclipse.golo.compiler.utils.StringUnescaping.escape;
 import gololang.ir.*;
 
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Deque;
 import java.util.LinkedList;
 import java.util.ArrayList;
-import java.util.Set;
 import java.util.function.Function;
 import static java.util.Arrays.asList;
 
@@ -61,7 +59,7 @@ public class GoloPrettyPrinter implements GoloIrVisitor {
       printer.blankLine();
       printer.space();
       printer.println("----");
-      printer.printMultiline(element.documentation());
+      printer.printMultiLines(element.documentation());
       printer.space();
       printer.println("----");
     }
@@ -76,7 +74,7 @@ public class GoloPrettyPrinter implements GoloIrVisitor {
     printer.blankLine();
     module.walk(this);
     // TODO: don't print, create a specific method
-    System.out.print(printer);
+    System.out.print(printer.toString().trim());
   }
 
   @Override
@@ -228,7 +226,6 @@ public class GoloPrettyPrinter implements GoloIrVisitor {
       }
       decorator.walk(this);
       printer.newline();
-      printer.space();
     }
   }
 
@@ -304,7 +301,9 @@ public class GoloPrettyPrinter implements GoloIrVisitor {
   @Override
   public void visitConstantStatement(ConstantStatement constantStatement) {
     Object value = constantStatement.value();
-    if (value instanceof String) {
+    if (value == null) {
+      printer.print("null");
+    } else if (value instanceof String) {
       printString((String) value);
     } else if (value instanceof Character) {
       printer.print("'" + escape(value.toString()) + "'");
@@ -321,7 +320,7 @@ public class GoloPrettyPrinter implements GoloIrVisitor {
               : "")
           + ((FunctionRef) value).name());
     } else {
-      printer.print(constantStatement.value());
+      printer.print(value);
     }
   }
 
