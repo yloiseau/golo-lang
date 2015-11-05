@@ -32,10 +32,11 @@ public class GoloPrettyPrinter implements GoloIrVisitor {
   private final CodePrinter printer = new CodePrinter();
 
   private static final List<String> RESERVED = asList(
-    "module", "import", "function", "local", "return", "if", "else", "while", "for", "foreach",
-    "in", "throw", "try", "catch", "finally", "case", "when", "match", "then", "otherwise",
-    "augment", "pimp", "augmentation", "with", "break", "continue", "struct", "union", "oftype",
-    "is", "isnt", "and", "or", "orIfNull", "not", "var", "let", "null", "true", "false");
+    "module", "import", "function", "local", "return", "if", "else", "while",
+    "for", "foreach", "in", "throw", "try", "catch", "finally", "case", "when",
+    "match", "then", "otherwise", "augment", "pimp", "augmentation", "with",
+    "break", "continue", "struct", "union", "oftype", "is", "isnt", "and", "or",
+    "orIfNull", "not", "var", "let", "null", "true", "false");
 
   private Deque<Boolean> compactReturn = new LinkedList<>();
   private boolean expanded = false;

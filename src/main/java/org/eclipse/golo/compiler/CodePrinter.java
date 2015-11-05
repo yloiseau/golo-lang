@@ -14,6 +14,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.LinkedList;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import java.util.regex.Pattern;
 
 import gololang.ir.GoloElement;
@@ -21,26 +22,36 @@ import gololang.ir.GoloIrVisitor;
 
 
 import static java.util.Arrays.asList;
-import static java.util.Collections.singletonList;
 
 interface FormatingElement {
   int length();
   boolean isEmpty();
   void append(Object o);
-  List<String> split(int width);
+  Stream<String> split(int width);
   void reset();
   char lastChar();
   Object dump();
 }
 
-interface Spliter extends java.util.function.BiFunction<List<? extends FormatingElement>, Integer, List<String>> {
+interface Spliter extends java.util.function.BiFunction<List<? extends FormatingElement>, Integer, Stream<String>> {}
 
-  static final Spliter SPLIT_ALL = (children, with) ->
+final class Spliters {
+  private static final Spliter SPLIT_ALL = (children, width) ->
     children.stream()
       .filter((e) -> !e.isEmpty())
-      .map(Object::toString)
-      .collect(Collectors.toList());
+      .flatMap((e) -> e.split(width));
 
+
+  public static final Spliter splitAll() { return SPLIT_ALL; }
+
+  public static final Spliter joinAll(String sep) {
+    return (children, width) -> Stream.of(
+        children.stream().map(Object::toString).collect(Collectors.joining(sep)));
+  }
+
+  public static final Spliter ifLongerThan(int width) {
+    return joinAll(" ");
+  }
 }
 
 class Span implements FormatingElement {
@@ -62,8 +73,8 @@ class Span implements FormatingElement {
   }
 
   @Override
-  public List<String> split(int width) {
-    return singletonList(toString());
+  public Stream<String> split(int width) {
+    return Stream.of(toString());
   }
 
   @Override
@@ -93,7 +104,7 @@ class Chunk implements FormatingElement {
   private Spliter splitStrategy;
 
   Chunk() {
-    this(Spliter.SPLIT_ALL);
+    this(Spliters.splitAll());
   }
 
   Chunk(Spliter split) {
@@ -122,7 +133,7 @@ class Chunk implements FormatingElement {
   }
 
   @Override
-  public List<String> split(int width) {
+  public Stream<String> split(int width) {
     return splitStrategy.apply(children, width);
   }
 
@@ -182,7 +193,8 @@ public class CodePrinter {
   private Pattern LINE_SPLITER = Pattern.compile(" *(\r\n|\n|\r)");
   private int spacing = 0;
   private StringBuilder buffer = new StringBuilder();
-  private FormatingElement currentLine = new Chunk();
+  private FormatingElement chunk = new Chunk(Spliters.splitAll());
+  private FormatingElement currentLine;
   private Set<Character> noSpaceAfter = new HashSet<>();
 
   public CodePrinter() {
@@ -200,11 +212,11 @@ public class CodePrinter {
   public void reset() {
     spacing = 0;
     buffer.setLength(0);
-    newChunk();
+    resetChunk();
   }
 
-  private void newChunk() {
-    currentLine.reset();
+  private void resetChunk() {
+    chunk.reset();
     newline();
   }
 
@@ -220,15 +232,14 @@ public class CodePrinter {
     }
   }
 
-  private void printLines(Iterable<String> lines) {
-    for (String line : lines) {
+  private void printLines(Stream<String> lines) {
+    lines.forEach((line) -> {
       buffer.append(line);
       buffer.append(NL);
-    }
+    });
   }
 
   public void printMultiLines(String txt) {
-    // List<String> lines = asList(txt.trim().split("\r\n|\r|\n"));
     List<String> lines = asList(LINE_SPLITER.split(txt.trim()));
     for (String line : lines) {
       if (line.isEmpty()) {
@@ -241,29 +252,40 @@ public class CodePrinter {
   }
 
   public void newline() {
-    currentLine.append(new Span());
+    if (currentLine != null) {
+      chunk.append(currentLine);
+    }
+    currentLine = new Chunk(Spliters.ifLongerThan(maxLineLength));
+    addBreak();
     mustIndent = true;
   }
 
+  public void addBreak() {
+    currentLine.append(new Span());
+  }
+
   public void newlineIfNeeded() {
-    newline();
+    if (!currentLine.isEmpty()) {
+      newline();
+    }
   }
 
   public void blankLine() {
-    if (!currentLine.isEmpty()) {
+    newlineIfNeeded();
+    if (!chunk.isEmpty()) {
       if (buffer.length() > 0) {
         buffer.append(NL);
       }
-      printLines(currentLine.split(maxLineLength));
+      printLines(chunk.split(maxLineLength));
     }
-    newChunk();
+    resetChunk();
   }
 
   public void space() {
     if (mustIndent) {
       indent();
     } else if (!noSpaceAfter.contains(currentLine.lastChar())) {
-      currentLine.append(' ');
+      print(' ');
     }
   }
 
@@ -277,9 +299,9 @@ public class CodePrinter {
   }
 
   private void indent() {
-    currentLine.append(linePrefix);
+    print(linePrefix);
     for (int i = 0; i < spacing; i++) {
-      currentLine.append(indent_char);
+      print(indent_char);
     }
     mustIndent = false;
   }
