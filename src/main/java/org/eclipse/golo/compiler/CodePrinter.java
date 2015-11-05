@@ -11,10 +11,133 @@ package org.eclipse.golo.compiler;
 
 import java.util.Set;
 import java.util.HashSet;
+import java.util.List;
+import java.util.LinkedList;
+import java.util.stream.Collectors;
+
 import gololang.ir.GoloElement;
 import gololang.ir.GoloIrVisitor;
 
+
 import static java.util.Arrays.asList;
+import static java.util.Collections.singletonList;
+
+interface FormatingElement {
+  int length();
+  boolean isEmpty();
+  void append(Object o);
+  List<String> split(int width);
+  void reset();
+  char lastChar();
+}
+
+interface Spliter extends java.util.function.BiFunction<List<? extends FormatingElement>, Integer, List<String>> {
+
+  static final Spliter SPLIT_ALL = (children, with) ->
+    children.stream().map(Object::toString).collect(Collectors.toList());
+
+}
+
+class Span implements FormatingElement {
+  StringBuilder text = new StringBuilder();
+
+  @Override
+  public int length() {
+    return text.length();
+  }
+
+  @Override
+  public boolean isEmpty() {
+    return text.length() == 0;
+  }
+
+  @Override
+  public void append(Object o) {
+    text.append(o);
+  }
+
+  @Override
+  public List<String> split(int width) {
+    return singletonList(toString());
+  }
+
+  @Override
+  public void reset() {
+    text.setLength(0);
+  }
+
+  @Override
+  public char lastChar() {
+    return text.charAt(text.length() - 1);
+  }
+
+  @Override
+  public String toString() {
+    return text.toString();
+  }
+}
+
+// TODO: strategies to split chunks
+class Chunk implements FormatingElement {
+  private LinkedList<FormatingElement> children = new LinkedList<>();
+  private Spliter splitStrategy;
+
+  Chunk() {
+    this(Spliter.SPLIT_ALL);
+  }
+
+  Chunk(Spliter split) {
+    splitStrategy = split;
+  }
+
+  @Override
+  public int length() {
+    return children.stream().mapToInt(e -> e.length() + 1).sum();
+  }
+
+  @Override
+  public boolean isEmpty() {
+    return children.isEmpty() || children.stream().allMatch(FormatingElement::isEmpty);
+  }
+
+  @Override
+  public void append(Object o) {
+    if (o instanceof FormatingElement) {
+      addChildren((FormatingElement) o);
+    } else if (!children.isEmpty()) {
+      children.getLast().append(o);
+    } else {
+      throw new IllegalArgumentException("can't append " + o);
+    }
+  }
+
+  @Override
+  public List<String> split(int width) {
+    if (width > 0 && length() > width) {
+      return splitStrategy.apply(children, width);
+    }
+    return singletonList(toString());
+  }
+
+  @Override
+  public void reset() {
+    children.clear();
+  }
+
+  @Override
+  public char lastChar() {
+    return children.getLast().lastChar();
+  }
+
+  @Override
+  public String toString() {
+    return children.stream().map(Object::toString).collect(Collectors.joining(" "));
+  }
+
+  private void addChildren(FormatingElement e) {
+    children.add(e);
+  }
+}
 
 // TODO: replace StringBuilder with a Writer/PrintStream
 // TODO: return this from methods to chain calls
@@ -23,9 +146,13 @@ public class CodePrinter {
   // TODO: configurable
   private int indent_size = 2;
   private char indent_char = ' ';
-  private int spacing = 0;
+  private int maxLineLength = 120;
   private String linePrefix = "";
+  private static final String NL = "\n";
+
+  private int spacing = 0;
   private StringBuilder buffer = new StringBuilder();
+  private FormatingElement currentLine = new Span();
   private Set<Character> noSpaceAfter = new HashSet<>();
 
   public void noSpaceAfter(Character... chars) {
@@ -38,51 +165,62 @@ public class CodePrinter {
 
   public void reset() {
     spacing = 0;
-    buffer = new StringBuilder();
+    buffer.setLength(0);
+    currentLine.reset();
   }
 
   public void print(Object o) {
-    String repr = o.toString();
-    if (repr.endsWith("\n")) {
-      this.buffer.append(repr.trim());
-      newline();
-    } else {
-      this.buffer.append(repr);
+    // TODO: add an object to the current span
+    if (o != null) {
+      String repr = o.toString();
+      if (repr.endsWith(NL)) {
+        currentLine.append(repr.trim());
+        newline();
+      } else {
+        currentLine.append(repr);
+      }
+    }
+  }
+
+  private void printLines(Iterable<String> lines) {
+    boolean first = true;
+    for (String line : lines) {
+      if (first) { first = false; }
+      else { space(); }
+      buffer.append(line);
+      buffer.append(NL);
     }
   }
 
   public void newline() {
-    this.buffer.append('\n');
-  }
-
-  private char lastChar(int offset) {
-    if (this.buffer.length() == 0) { return Character.MIN_VALUE; }
-    int idx = Math.max(0, this.buffer.length() - (offset + 1));
-    return this.buffer.charAt(idx);
-  }
-
-  private boolean endsWith(int offset, char c) {
-    return (this.buffer.length() > offset
-            && lastChar(offset) == c);
+    // TODO: add a new span to the current chunk
+    printLines(currentLine.split(maxLineLength));
+    currentLine.reset();
   }
 
   public void newlineIfNeeded() {
-    if (!endsWith(0, '\n')) {
+    if (!currentLine.isEmpty()) {
       newline();
     }
   }
 
   public void blankLine() {
+    // TODO: put the chunk in the buffer and create a new one
     newlineIfNeeded();
-    if (!endsWith(1, '\n')) {
-      newline();
+    if (buffer.length() >= (2 * NL.length())
+        && !(NL + NL).equals(buffer.substring(buffer.length() - (2 * NL.length())))) {
+      buffer.append(NL);
     }
   }
 
   public void space() {
-    char last = lastChar(0);
-    if (last == Character.MIN_VALUE || last == '\n') { indent(); }
-    else if (!noSpaceAfter.contains(last)) { print(' '); }
+    // TODO: add a space to the current span, indenting if needed
+    if (currentLine.isEmpty()) {
+      indent();
+    }
+    else if (!noSpaceAfter.contains(currentLine.lastChar())) {
+      currentLine.append(' ');
+    }
   }
 
   public void println(Object s) {
@@ -102,9 +240,9 @@ public class CodePrinter {
   }
 
   private void indent() {
-    buffer.append(linePrefix);
+    currentLine.append(linePrefix);
     for (int i = 0; i < spacing; i++) {
-      buffer.append(indent_char);
+      currentLine.append(indent_char);
     }
   }
 
@@ -155,6 +293,7 @@ public class CodePrinter {
   }
 
   public String toString() {
+    newlineIfNeeded();
     return buffer.toString();
   }
 }

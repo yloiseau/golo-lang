@@ -70,12 +70,13 @@ public class GoloPrettyPrinter implements GoloIrVisitor {
   @Override
   public void visitModule(GoloModule module) {
     this.module = module;
+    printer.reset();
     printDocumentation(module);
     printer.println("module " + module.getPackageAndClass());
     printer.blankLine();
     module.walk(this);
     // TODO: don't print, create a specific method
-    System.out.println(printer);
+    System.out.print(printer);
   }
 
   @Override
@@ -255,13 +256,13 @@ public class GoloPrettyPrinter implements GoloIrVisitor {
     printer.space();
     if (compactReturn() || isLoopBlock(statements)) {
       statements.get(0).accept(this);
-    } else if (isCompact(block)) {
-      printer.print("{ ");
-      if (!block.isEmpty()) {
-        statements.get(0).accept(this);
-      }
-      printer.space();
-      printer.print("}");
+    // } else if (isCompact(block)) {
+    //   printer.print("{ ");
+    //   if (!block.isEmpty()) {
+    //     statements.get(0).accept(this);
+    //   }
+    //   printer.space();
+    //   printer.print("}");
     } else {
       printer.beginBlock("{");
       for (GoloStatement<?> s : block.getStatements()) {
