@@ -315,31 +315,23 @@ public class GoloPrettyPrinter implements GoloIrVisitor {
     } else if (value instanceof ClassReference) {
       printer.print(((ClassReference) value).getName() + ".class");
     } else if (value instanceof FunctionRef) {
+      FunctionRef ref = (FunctionRef) value;
       printer.print("^"
-          + ((((FunctionRef) value).module() != null)
-              ? (((FunctionRef) value).module() + "::")
-              : "")
-          + ((FunctionRef) value).name());
+          + (ref.module() != null
+             ? (ref.module() + "::")
+             : "")
+          + ref.name());
     } else {
       printer.print(value);
     }
   }
 
-  private boolean isNull(GoloStatement<?> statement) {
-    return (
-      statement instanceof ConstantStatement
-      && ((ConstantStatement) statement).value() == null);
-  }
-
-  private boolean isReturnNull(GoloStatement<?> statement) {
-    return (statement instanceof ReturnStatement)
-      && isNull(((ReturnStatement) statement).expression());
-  }
 
   @Override
   public void visitReturnStatement(ReturnStatement returnStatement) {
     if (compactReturn()) {
-      printer.print("-> ");
+      printer.print("->");
+      printer.addBreak();
       returnStatement.walk(this);
     } else {
       if (!returnStatement.isSynthetic() || expanded) {
@@ -630,7 +622,7 @@ public class GoloPrettyPrinter implements GoloIrVisitor {
 
   @Override
   public void visitMatchExpression(MatchExpression expr) {
-    printer.space();
+    //- printer.space();
     printer.print("match ");
     visitAlternatives(expr);
   }

@@ -9,6 +9,7 @@
 
 package org.eclipse.golo.compiler;
 
+import java.util.Deque;
 import java.util.Set;
 import java.util.HashSet;
 import java.util.List;
@@ -33,24 +34,45 @@ interface FormatingElement {
   Object dump();
 }
 
-interface Spliter extends java.util.function.BiFunction<List<? extends FormatingElement>, Integer, Stream<String>> {}
+interface Spliter extends java.util.function.BiFunction<List<? extends FormatingElement>, Integer, Stream<String>> { }
 
 final class Spliters {
+  private Spliters() {
+    // utility class
+  }
+
   private static final Spliter SPLIT_ALL = (children, width) ->
     children.stream()
       .filter((e) -> !e.isEmpty())
       .flatMap((e) -> e.split(width));
 
 
-  public static final Spliter splitAll() { return SPLIT_ALL; }
+  public static Spliter splitAll() { return SPLIT_ALL; }
 
-  public static final Spliter joinAll(String sep) {
+  public static Spliter joinAll(String sep) {
     return (children, width) -> Stream.of(
         children.stream().map(Object::toString).collect(Collectors.joining(sep)));
   }
 
-  public static final Spliter ifLongerThan(int width) {
-    return joinAll(" ");
+  public static Spliter ifLongerThan(String sep, Set<Character> except) {
+    return (children, width) -> {
+      List<String> spans = new LinkedList<>();
+      StringBuilder current = new StringBuilder();
+      for (FormatingElement child : children) {
+        if (width > 0 && (current.length() + child.length()) > width) {
+          spans.add(current.toString());
+          current.setLength(0);
+        }
+        if (current.length() > 0 && !except.contains(current.charAt(current.length() - 1))) {
+          current.append(sep);
+        }
+        current.append(child);
+      }
+      if (current.length() > 0) {
+        spans.add(current.toString());
+      }
+      return spans.stream();
+    };
   }
 }
 
@@ -95,6 +117,18 @@ class Span implements FormatingElement {
   @Override
   public Object dump() {
     return '"' + toString() + '"';
+  }
+
+  public static Span empty() {
+    return new Span();
+  }
+
+  public static Span of(Object... objects) {
+    Span s = new Span();
+    for (Object o : objects) {
+      s.append(o);
+    }
+    return s;
   }
 }
 
@@ -144,7 +178,6 @@ class Chunk implements FormatingElement {
 
   @Override
   public char lastChar() {
-    int idx = children.size() - 1;
     for (int i = children.size() - 1; i >= 0; i--) {
       if (!children.get(i).isEmpty()) {
         return children.get(i).lastChar();
@@ -176,6 +209,18 @@ class Chunk implements FormatingElement {
     removeLastIfEmpty(e);
     children.add(e);
   }
+
+  public static Chunk topLevel() {
+    return new Chunk(Spliters.splitAll());
+  }
+
+  public static Chunk wrapping(String separator, Set<Character> exceptions) {
+    return new Chunk(Spliters.ifLongerThan(separator, exceptions));
+  }
+
+  public static Chunk verbatim() {
+    return new Chunk(Spliters.joinAll(""));
+  }
 }
 
 // TODO: replace StringBuilder with a Writer/PrintStream
@@ -183,22 +228,35 @@ class Chunk implements FormatingElement {
 
 public class CodePrinter {
   // TODO: configurable
-  private int indent_size = 2;
-  private char indent_char = ' ';
-  private int maxLineLength = 120;
+  private int indentSize = 2;
+  private char indentChar = ' ';
+  private int maxLineLength = 80;
   private String linePrefix = "";
   private static final String NL = "\n";
   private boolean mustIndent = true;
 
-  private Pattern LINE_SPLITER = Pattern.compile(" *(\r\n|\n|\r)");
+  private static final Pattern LINE_SPLITER = Pattern.compile(" *(\r\n|\n|\r)");
   private int spacing = 0;
   private StringBuilder buffer = new StringBuilder();
-  private FormatingElement chunk = new Chunk(Spliters.splitAll());
-  private FormatingElement currentLine;
+  private FormatingElement chunk = Chunk.topLevel();
+  private Deque<Chunk> innerChunks = new LinkedList<>();
   private Set<Character> noSpaceAfter = new HashSet<>();
 
   public CodePrinter() {
     reset();
+  }
+
+  private FormatingElement currentLine() {
+    return innerChunks.peek();
+  }
+
+  private void innerChunk(Chunk inner) {
+    currentLine().append(inner);
+    innerChunks.push(inner);
+  }
+
+  private Chunk exitInner() {
+    return innerChunks.pop();
   }
 
   public void noSpaceAfter(Character... chars) {
@@ -216,6 +274,7 @@ public class CodePrinter {
   }
 
   private void resetChunk() {
+    innerChunks.clear();
     chunk.reset();
     newline();
   }
@@ -224,48 +283,54 @@ public class CodePrinter {
     if (o != null) {
       String repr = o.toString();
       if (repr.endsWith(NL)) {
-        currentLine.append(repr.trim());
+        currentLine().append(repr.trim());
         newline();
       } else {
-        currentLine.append(repr);
+        currentLine().append(repr);
       }
     }
   }
 
   private void printLines(Stream<String> lines) {
     lines.forEach((line) -> {
-      buffer.append(line);
-      buffer.append(NL);
-    });
+        buffer.append(line);
+        buffer.append(NL);
+      });
   }
 
   public void printMultiLines(String txt) {
+    // FIXME: try to wrap when too long...
     List<String> lines = asList(LINE_SPLITER.split(txt.trim()));
+    // innerChunk(Chunk.verbatim());
+    // addBreak();
     for (String line : lines) {
       if (line.isEmpty()) {
-        currentLine.append(NL);
+        currentLine().append(NL);
       } else {
         space();
         println(line);
       }
     }
+    // currentLine().append(NL);
+    // addBreak();
+    // exitInner();
   }
 
   public void newline() {
-    if (currentLine != null) {
-      chunk.append(currentLine);
+    if (currentLine() != null) {
+      chunk.append(innerChunks.pop());
     }
-    currentLine = new Chunk(Spliters.ifLongerThan(maxLineLength));
+    innerChunks.push(Chunk.wrapping(" ", noSpaceAfter));
     addBreak();
     mustIndent = true;
   }
 
   public void addBreak() {
-    currentLine.append(new Span());
+    currentLine().append(Span.empty());
   }
 
   public void newlineIfNeeded() {
-    if (!currentLine.isEmpty()) {
+    if (!currentLine().isEmpty()) {
       newline();
     }
   }
@@ -284,7 +349,7 @@ public class CodePrinter {
   public void space() {
     if (mustIndent) {
       indent();
-    } else if (!noSpaceAfter.contains(currentLine.lastChar())) {
+    } else if (!noSpaceAfter.contains(currentLine().lastChar())) {
       print(' ');
     }
   }
@@ -301,17 +366,17 @@ public class CodePrinter {
   private void indent() {
     print(linePrefix);
     for (int i = 0; i < spacing; i++) {
-      print(indent_char);
+      print(indentChar);
     }
     mustIndent = false;
   }
 
   public void incr() {
-    spacing = spacing + indent_size;
+    spacing = spacing + indentSize;
   }
 
   public void decr() {
-    spacing = Math.max(0, spacing - indent_size);
+    spacing = Math.max(0, spacing - indentSize);
   }
 
   public void beginBlock(String delim) {
@@ -324,6 +389,17 @@ public class CodePrinter {
     decr();
     indent();
     print(delim);
+  }
+
+  public void beginSoftBlock(String delim) {
+    print(delim);
+    innerChunk(Chunk.wrapping(" ", noSpaceAfter));
+    addBreak();
+  }
+
+  public void endSoftBlock(String delim) {
+    print(delim);
+    exitInner();
   }
 
   public void join(Iterable<? extends Object> elements, String separator) {
