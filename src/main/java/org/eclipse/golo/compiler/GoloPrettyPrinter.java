@@ -11,6 +11,7 @@ package org.eclipse.golo.compiler;
 
 import static org.eclipse.golo.compiler.utils.StringUnescaping.escape;
 import gololang.ir.*;
+import org.eclipse.golo.compiler.fmt.CodePrinter;
 
 import java.util.Collections;
 import java.util.List;
@@ -356,14 +357,12 @@ public class GoloPrettyPrinter implements GoloIrVisitor {
   }
 
   private void printInvocationArguments(List<GoloElement<?>> arguments) {
-    if (arguments.size() < COLLECTION_WRAPPING_THRESHOLD) {
-      printer.print("(");
-      printer.joinedVisit(this, arguments, ",");
-      printer.print(")");
+    if (arguments.isEmpty()) {
+      printer.print("()");
     } else {
-      printer.beginBlock("(");
-      printer.joinedVisit(this, arguments, ",\n");
-      printer.endBlock(")");
+      printer.beginSoftBlock("(");
+      printer.joinedVisit(this, arguments, ",");
+      printer.endSoftBlock(")");
     }
   }
 
@@ -566,16 +565,9 @@ public class GoloPrettyPrinter implements GoloIrVisitor {
       if (collectionLiteral.getType() != CollectionLiteral.Type.tuple || expanded) {
         printer.print(collectionLiteral.getType());
       }
-      if (collectionLiteral.getExpressions().size() > COLLECTION_WRAPPING_THRESHOLD) {
-        printer.beginBlock("[");
-        printer.space();
-        printer.joinedVisit(this, collectionLiteral.getExpressions(), ",\n");
-        printer.endBlock("]");
-      } else {
-        printer.print("[");
-        printer.joinedVisit(this, collectionLiteral.getExpressions(), ",");
-        printer.print("]");
-      }
+      printer.beginSoftBlock("[");
+      printer.joinedVisit(this, collectionLiteral.getExpressions(), ",");
+      printer.endSoftBlock("]");
     }
   }
 

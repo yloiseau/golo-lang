@@ -10,7 +10,7 @@
 
 package gololang.ir;
 
-import org.eclipse.golo.compiler.CodePrinter;
+import org.eclipse.golo.compiler.fmt.CodePrinter;
 import java.io.PrintStream;
 
 public class IrTreeDumper implements GoloIrVisitor {
