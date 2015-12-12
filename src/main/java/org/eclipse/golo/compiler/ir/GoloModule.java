@@ -102,6 +102,7 @@ public final class GoloModule extends GoloElement implements FunctionContainer {
 
   @Override
   public void addFunction(GoloFunction function) {
+    checkShadowing(function);
     function.relinkTopLevel(globalReferences);
     functions.add(function);
     if (function.isMain()) {

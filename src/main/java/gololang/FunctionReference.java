@@ -234,6 +234,9 @@ public class FunctionReference {
     if (this.parameterNames == null) {
       return null;
     }
+    if (this.parameterNames.length == 0) {
+      return this.parameterNames;
+    }
     String[] filtered = new String[this.parameterNames.length - size];
     if (filtered.length > 0) {
       System.arraycopy(parameterNames, 0, filtered, 0, from);

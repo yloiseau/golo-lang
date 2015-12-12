@@ -71,6 +71,7 @@ public final class Augmentation extends GoloElement implements FunctionContainer
 
   @Override
   public void addFunction(GoloFunction func) {
+    checkShadowing(func);
     functions.add(func);
     makeParentOf(func);
   }

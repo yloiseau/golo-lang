@@ -50,6 +50,7 @@ public final class NamedAugmentation extends GoloElement implements FunctionCont
 
   @Override
   public void addFunction(GoloFunction func) {
+    checkShadowing(func);
     functions.add(func);
     makeParentOf(func);
   }

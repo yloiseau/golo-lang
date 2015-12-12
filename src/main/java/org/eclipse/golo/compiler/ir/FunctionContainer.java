@@ -11,11 +11,22 @@ package org.eclipse.golo.compiler.ir;
 
 import java.util.Set;
 import java.util.Collection;
+import org.eclipse.golo.compiler.FunctionSignature;
+import org.eclipse.golo.runtime.AmbiguousFunctionReferenceException;
 
 public interface FunctionContainer {
   Set<GoloFunction> getFunctions();
 
   void addFunction(GoloFunction func);
+
+  default void checkShadowing(GoloFunction func) throws AmbiguousFunctionReferenceException {
+    FunctionSignature newFunction = FunctionSignature.of(func);
+    for (GoloFunction f : getFunctions()) {
+      if (newFunction.shadows(f)) {
+        throw new AmbiguousFunctionReferenceException(func + " is shadowing " + f);
+      }
+    }
+  }
 
   default void addFunctions(Collection<GoloFunction> funcs) {
     for (GoloFunction f : funcs) {
