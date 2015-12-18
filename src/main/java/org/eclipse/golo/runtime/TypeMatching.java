@@ -13,6 +13,7 @@ import gololang.FunctionReference;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
+import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.HashMap;
 import java.util.Map;
@@ -121,5 +122,9 @@ public final class TypeMatching {
     return
       argumentsNumberMatches(constructor.getParameterTypes().length, arguments.length, constructor.isVarArgs())
       && canAssign(constructor.getParameterTypes(), arguments, constructor.isVarArgs());
+  }
+
+  public static boolean argumentsMatch(Field f, Object[] args) {
+    return true;
   }
 }

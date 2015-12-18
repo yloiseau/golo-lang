@@ -76,6 +76,10 @@ public class FunctionInvocation extends AbstractInvocation {
     return constant;
   }
 
+  public boolean isClosure() {
+    return anonymous || onReference || onModuleState;
+  }
+
   @Override
   public String toString() {
     return String.format("FunctionInvocation{name=%s}", getName());

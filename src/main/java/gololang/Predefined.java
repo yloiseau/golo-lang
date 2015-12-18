@@ -15,6 +15,7 @@ import java.io.File;
 import java.io.IOException;
 import java.lang.invoke.MethodHandleProxies;
 import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodHandle;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.nio.charset.Charset;
@@ -355,6 +356,7 @@ public final class Predefined {
     require(type instanceof Class, "type must be a Class");
     require(func instanceof FunctionReference, "func must be a FunctionReference");
     Class<?> theType = (Class<?>) type;
+    MethodHandle theHandle = ((FunctionReference) func).handle();
     for (Method method : theType.getMethods()) {
       if (!method.isDefault() && !isStatic(method.getModifiers())) {
         Map<String, Object> configuration = new HashMap<>();
@@ -363,7 +365,7 @@ public final class Predefined {
         implementations.put(
             method.getName(),
             new FunctionReference(
-              dropArguments(((FunctionReference) func).handle(), 0, Object.class),
+              dropArguments(theHandle, 0, Object.class),
               Arrays.stream(method.getParameters())
               .map(Parameter::getName)
               .toArray(String[]::new)));

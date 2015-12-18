@@ -37,16 +37,16 @@ public final class PackageAndClass {
    * @return a package and class definition.
    */
   public static PackageAndClass fromString(String qualifiedName) {
-    return new PackageAndClass(NamingUtils.extractTargetJavaPackage(qualifiedName), NamingUtils.extractTargetJavaClass(qualifiedName));
+    return new PackageAndClass(
+        NamingUtils.extractTargetJavaPackage(qualifiedName), 
+        NamingUtils.extractTargetJavaClass(qualifiedName));
   }
 
   /**
    * @return a new {@code PackageAndClass} identifying an inner class of this class.
    */
   public PackageAndClass createInnerClass(String name) {
-    return new PackageAndClass(
-        this.packageName,
-        this.className + "$" + name.replace('.', '$'));
+    return new PackageAndClass(packageName, NamingUtils.innerClassOf(className, name));
   }
 
   /**
@@ -107,7 +107,7 @@ public final class PackageAndClass {
    * @return a mangled named for this class.
    */
   public String mangledName() {
-    return toString().replace('.', '$');
+    return NamingUtils.mangleName(toString());
   }
 
   @Override

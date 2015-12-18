@@ -15,6 +15,7 @@ import org.eclipse.golo.runtime.Loader;
 import org.eclipse.golo.runtime.Module;
 
 import static org.eclipse.golo.runtime.augmentation.AugmentationApplication.Kind;
+import static org.eclipse.golo.runtime.Extractors.isAssignableFrom;
 
 /**
  * Encapsulate a module defining an augmentation.
@@ -70,14 +71,10 @@ public final class DefiningModule {
             target, scope, Kind.SIMPLE));
   }
 
-  private static Predicate<Class<?>> isAssignableFrom(Class<?> receiver) {
-    return target -> target != null && target.isAssignableFrom(receiver);
-  }
-
   private Stream<AugmentationApplication> fullyNamedAugmentationsFor(Loader loader, Class<?> receiverType) {
     return Stream.of(Module.augmentationApplications(module))
-      .map(targetName -> loader.load(targetName))
-      .filter(target -> target != null && target.isAssignableFrom(receiverType))
+      .map(loader)
+      .filter(isAssignableFrom(receiverType))
       .flatMap(target -> qualifyAugmentations(loader, target));
   }
 
