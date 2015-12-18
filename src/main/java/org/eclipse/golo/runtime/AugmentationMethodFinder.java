@@ -21,7 +21,7 @@ import static java.lang.invoke.MethodHandles.*;
 import static java.lang.reflect.Modifier.*;
 import static org.eclipse.golo.runtime.NamedArgumentsHelper.checkArgumentPosition;
 
-class AugmentationMethodFinder extends MethodFinder {
+class AugmentationMethodFinder extends MethodFinder<MethodInvocation> {
 
   private final Loader loader;
 

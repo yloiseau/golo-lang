@@ -356,6 +356,7 @@ public final class MethodInvocationSupport {
       return target;
     }
 
+
     target = new AugmentationMethodFinder(invocation, lookup).find();
     if (target != null) {
       return target;

@@ -20,7 +20,7 @@ import java.util.stream.Stream;
 import static java.lang.invoke.MethodHandles.*;
 import static java.lang.reflect.Modifier.*;
 
-class RegularMethodFinder extends MethodFinder {
+class RegularMethodFinder extends MethodFinder<MethodInvocation> {
 
   private final boolean makeAccessible;
 

@@ -17,7 +17,7 @@ import java.util.Objects;
 import static java.lang.invoke.MethodHandles.*;
 import static java.lang.invoke.MethodType.methodType;
 
-public class PropertyMethodFinder extends MethodFinder {
+public class PropertyMethodFinder extends MethodFinder<MethodInvocation> {
 
   private static final MethodHandle FLUENT_SETTER;
 

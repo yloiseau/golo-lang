@@ -17,7 +17,7 @@ import static java.lang.invoke.MethodType.methodType;
 
 import static gololang.Messages.message;
 
-class ArrayMethodFinder extends MethodFinder {
+class ArrayMethodFinder extends MethodFinder<MethodInvocation> {
 
   ArrayMethodFinder(MethodInvocation invocation, Lookup lookup) {
     super(invocation, lookup);

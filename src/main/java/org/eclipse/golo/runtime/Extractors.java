@@ -76,19 +76,23 @@ public final class Extractors {
   }
 
   public static boolean isPublic(Member m) {
-    return Modifier.isPublic(m.getModifiers());
+    return m != null && Modifier.isPublic(m.getModifiers());
   }
 
   public static boolean isStatic(Member m) {
-    return Modifier.isStatic(m.getModifiers());
+    return m != null && Modifier.isStatic(m.getModifiers());
   }
 
   public static boolean isConcrete(Member m) {
-    return !Modifier.isAbstract(m.getModifiers());
+    return m != null && !Modifier.isAbstract(m.getModifiers());
   }
 
   public static Predicate<Member> isNamed(String name) {
-    return m -> m.getName().equals(name);
+    return m -> m != null && m.getName().equals(name);
+  }
+
+  public static Predicate<Class<?>> isAssignableFrom(Class<?> receiver) {
+    return target -> target != null && target.isAssignableFrom(receiver);
   }
 
   public static Predicate<Method> matchFunctionReference(String name, int arity, boolean varargs) {

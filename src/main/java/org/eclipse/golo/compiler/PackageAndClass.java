@@ -9,12 +9,17 @@
 
 package org.eclipse.golo.compiler;
 
+import java.lang.reflect.Member;
+
 import static java.util.Objects.requireNonNull;
 
 /**
  * Represents a package and class.
  */
 public final class PackageAndClass {
+
+  public static final char PACKAGE_CLASS_SEPARATOR = '.';
+  public static final char INNER_SEPARATOR = '$';
 
   private final String packageName;
   private final String className;
@@ -45,9 +50,25 @@ public final class PackageAndClass {
         extractTargetJavaClass(qualifiedName));
   }
 
+  public static PackageAndClass of(Object value) {
+    if (value instanceof PackageAndClass) {
+      return value;
+    }
+    if (value instanceof String) {
+      return fromString((String) value);
+    }
+    if (value instanceof Class) {
+      return fromString(((Class) value).getName());
+    }
+    if (value instanceof Member) {
+      return of(((Member) value).getDeclaringClass());
+    }
+    return of(value.getClass());
+  }
+
   private static int packageClassSeparatorIndex(String moduleName) {
     if (moduleName != null) {
-      return moduleName.lastIndexOf('.');
+      return moduleName.lastIndexOf(PACKAGE_CLASS_SEPARATOR);
     }
     return -1;
   }
@@ -68,6 +89,10 @@ public final class PackageAndClass {
     return moduleName;
   }
 
+  private static String mangle(String name) {
+    return name.replace(PACKAGE_CLASS_SEPARATOR, INNER_SEPARATOR);
+  }
+
 
   /**
    * Create an inner class.
@@ -83,7 +108,7 @@ public final class PackageAndClass {
   public PackageAndClass createInnerClass(String name) {
     return new PackageAndClass(
         this.packageName,
-        this.className + "$" + name.replace('.', '$'));
+        this.className + INNER_SEPARATOR + mangle(name));
   }
 
   /**
@@ -114,7 +139,7 @@ public final class PackageAndClass {
    */
   public PackageAndClass createSubPackage(String name) {
     return new PackageAndClass(
-        this.packageName.isEmpty() ? this.className : this.packageName + "." + this.className, name);
+        this.packageName.isEmpty() ? this.className : this.packageName + PACKAGE_CLASS_SEPARATOR + this.className, name);
   }
 
   /**
@@ -165,6 +190,32 @@ public final class PackageAndClass {
   }
 
   /**
+   * Checks if this name designate an inner class.
+   */
+  public boolean isInnerClass() {
+    return className.indexOf(INNER_SEPARATOR) > 0;
+  }
+
+  /**
+   * Returns the containing class of an inner class, or null if it's not an inner class.
+   */
+  public PackageAndClass containingClass() {
+    int sep = className.indexOf(INNER_SEPARATOR);
+    if (sep <= 0) {
+      return null;
+    }
+    return new PackageAndClass(packageName, className.substring(0, sep));
+  }
+
+  /**
+   * Checks if this name is designate an inner class of the given name.
+   */
+  public boolean isInnerClassOf(PackageAndClass outer) {
+    return outer != null && outer.equals(this.containingClass());
+  }
+
+
+  /**
    * @return the package as a {@code PackageAndClass}
    */
   public PackageAndClass parentPackage() {
@@ -183,7 +234,7 @@ public final class PackageAndClass {
     if (packageName.isEmpty()) {
       return className;
     } else {
-      return packageName + "." + className;
+      return packageName + PACKAGE_CLASS_SEPARATOR + className;
     }
   }
 
@@ -206,7 +257,7 @@ public final class PackageAndClass {
    * @return a mangled named for this class.
    */
   public String mangledName() {
-    return toString().replace('.', '$');
+    return mangle(toString());
   }
 
   @Override

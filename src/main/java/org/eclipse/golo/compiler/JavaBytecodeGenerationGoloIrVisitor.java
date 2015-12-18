@@ -22,7 +22,6 @@ import java.math.BigInteger;
 import static org.eclipse.golo.compiler.JavaBytecodeUtils.loadInteger;
 import static org.eclipse.golo.compiler.JavaBytecodeUtils.loadLong;
 import static org.eclipse.golo.compiler.JavaBytecodeUtils.visitLine;
-import static java.lang.invoke.MethodType.genericMethodType;
 import static java.lang.invoke.MethodType.methodType;
 import static org.eclipse.golo.runtime.OperatorType.*;
 import static org.objectweb.asm.ClassWriter.COMPUTE_FRAMES;
@@ -361,6 +360,12 @@ class JavaBytecodeGenerationGoloIrVisitor implements GoloIrVisitor {
     return MethodType.genericMethodType(arity - 1, true).toMethodDescriptorString();
   }
 
+  private String goloClosureSignature(int arity) {
+    return MethodType.genericMethodType(arity + 1)
+      .changeParameterType(0, FunctionReference.class)
+      .toMethodDescriptorString();
+  }
+
   @Override
   public void visitDecorator(Decorator deco) {
     // do nothing since decorators are dealt with at an earlier stage
@@ -514,10 +519,9 @@ class JavaBytecodeGenerationGoloIrVisitor implements GoloIrVisitor {
     if (functionInvocation.isOnModuleState()) {
       Builders.refLookup(functionInvocation.getName()).accept(this);
     }
-    if (functionInvocation.isAnonymous() || functionInvocation.isOnReference() || functionInvocation.isOnModuleState()) {
+    if (functionInvocation.isClosure()) {
       currentMethodVisitor.visitTypeInsn(CHECKCAST, "gololang/FunctionReference");
-      MethodType type = genericMethodType(functionInvocation.getArity() + 1).changeParameterType(0, FunctionReference.class);
-      typeDef = type.toMethodDescriptorString();
+      typeDef = goloClosureSignature(functionInvocation.getArity());
       handle = CLOSURE_INVOCATION_HANDLE;
     }
     List<String> argumentNames = visitInvocationArguments(functionInvocation);

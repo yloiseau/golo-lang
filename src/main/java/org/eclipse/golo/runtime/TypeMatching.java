@@ -11,6 +11,7 @@ package org.eclipse.golo.runtime;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
+import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.HashMap;
 import java.util.Map;
@@ -126,5 +127,9 @@ public final class TypeMatching {
 
   public static boolean returnsValue(Method m) {
     return !(m.getReturnType().equals(void.class) || m.getReturnType().equals(Void.class));
+  }
+
+  public static boolean argumentsMatch(Field f, Object[] args) {
+    return true;
   }
 }

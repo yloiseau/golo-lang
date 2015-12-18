@@ -76,6 +76,10 @@ public class FunctionInvocation extends AbstractInvocation {
     return constant;
   }
 
+  public boolean isClosure() {
+    return anonymous || onReference || onModuleState;
+  }
+
   @Override
   public FunctionInvocation withArgs(Object... arguments) {
     super.withArgs(arguments);

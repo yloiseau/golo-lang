@@ -22,13 +22,13 @@ import static org.eclipse.golo.runtime.NamedArgumentsHelper.hasNamedParameters;
 import static org.eclipse.golo.runtime.NamedArgumentsHelper.getParameterNames;
 import static org.eclipse.golo.runtime.NamedArgumentsHelper.checkArgumentPosition;
 
-abstract class MethodFinder {
+abstract class MethodFinder<T extends AbstractInvocation> {
 
-  protected final MethodInvocation invocation;
+  protected final T invocation;
   protected final Lookup lookup;
   protected final Class<?> callerClass;
 
-  MethodFinder(MethodInvocation invocation, Lookup lookup) {
+  MethodFinder(T invocation, Lookup lookup) {
     this.invocation = invocation;
     this.lookup = lookup;
     this.callerClass = lookup.lookupClass();
