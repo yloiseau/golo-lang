@@ -16,6 +16,9 @@ import java.lang.reflect.Constructor;
 import java.util.stream.Stream;
 import java.lang.reflect.Modifier;
 import java.util.function.Predicate;
+import java.util.*;
+
+import static java.util.stream.Collectors.toList;
 
 public final class Extractors {
   private Extractors() {
@@ -72,6 +75,20 @@ public final class Extractors {
     return Stream.concat(getMethods(klass), getFields(klass));
   }
 
+  public static Method getSamMethod(Class<?> type) {
+    if (!type.isInterface()) {
+      throw new IllegalArgumentException("Not a SAM: " + type + " is not an interface");
+    }
+    List<Method> meths = Arrays.stream(type.getMethods())
+      .filter(m -> !m.isDefault() && !isStatic(m))
+      .collect(toList());
+    if (meths.size() != 1) {
+      throw new IllegalArgumentException("Not a SAM: " + type + " has more than one method ("
+          + meths + ")");
+    }
+    return meths.get(0);
+  }
+
   public static boolean isPublic(Member m) {
     return Modifier.isPublic(m.getModifiers());
   }
@@ -82,6 +99,14 @@ public final class Extractors {
 
   public static boolean isConcrete(Member m) {
     return !Modifier.isAbstract(m.getModifiers());
+  }
+
+  public static boolean isAbstract(Member m) {
+    return Modifier.isAbstract(m.getModifiers());
+  }
+
+  public static boolean isDefault(Method m) {
+    return m.isDefault();
   }
 
   public static Predicate<? extends Member> isNamed(String name) {

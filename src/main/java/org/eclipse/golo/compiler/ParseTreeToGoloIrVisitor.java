@@ -118,7 +118,7 @@ public class ParseTreeToGoloIrVisitor implements GoloParserVisitor {
 
     public GoloFunction getOrCreateFunction() {
       if (!(objectStack.peek() instanceof GoloFunction)) {
-        objectStack.push(functionDeclaration().synthetic().local().asClosure());
+        objectStack.push(functionDeclaration().synthetic().asClosure());
       }
       return (GoloFunction) objectStack.peek();
     }

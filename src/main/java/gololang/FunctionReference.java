@@ -99,6 +99,10 @@ public class FunctionReference {
     return new FunctionReference(handle.asVarargsCollector(arrayType), this.parameterNames);
   }
 
+  public FunctionReference asVarargsCollector() {
+    return asVarargsCollector(Object[].class);
+  }
+
   public FunctionReference bindTo(Object x) {
     return new FunctionReference(handle.bindTo(x), dropParameterNames(0, 1));
   }
@@ -109,6 +113,14 @@ public class FunctionReference {
 
   public FunctionReference asSpreader(Class<?> arrayType, int arrayLength) {
     return new FunctionReference(handle.asSpreader(arrayType, arrayLength));
+  }
+
+  public FunctionReference asSpreader(int arrayLength) {
+    return asSpreader(Object[].class, arrayLength);
+  }
+
+  public FunctionReference asSpreader() {
+    return asSpreader(Object[].class, handle.type().parameterCount());
   }
 
   public Object invoke(Object... args) throws Throwable {

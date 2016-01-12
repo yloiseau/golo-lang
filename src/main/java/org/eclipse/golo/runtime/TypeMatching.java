@@ -80,8 +80,10 @@ public final class TypeMatching {
     return (value instanceof FunctionReference) && isSAM(type);
   }
 
+  // FIXME: pb if default methods
   public static boolean isSAM(Class<?> type) {
-    return type.isInterface() && (type.getMethods().length == 1);
+    return type.isInterface() && type.getMethods().length == 1;
+      // && java.util.Arrays.stream(type.getMethods()).filter(m -> !m.isDefault()).count() == 1;
   }
 
   public static boolean isFunctionalInterface(Class<?> type) {

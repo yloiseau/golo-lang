@@ -10,6 +10,7 @@
 package gololang;
 
 import org.eclipse.golo.runtime.AmbiguousFunctionReferenceException;
+import org.eclipse.golo.runtime.Extractors;
 
 import java.io.File;
 import java.io.IOException;
@@ -338,6 +339,17 @@ public final class Predefined {
     require(interfaceClass instanceof Class, "interfaceClass must be a Class");
     require(target instanceof FunctionReference, "target must be a FunctionReference");
     return MethodHandleProxies.asInterfaceInstance((Class<?>) interfaceClass, ((FunctionReference) target).handle());
+  }
+
+  /**
+   * TODO: doc
+   */
+  public static Object asFunctionReference(Object interfaceClass, Object target) throws Throwable {
+    require(interfaceClass instanceof Class, "interfaceClass must be a Class");
+    Class<?> type = (Class<?>) interfaceClass;
+    require(type.isAssignableFrom(target.getClass()), "target must be an instance of interfaceClass");
+    return new FunctionReference(MethodHandles.lookup()
+        .unreflect(Extractors.getSamMethod(type)).bindTo(target));
   }
 
   /**
