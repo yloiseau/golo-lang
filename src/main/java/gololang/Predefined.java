@@ -11,11 +11,13 @@ package gololang;
 
 import org.eclipse.golo.runtime.AmbiguousFunctionReferenceException;
 import org.eclipse.golo.runtime.Extractors;
+import org.eclipse.golo.runtime.TypeMatching;
 
 import java.io.File;
 import java.io.IOException;
 import java.lang.invoke.MethodHandleProxies;
 import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodHandle;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.nio.charset.Charset;
@@ -338,18 +340,42 @@ public final class Predefined {
   public static Object asInterfaceInstance(Object interfaceClass, Object target) {
     require(interfaceClass instanceof Class, "interfaceClass must be a Class");
     require(target instanceof FunctionReference, "target must be a FunctionReference");
-    return MethodHandleProxies.asInterfaceInstance((Class<?>) interfaceClass, ((FunctionReference) target).handle());
+    Class<?> type = (Class<?>) interfaceClass;
+    MethodHandle handle = ((FunctionReference) target).handle();
+    Method samMethod = Extractors.getSamMethod(type);
+    if (samMethod.isVarArgs()) {
+      if (handle.isVarargsCollector()) {
+        handle = handle.asFixedArity();
+      }
+      if (!TypeMatching.isLastParameterAnArray(handle.type())) {
+        Class<?> samLastArgumentType = samMethod.getParameterTypes()[samMethod.getParameterCount() - 1];
+        int spreadingSize = handle.type().parameterCount() - samMethod.getParameterCount() + 1;
+        handle = handle.asSpreader(samLastArgumentType, spreadingSize);
+      }
+    }
+    return MethodHandleProxies.asInterfaceInstance(type, handle);
   }
 
   /**
-   * TODO: doc
+   * Turns a instace of a single-method interface into a function reference.
+   * <p>
+   * This is the reverse operation of {@link #asInterfaceInstance(Object, Object)}
+   *
+   * @param interfaceClass the single-method interface class to transform from
+   * @param target the instance of that interface to convert
+   * @return a {@link gololang.FunctionReference}
+   * @see gololang.Predefined#asInterfaceInstance(Object, Object)
    */
-  public static Object asFunctionReference(Object interfaceClass, Object target) throws Throwable {
+  public static FunctionReference asFunctionReference(Object interfaceClass, Object target) throws Throwable {
     require(interfaceClass instanceof Class, "interfaceClass must be a Class");
     Class<?> type = (Class<?>) interfaceClass;
     require(type.isAssignableFrom(target.getClass()), "target must be an instance of interfaceClass");
-    return new FunctionReference(MethodHandles.lookup()
-        .unreflect(Extractors.getSamMethod(type)).bindTo(target));
+    Method m = Extractors.getSamMethod(type);
+    MethodHandle mh = MethodHandles.lookup().unreflect(m).bindTo(target);
+    if (m.isVarArgs()) {
+      mh = mh.asVarargsCollector(m.getParameterTypes()[m.getParameterCount() - 1]);
+    }
+    return new FunctionReference(mh);
   }
 
   /**

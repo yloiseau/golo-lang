@@ -80,13 +80,18 @@ public final class Extractors {
       throw new IllegalArgumentException("Not a SAM: " + type + " is not an interface");
     }
     List<Method> meths = Arrays.stream(type.getMethods())
-      .filter(m -> !m.isDefault() && !isStatic(m))
+      .filter(Extractors::isSamMethod)
       .collect(toList());
     if (meths.size() != 1) {
-      throw new IllegalArgumentException("Not a SAM: " + type + " has more than one method ("
+      throw new IllegalArgumentException("Not a SAM: " + type + " doesn't have only one abstract method ("
           + meths + ")");
     }
     return meths.get(0);
+  }
+
+
+  public static boolean isSamMethod(Method m) {
+    return !m.isDefault() && !isStatic(m);
   }
 
   public static boolean isPublic(Member m) {
