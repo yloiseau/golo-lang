@@ -35,6 +35,10 @@ public final class BinaryOperation extends ExpressionStatement<BinaryOperation> 
 
   protected BinaryOperation self() { return this; }
 
+  public boolean isConstant() {
+    return !isMethodCall() && leftExpression.isConstant() && rightExpression.isConstant();
+  }
+
   public OperatorType getType() {
     return type;
   }

@@ -11,6 +11,7 @@
 package org.eclipse.golo.compiler.ir;
 
 import java.util.Objects;
+import java.util.*;
 
 public class TryCatchFinally extends GoloStatement<TryCatchFinally> {
 

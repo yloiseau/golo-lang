@@ -327,7 +327,11 @@ public final class GoloFunction extends ExpressionStatement<GoloFunction> {
 
   @Override
   protected void replaceElement(GoloElement<?> original, GoloElement<?> newElement) {
-    throw cantReplace();
+    if (newElement instanceof Block && this.block.equals(original)) {
+      this.block = (Block) newElement;
+    } else {
+      throw cantReplace();
+    }
   }
 
   @Override

@@ -128,6 +128,11 @@ class JavaBytecodeGenerationGoloIrVisitor implements GoloIrVisitor {
   }
 
   @Override
+  public void visitNoop(Noop noop) {
+    // do nothing...
+  }
+
+  @Override
   public void visitModule(GoloModule module) {
     this.currentModule = module;
     classWriter.visit(V1_8, ACC_PUBLIC | ACC_SUPER, module.getPackageAndClass().toJVMType(), null, JOBJECT, null);

@@ -10,6 +10,8 @@
 
 package org.eclipse.golo.compiler.ir;
 
+import java.util.Optional;
+
 public final class ReferenceLookup extends ExpressionStatement<ReferenceLookup> {
 
   private final String name;
@@ -27,6 +29,10 @@ public final class ReferenceLookup extends ExpressionStatement<ReferenceLookup> 
 
   public LocalReference resolveIn(ReferenceTable referenceTable) {
     return referenceTable.get(name);
+  }
+
+  public Optional<LocalReference> resolve() {
+    return this.getLocalReferenceTable().flatMap(r -> Optional.ofNullable(r.get(this.name)));
   }
 
   public LocalReference varRef() {

@@ -10,6 +10,9 @@
 
 package org.eclipse.golo.compiler.ir;
 
+import java.util.Collection;
+import java.util.HashSet;
+
 public final class ConditionalBranching extends GoloStatement<ConditionalBranching> {
 
   private ExpressionStatement<?> condition;
@@ -133,8 +136,12 @@ public final class ConditionalBranching extends GoloStatement<ConditionalBranchi
   protected void replaceElement(GoloElement<?> original, GoloElement<?> newElement) {
     if (condition == original && newElement instanceof ExpressionStatement) {
       condition(newElement);
-    } else if (elseConditionalBranching == original && newElement instanceof ConditionalBranching) {
-      elseBranch(newElement);
+    } else if (elseConditionalBranching == original) {
+      if (newElement instanceof ConditionalBranching) {
+        elseBranch(newElement);
+      } else {
+        whenFalse(newElement);
+      }
     } else if (trueBlock == original) {
       whenTrue(newElement);
     } else if (falseBlock == original) {

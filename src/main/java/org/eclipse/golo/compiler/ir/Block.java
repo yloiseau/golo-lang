@@ -10,9 +10,7 @@
 
 package org.eclipse.golo.compiler.ir;
 
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 import static java.util.Collections.unmodifiableList;
 import static org.eclipse.golo.compiler.ir.Builders.*;
@@ -20,7 +18,7 @@ import static java.util.Objects.requireNonNull;
 
 public final class Block extends ExpressionStatement<Block> {
 
-  private final List<GoloStatement<?>> statements = new LinkedList<>();
+  private final LinkedList<GoloStatement<?>> statements = new LinkedList<>();
   private ReferenceTable referenceTable;
   private boolean hasReturn = false;
 
@@ -83,6 +81,17 @@ public final class Block extends ExpressionStatement<Block> {
     return unmodifiableList(statements);
   }
 
+  public GoloStatement<?> getLastStatement() {
+    for (Iterator<GoloStatement<?>> it = statements.descendingIterator(); it.hasNext();) {
+      GoloStatement<?> st = it.next();
+      if (st instanceof Noop) {
+        continue;
+      }
+      return st;
+    }
+    return null;
+  }
+
   public Block add(Object statement) {
     this.addStatement(toGoloStatement(statement));
     return this;
@@ -95,8 +104,12 @@ public final class Block extends ExpressionStatement<Block> {
   }
 
   public void addStatement(GoloStatement<?> statement) {
-    statements.add(statement);
-    updateStateWith(statement);
+    if (isUnaryBlock(statement)) {
+      addStatement(((Block) statement).statements.get(0));
+    } else {
+      statements.add(statement);
+      updateStateWith(statement);
+    }
   }
 
   public void prependStatement(GoloStatement<?> statement) {
@@ -105,8 +118,17 @@ public final class Block extends ExpressionStatement<Block> {
   }
 
   private void setStatement(int idx, GoloStatement<?> statement) {
-    statements.set(idx, statement);
-    updateStateWith(statement);
+    if (isUnaryBlock(statement)) {
+      setStatement(idx, ((Block) statement).statements.get(0));
+    } else {
+      referenceTable.removeFrom(statements.get(idx));
+      statements.set(idx, statement);
+      updateStateWith(statement);
+    }
+  }
+
+  public static boolean isUnaryBlock(GoloStatement<?> statement) {
+    return statement instanceof Block && ((Block) statement).statements.size() == 1;
   }
 
   private void checkForReturns(GoloStatement<?> statement) {
@@ -163,4 +185,23 @@ public final class Block extends ExpressionStatement<Block> {
       throw cantReplace(original, newElement);
     }
   }
+
+  @Override
+  protected GoloElement previousSiblingOf(GoloElement current) {
+    int idx = statements.indexOf(current);
+    if (idx < 1) {
+      return null;
+    }
+    return statements.get(idx - 1);
+  }
+
+  @Override
+  protected GoloElement nextSiblingOf(GoloElement current) {
+    int idx = statements.indexOf(current);
+    if (idx == -1 || idx == statements.size() - 1) {
+      return null;
+    }
+    return statements.get(idx + 1);
+  }
+
 }

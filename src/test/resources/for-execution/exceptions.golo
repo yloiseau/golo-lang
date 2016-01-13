@@ -19,7 +19,11 @@ function finally_no_exception = {
   var a = null
   try {
     a = "ok"
-  } catch (e) { return "woops" } finally { return a }
+  } catch (e) {
+    return "woops"
+  } finally {
+    return a
+  }
 }
 
 function finally_with_exception = {

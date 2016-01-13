@@ -10,8 +10,7 @@
 
 package org.eclipse.golo.compiler.ir;
 
-import java.util.List;
-import java.util.LinkedList;
+import java.util.*;
 import java.util.Objects;
 
 import static java.util.Collections.unmodifiableList;

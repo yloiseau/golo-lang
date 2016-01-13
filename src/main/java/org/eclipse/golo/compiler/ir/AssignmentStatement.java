@@ -66,4 +66,8 @@ public final class AssignmentStatement extends GoloAssignment<AssignmentStatemen
     visitor.visitAssignmentStatement(this);
   }
 
+  @Override
+  public boolean isConstant() {
+    return isDeclaring() && getExpressionStatement().isConstant() && getLocalReference().isConstant();
+  }
 }

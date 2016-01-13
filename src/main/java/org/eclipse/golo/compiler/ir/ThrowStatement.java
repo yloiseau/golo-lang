@@ -12,7 +12,7 @@ package org.eclipse.golo.compiler.ir;
 
 import java.util.Objects;
 
-public final class ThrowStatement extends GoloStatement<ThrowStatement> {
+public final class ThrowStatement extends GoloStatement<ThrowStatement> implements EndOfBlock {
 
   private GoloStatement<?> expressionStatement;
 

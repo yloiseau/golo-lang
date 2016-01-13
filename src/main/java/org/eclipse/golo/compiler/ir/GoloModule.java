@@ -79,6 +79,10 @@ public final class GoloModule extends GoloElement<GoloModule> implements Functio
     return imp;
   }
 
+  public GoloFunction getModuleInitializer() {
+    return moduleStateInitializer;
+  }
+
   public Collection<Augmentation> getAugmentations() {
     return unmodifiableCollection(augmentations.values());
   }

@@ -11,8 +11,10 @@
 package org.eclipse.golo.compiler.ir;
 
 import java.util.Objects;
+import java.util.Collection;
+import java.util.Collections;
 
-public final class ReturnStatement extends GoloStatement<ReturnStatement> {
+public final class ReturnStatement extends GoloStatement<ReturnStatement> implements EndOfBlock {
 
   private GoloStatement<?> expressionStatement;
   private boolean returningVoid;

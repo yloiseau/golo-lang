@@ -77,6 +77,7 @@ public final class LocalReference extends GoloElement<LocalReference> {
     return kind == Kind.MODULE_CONSTANT || kind == Kind.MODULE_VARIABLE;
   }
 
+  @Override
   public boolean isConstant() {
     return kind == Kind.CONSTANT || kind == Kind.MODULE_CONSTANT;
   }

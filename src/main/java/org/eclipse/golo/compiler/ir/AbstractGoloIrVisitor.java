@@ -292,4 +292,11 @@ public abstract class AbstractGoloIrVisitor implements GoloIrVisitor {
     member.walk(this);
   }
 
+  /**
+   * @inheritDoc
+   */
+  @Override
+  public void visitNoop(Noop noop) {
+    noop.walk(this);
+  }
 }

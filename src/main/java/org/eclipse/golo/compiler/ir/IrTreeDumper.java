@@ -457,10 +457,18 @@ public class IrTreeDumper implements GoloIrVisitor {
       incr();
       space();
       System.out.println("Local declaration:");
-      for (GoloAssignment a : expr.declarations()) {
+      for (GoloAssignment<?> a : expr.declarations()) {
         a.accept(this);
       }
       decr();
     }
+  }
+
+  @Override
+  public void visitNoop(Noop noop) {
+    incr();
+    space();
+    System.out.println("Noop: " + noop.comment());
+    decr();
   }
 }

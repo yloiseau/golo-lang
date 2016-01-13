@@ -21,5 +21,16 @@ function change {
       sed -i "s/$COPYRIGHT_START-[0-9]\{4,4\}/$COPYRIGHT_START-$to/"
 }
 
+function usage {
+echo "Changes the copyright year of all files in ${PROJECT_ROOT}"
+echo ""
+echo "Usage: $0 [YEAR]"
+echo "Option:"
+echo "  YEAR: the upper year for the copyright (defaults to current year)"
+}
+
 default_year=$(date +%Y)
-change "${1:-$default_year}"
+case $1 in
+  -h|--help) usage; exit 0;;
+  *) change "${1:-$default_year}"
+esac

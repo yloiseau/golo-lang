@@ -11,6 +11,7 @@
 package org.eclipse.golo.compiler.ir;
 
 import java.util.Objects;
+import java.util.*;
 
 import static org.eclipse.golo.compiler.ir.Builders.*;
 

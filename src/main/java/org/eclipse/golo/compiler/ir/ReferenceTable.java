@@ -50,6 +50,14 @@ public final class ReferenceTable {
     }
   }
 
+  public void removeFrom(GoloStatement statement) {
+    if (statement instanceof ReferencesHolder) {
+      for (LocalReference r : ((ReferencesHolder) statement).getDeclaringReferences()) {
+        this.remove(r);
+      }
+    }
+  }
+
   public LocalReference get(String name) {
     LocalReference reference = table.get(name);
     if (reference != null) {
@@ -74,7 +82,7 @@ public final class ReferenceTable {
     if (prune) {
       for (LocalReference reference : parent.references()) {
         if (this.hasReferenceFor(reference.getName())) {
-          this.remove(reference.getName());
+          this.remove(reference);
         }
       }
     }
@@ -149,6 +157,10 @@ public final class ReferenceTable {
     table.remove(name);
   }
 
+  public void remove(LocalReference ref) {
+    remove(ref.getName());
+  }
+
   @Override
   public String toString() {
     StringBuilder representation = new StringBuilder("ReferenceTable: {\n");
@@ -161,4 +173,5 @@ public final class ReferenceTable {
     }
     return representation.toString();
   }
+
 }

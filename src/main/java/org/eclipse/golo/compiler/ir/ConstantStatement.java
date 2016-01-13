@@ -21,6 +21,10 @@ public final class ConstantStatement extends ExpressionStatement<ConstantStateme
     this.value = value;
   }
 
+  public boolean isConstant() {
+    return true;
+  }
+
   public Object getValue() {
     return value;
   }

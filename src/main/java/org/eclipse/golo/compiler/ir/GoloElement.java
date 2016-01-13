@@ -22,6 +22,10 @@ public abstract class GoloElement<T extends GoloElement<T>> {
 
   protected abstract T self();
 
+  public boolean isConstant() {
+    return false;
+  }
+
   public final T ofAST(GoloASTNode node) {
     if (node != null) {
       this.documentation(node.getDocumentation());
@@ -35,7 +39,7 @@ public abstract class GoloElement<T extends GoloElement<T>> {
   }
 
   public final boolean hasParent() {
-    return this.parent != null;
+    return this.parent != null && this.parent != this;
   }
 
   public final GoloElement<?> parent() {
@@ -50,7 +54,7 @@ public abstract class GoloElement<T extends GoloElement<T>> {
     return childElement;
   }
 
-  private void relinkChild(GoloElement child) {
+  private void relinkChild(GoloElement<?> child) {
     this.getLocalReferenceTable().ifPresent((rt) -> child.accept(new AbstractGoloIrVisitor() {
       boolean prune = true;
       @Override
@@ -64,6 +68,30 @@ public abstract class GoloElement<T extends GoloElement<T>> {
         c.walk(this);
       }
     }));
+  }
+
+  protected GoloElement<?> previousSiblingOf(GoloElement current) {
+    return null;
+  }
+
+  protected GoloElement<?> nextSiblingOf(GoloElement current) {
+    return null;
+  }
+
+  public GoloElement<?> getPreviousSibling() {
+    if (hasParent()) {
+      return this.parent.previousSiblingOf(this);
+    } else {
+      return null;
+    }
+  }
+
+  public GoloElement<?> getNextSibling() {
+    if (hasParent()) {
+      return this.parent.nextSiblingOf(this);
+    } else {
+      return null;
+    }
   }
 
   protected final RuntimeException cantReplace() {
@@ -140,7 +168,7 @@ public abstract class GoloElement<T extends GoloElement<T>> {
   }
 
   public Optional<ReferenceTable> getLocalReferenceTable() {
-    if (this.parent != null && this.parent != this) {
+    if (hasParent()) {
       return parent.getLocalReferenceTable();
     }
     return Optional.empty();

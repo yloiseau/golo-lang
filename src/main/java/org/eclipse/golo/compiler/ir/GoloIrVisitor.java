@@ -79,4 +79,6 @@ public interface GoloIrVisitor {
   void visitLocalReference(LocalReference localRef);
 
   void visitMember(Member member);
+
+  void visitNoop(Noop noop);
 }

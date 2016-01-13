@@ -10,7 +10,7 @@
 
 package org.eclipse.golo.compiler.ir;
 
-public final class LoopBreakFlowStatement extends GoloStatement<LoopBreakFlowStatement> {
+public final class LoopBreakFlowStatement extends GoloStatement<LoopBreakFlowStatement> implements EndOfBlock {
 
   public enum Type {
     BREAK, CONTINUE

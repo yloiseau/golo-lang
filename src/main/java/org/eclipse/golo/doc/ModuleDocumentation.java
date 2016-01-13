@@ -379,5 +379,9 @@ public class ModuleDocumentation implements DocumentationElement {
     @Override
     public void visitNamedArgument(NamedArgument namedArgument) {
     }
+
+    @Override
+    public void visitNoop(Noop noop) {
+    }
   }
 }

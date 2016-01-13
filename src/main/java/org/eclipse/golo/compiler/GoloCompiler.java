@@ -11,6 +11,7 @@
 package org.eclipse.golo.compiler;
 
 import org.eclipse.golo.compiler.ir.GoloModule;
+import org.eclipse.golo.compiler.ir.GoloElement;
 import org.eclipse.golo.compiler.parser.ASTCompilationUnit;
 import org.eclipse.golo.compiler.parser.GoloOffsetParser;
 import org.eclipse.golo.compiler.parser.GoloParser;
@@ -67,7 +68,8 @@ public class GoloCompiler {
    * @param sourceCodeInputStream the source code input stream.
    * @return the parser.
    */
-  public final GoloParser initParser(String goloSourceFilename, InputStream sourceCodeInputStream) throws GoloCompilationException {
+  public final GoloParser initParser(String goloSourceFilename, InputStream sourceCodeInputStream)
+    throws GoloCompilationException {
     try {
       return initParser(new InputStreamReader(sourceCodeInputStream, Charset.forName("UTF-8")));
     } catch (UnsupportedCharsetException e) {
@@ -101,7 +103,8 @@ public class GoloCompiler {
    */
   public final List<CodeGenerationResult> compile(String goloSourceFilename, InputStream sourceCodeInputStream) throws GoloCompilationException {
     resetExceptionBuilder();
-    ASTCompilationUnit compilationUnit = parse(goloSourceFilename, initParser(goloSourceFilename, sourceCodeInputStream));
+    ASTCompilationUnit compilationUnit = parse(goloSourceFilename,
+                                          initParser(goloSourceFilename, sourceCodeInputStream));
     GoloModule goloModule = check(compilationUnit);
     JavaBytecodeGenerationGoloIrVisitor bytecodeGenerator = new JavaBytecodeGenerationGoloIrVisitor();
     return bytecodeGenerator.generateBytecode(goloModule, goloSourceFilename);
@@ -212,21 +215,22 @@ public class GoloCompiler {
    */
   public final GoloModule check(ASTCompilationUnit compilationUnit) {
     GoloModule goloModule = transform(compilationUnit);
-    return refine(goloModule);
+    refine(goloModule);
+    return goloModule;
   }
 
   public final GoloModule transform(ASTCompilationUnit compilationUnit) {
     return new ParseTreeToGoloIrVisitor().transform(compilationUnit, exceptionBuilder);
   }
 
-  public final GoloModule refine(GoloModule goloModule) {
-    if (goloModule != null) {
-      goloModule.accept(new SugarExpansionVisitor());
-      goloModule.accept(new ClosureCaptureGoloIrVisitor());
-      goloModule.accept(new LocalReferenceAssignmentAndVerificationVisitor(exceptionBuilder));
+  public final void refine(GoloElement goloElement) {
+    if (goloElement != null) {
+      goloElement.accept(new SugarExpansionVisitor());
+      goloElement.accept(new OptimisationIrVisitor());
+      goloElement.accept(new ClosureCaptureGoloIrVisitor());
+      goloElement.accept(new LocalReferenceAssignmentAndVerificationVisitor(exceptionBuilder));
     }
     throwIfErrorEncountered();
-    return goloModule;
   }
 
   /**
