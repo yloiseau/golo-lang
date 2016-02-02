@@ -27,7 +27,7 @@ public class FunctionCallSupportTest {
     return str;
   }
 
-  static class Foo {
+  public static class Foo {
     static final String FOO = "Foo";
 
     static int someInt() {
@@ -60,7 +60,7 @@ public class FunctionCallSupportTest {
 
 
   @FunctionalInterface
-  static interface DummyFunctionalInterface {
+  public static interface DummyFunctionalInterface {
 
     String plop();
 

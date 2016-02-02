@@ -74,7 +74,7 @@ public final class FunctionCallSupport {
 
   public static Object samFilter(Class<?> type, Object value) {
     if (value instanceof FunctionReference) {
-      return MethodHandleProxies.asInterfaceInstance(type, ((FunctionReference) value).handle());
+      return gololang.Predefined.asInterfaceInstance(type, value);
     }
     return value;
   }
@@ -234,13 +234,23 @@ public final class FunctionCallSupport {
   public static MethodHandle insertSAMFilter(MethodHandle handle, Lookup caller, Class<?>[] types, int startIndex) {
     if (types != null) {
       for (int i = 0; i < types.length; i++) {
-        if (TypeMatching.isSAM(types[i])) {
-          handle = MethodHandles.filterArguments(handle, startIndex + i, SAM_FILTER.bindTo(types[i]));
-        } else if (TypeMatching.isFunctionalInterface(types[i])) {
+
+        // if (TypeMatching.isSAM(types[i])) {
+        //   handle = MethodHandles.filterArguments(handle, startIndex + i, SAM_FILTER.bindTo(types[i]));
+        // } else if (TypeMatching.isFunctionalInterface(types[i])) {
+        //   handle = MethodHandles.filterArguments(
+        //       handle,
+        //       startIndex + i,
+        //       FUNCTIONAL_INTERFACE_FILTER.bindTo(caller).bindTo(types[i]));
+        // }
+
+        if (TypeMatching.isFunctionalInterface(types[i])) {
           handle = MethodHandles.filterArguments(
               handle,
               startIndex + i,
               FUNCTIONAL_INTERFACE_FILTER.bindTo(caller).bindTo(types[i]));
+        } else if (TypeMatching.isSAM(types[i])) {
+          handle = MethodHandles.filterArguments(handle, startIndex + i, SAM_FILTER.bindTo(types[i]));
         }
       }
     }

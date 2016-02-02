@@ -14,6 +14,7 @@ This module defines the set of standard augmentations.
 ----
 module gololang.StandardAugmentations
 
+import java.util.`function
 
 local function _newWithSameType = |this| {
   try {
@@ -875,6 +876,86 @@ augment gololang.Tuple {
   Joins the elements of a tuple into a string and using a separator.
   ----
   function join = |this, separator| -> _join(this, separator)
+}
+
+
+# ............................................................................................... #
+
+----
+Augmentations over `Function`.
+
+These augmentations are mainly to improve the compatibility between Golo
+`FunctionReference` and Java 8 functions.
+----
+augment java.util.`function.Function {
+  function invoke = |this, t| -> this: apply(t)
+  function asFunctionReference = |this| -> asFunctionReference(Function.class, this)
+}
+
+----
+Augmentations over `Consumer`.
+
+These augmentations are mainly to improve the compatibility between Golo
+`FunctionReference` and Java 8 functions.
+----
+augment java.util.`function.Consumer {
+  function invoke = |this, t| -> this: accept(t)
+  function asFunctionReference = |this| -> asFunctionReference(Consumer.class, this)
+}
+
+----
+Augmentations over `Predicate`.
+
+These augmentations are mainly to improve the compatibility between Golo
+`FunctionReference` and Java 8 functions.
+----
+augment java.util.`function.Predicate {
+  function invoke = |this, t| -> this: test(t)
+  function asFunctionReference = |this| -> asFunctionReference(Predicate.class, this)
+}
+
+----
+Augmentations over `Supplier`.
+
+These augmentations are mainly to improve the compatibility between Golo
+`FunctionReference` and Java 8 functions.
+----
+augment java.util.`function.Supplier {
+  function invoke = |this| -> this: get()
+  function asFunctionReference = |this| -> asFunctionReference(Supplier.class, this)
+}
+
+----
+Augmentations over `BiFunction`.
+
+These augmentations are mainly to improve the compatibility between Golo
+`FunctionReference` and Java 8 functions.
+----
+augment java.util.`function.BiFunction {
+  function invoke = |this, t, u| -> this: apply(t, u)
+  function asFunctionReference = |this| -> asFunctionReference(BiFunction.class, this)
+}
+
+----
+Augmentations over `BiConsumer`.
+
+These augmentations are mainly to improve the compatibility between Golo
+`FunctionReference` and Java 8 functions.
+----
+augment java.util.`function.BiConsumer {
+  function invoke = |this, t, u| -> this: accept(t, u)
+  function asFunctionReference = |this| -> asFunctionReference(BiConsumer.class, this)
+}
+
+----
+Augmentations over `BiPredicate`.
+
+These augmentations are mainly to improve the compatibility between Golo
+`FunctionReference` and Java 8 functions.
+----
+augment java.util.`function.BiPredicate {
+  function invoke = |this, t, u| -> this: test(t, u)
+  function asFunctionReference = |this| -> asFunctionReference(BiPredicate.class, this)
 }
 
 # ............................................................................................... #

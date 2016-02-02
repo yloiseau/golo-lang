@@ -38,6 +38,9 @@ class SugarExpansionVisitor extends AbstractGoloIrVisitor {
     }
   }
 
+  /**
+   * Create the function for the closure reference.
+   */
   @Override
   public void visitClosureReference(ClosureReference closure) {
     functionsToAdd.add(closure.getTarget().name(symbols.next("closure")));

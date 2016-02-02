@@ -14,6 +14,7 @@ import gololang.FunctionReference;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.lang.invoke.MethodType;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -81,7 +82,10 @@ public final class TypeMatching {
   }
 
   public static boolean isSAM(Class<?> type) {
-    return type.isInterface() && (type.getMethods().length == 1);
+    return type.isInterface()
+      && java.util.Arrays.stream(type.getMethods())
+        .filter(Extractors::isSamMethod)
+        .count() == 1;
   }
 
   public static boolean isFunctionalInterface(Class<?> type) {
@@ -97,6 +101,11 @@ public final class TypeMatching {
 
   public static boolean isLastArgumentAnArray(int index, Object[] args) {
     return index > 0 && args.length == index && args[index - 1] instanceof Object[];
+  }
+
+  public static boolean isLastParameterAnArray(MethodType type) {
+    return type.parameterCount() > 0
+      && type.parameterType(type.parameterCount() - 1).isArray();
   }
 
   private static boolean argumentsNumberMatches(int paramsNumber, int argsNumber, boolean isVarArgs) {
