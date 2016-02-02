@@ -49,7 +49,7 @@ public final class ClosureCallSupport {
       GUARD = lookup.findStatic(
           ClosureCallSupport.class,
           "guard",
-          methodType(boolean.class, FunctionReference.class, FunctionReference.class));
+          methodType(boolean.class, Object.class, Object.class));
 
       FALLBACK = lookup.findStatic(
           ClosureCallSupport.class,
@@ -76,11 +76,18 @@ public final class ClosureCallSupport {
     return callSite;
   }
 
-  public static boolean guard(FunctionReference expected, FunctionReference actual) {
+  public static boolean guard(Object expected, Object actual) {
     return expected == actual;
   }
 
   public static Object fallback(InlineCache callSite, Object[] args) throws Throwable {
+    if (args[0] instanceof FunctionReference) {
+      return callFunctionReference(callSite, args);
+    }
+    throw new IllegalArgumentException("not a FunctionReference");
+  }
+
+  public static Object callFunctionReference(InlineCache callSite, Object[] args) throws Throwable {
     FunctionReference targetFunctionReference = (FunctionReference) args[0];
     MethodHandle target = targetFunctionReference.handle();
     MethodHandle invoker = MethodHandles.dropArguments(target, 0, FunctionReference.class);

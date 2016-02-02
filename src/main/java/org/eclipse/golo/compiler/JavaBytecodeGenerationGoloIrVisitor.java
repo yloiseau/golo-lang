@@ -518,8 +518,7 @@ class JavaBytecodeGenerationGoloIrVisitor implements GoloIrVisitor {
       Builders.refLookup(functionInvocation.getName()).accept(this);
     }
     if (functionInvocation.isAnonymous() || functionInvocation.isOnReference() || functionInvocation.isOnModuleState()) {
-      currentMethodVisitor.visitTypeInsn(CHECKCAST, "gololang/FunctionReference");
-      MethodType type = genericMethodType(functionInvocation.getArity() + 1).changeParameterType(0, FunctionReference.class);
+      MethodType type = genericMethodType(functionInvocation.getArity() + 1);
       typeDef = type.toMethodDescriptorString();
       handle = CLOSURE_INVOCATION_HANDLE;
     }
