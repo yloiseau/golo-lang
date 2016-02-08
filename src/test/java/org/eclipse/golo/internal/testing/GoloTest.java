@@ -20,6 +20,10 @@ public abstract class GoloTest {
     TestUtils.compileAndLoadGoloModule(RESOURCES + srcDir(), moduleName + ".golo", loader);
   }
 
+  protected void loadJava(String binaryName) throws Throwable {
+    loader.loadClass(binaryName);
+  }
+
   protected void run(String moduleName) throws Throwable {
     TestUtils.runTests(RESOURCES + srcDir(), moduleName + ".golo", loader);
   }

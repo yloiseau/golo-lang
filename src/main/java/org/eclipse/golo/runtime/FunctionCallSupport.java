@@ -87,21 +87,16 @@ public final class FunctionCallSupport {
   }
 
   public static Object asFunctionalInterface(Lookup caller, Class<?> type, MethodHandle handle) throws Throwable {
-    for (Method method : type.getMethods()) {
-      if (!method.isDefault() && !isStatic(method.getModifiers())) {
-        MethodType lambdaType = methodType(method.getReturnType(), method.getParameterTypes());
-        CallSite callSite = LambdaMetafactory.metafactory(
-            caller,
-            method.getName(),
-            methodType(type),
-            lambdaType,
-            handle,
-            lambdaType);
-        return callSite.dynamicInvoker().invoke();
-      }
-    }
-    throw new RuntimeException(
-        "Could not convert " + handle + " to a functional interface of type " + type);
+    Method method = Extractors.getSamMethod(type);
+    MethodType lambdaType = methodType(method.getReturnType(), method.getParameterTypes());
+    CallSite callSite = LambdaMetafactory.metafactory(
+        caller,
+        method.getName(),
+        methodType(type),
+        lambdaType,
+        handle,
+        lambdaType);
+    return callSite.dynamicInvoker().invoke();
   }
 
   public static CallSite bootstrap(Lookup caller, String name, MethodType type, Object... bsmArgs) throws IllegalAccessException, ClassNotFoundException {
@@ -235,23 +230,23 @@ public final class FunctionCallSupport {
     if (types != null) {
       for (int i = 0; i < types.length; i++) {
 
-        // if (TypeMatching.isSAM(types[i])) {
-        //   handle = MethodHandles.filterArguments(handle, startIndex + i, SAM_FILTER.bindTo(types[i]));
-        // } else if (TypeMatching.isFunctionalInterface(types[i])) {
-        //   handle = MethodHandles.filterArguments(
-        //       handle,
-        //       startIndex + i,
-        //       FUNCTIONAL_INTERFACE_FILTER.bindTo(caller).bindTo(types[i]));
-        // }
-
-        if (TypeMatching.isFunctionalInterface(types[i])) {
+        if (TypeMatching.isSAM(types[i])) {
+          handle = MethodHandles.filterArguments(handle, startIndex + i, SAM_FILTER.bindTo(types[i]));
+        } else if (TypeMatching.isFunctionalInterface(types[i])) {
           handle = MethodHandles.filterArguments(
               handle,
               startIndex + i,
               FUNCTIONAL_INTERFACE_FILTER.bindTo(caller).bindTo(types[i]));
-        } else if (TypeMatching.isSAM(types[i])) {
-          handle = MethodHandles.filterArguments(handle, startIndex + i, SAM_FILTER.bindTo(types[i]));
         }
+
+        // if (TypeMatching.isFunctionalInterface(types[i])) {
+        //   handle = MethodHandles.filterArguments(
+        //       handle,
+        //       startIndex + i,
+        //       FUNCTIONAL_INTERFACE_FILTER.bindTo(caller).bindTo(types[i]));
+        // } else if (TypeMatching.isSAM(types[i])) {
+        //   handle = MethodHandles.filterArguments(handle, startIndex + i, SAM_FILTER.bindTo(types[i]));
+        // }
       }
     }
     return handle;

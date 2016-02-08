@@ -82,10 +82,11 @@ public final class TypeMatching {
   }
 
   public static boolean isSAM(Class<?> type) {
-    return type.isInterface()
-      && java.util.Arrays.stream(type.getMethods())
-        .filter(Extractors::isSamMethod)
-        .count() == 1;
+    return type.isInterface() && (type.getMethods().length == 1);
+    // return type.isInterface()
+    //   && java.util.Arrays.stream(type.getMethods())
+    //     .filter(Extractors::isSamMethod)
+    //     .count() == 1;
   }
 
   public static boolean isFunctionalInterface(Class<?> type) {

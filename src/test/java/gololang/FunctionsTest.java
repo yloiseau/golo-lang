@@ -11,16 +11,22 @@ package gololang;
 
 import org.testng.annotations.Test;
 import org.eclipse.golo.internal.testing.GoloTest;
-
-import java.util.function.*;
+import org.eclipse.golo.internal.testing.TestUtils;
+import org.eclipse.golo.compiler.GoloClassLoader;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.is;
 
 
 public class FunctionsTest extends GoloTest {
 
+  @Override
+  protected String srcDir() {
+    return "for-test/";
+  }
+
+  /* .............................................................. */
   public interface UnarySAM {
     Integer call(Integer v);
-
-    default int plop() { return 42; }
   }
 
   public interface Invokable {
@@ -29,12 +35,16 @@ public class FunctionsTest extends GoloTest {
 
   @FunctionalInterface
   public interface VarargsFI {
-    Object call(Object... arguments) throws Throwable;
+    Integer call(Integer... arguments) throws Throwable;
+
+    default int jumpstreet() { return 21; }
   }
 
-  @Override
-  protected String srcDir() {
-    return "for-test/";
+  @FunctionalInterface
+  public interface UnaryFI {
+    Integer apply(Integer v);
+
+    default int jumpstreet() { return 21; }
   }
 
   /* .............................................................. */
@@ -46,16 +56,29 @@ public class FunctionsTest extends GoloTest {
     return f.invoke(42);
   }
 
+  public static Object callInvokableVar(Invokable f) throws Throwable {
+    return f.invoke(42, 0);
+  }
+
+  public static Object callVarargsFI(VarargsFI f) throws Throwable {
+    return f.call(21, 0) + f.jumpstreet();
+  }
+
   public static Object callSAM(UnarySAM o) {
     return o.call(42);
   }
 
-  public static Object callFunction(Function<Object, Object> f) {
-    return f.apply(42);
+  public static Object callFI(UnaryFI f) {
+    return f.apply(21) + f.jumpstreet();
   }
 
-  public static Function<Object, Object> identityFunction() {
+  /* .............................................................. */
+  public static UnaryFI identityFI() {
     return (x) -> x;
+  }
+
+  public static VarargsFI identityVarFI() {
+    return (Integer... xs) -> xs[0];
   }
 
   public static UnarySAM identitySAM() {
@@ -80,6 +103,10 @@ public class FunctionsTest extends GoloTest {
 
   @Test
   public void testJavaHOF() throws Throwable {
-    run("java-hof");
+    // Thread.currentThread().getContextClassLoader();
+    GoloClassLoader l = new GoloClassLoader(Thread.currentThread().getContextClassLoader());
+    TestUtils.runTests("src/test/resources/for-test/", "java-hof.golo", l);
+    // run("java-hof");
+
   }
 }
