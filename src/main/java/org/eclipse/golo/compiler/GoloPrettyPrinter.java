@@ -342,7 +342,7 @@ public class GoloPrettyPrinter implements GoloIrVisitor {
       returnStatement.walk(this);
     } else {
       if (!returnStatement.isSynthetic() || expanded) {
-        printer.print(Element.keywork("return"));
+        printer.print(Element.keyword("return"));
         if (!returnStatement.isReturningVoid()) {
           printer.space();
           returnStatement.walk(this);
