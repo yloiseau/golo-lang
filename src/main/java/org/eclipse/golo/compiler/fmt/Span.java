@@ -10,28 +10,36 @@
 package org.eclipse.golo.compiler.fmt;
 
 import java.util.List;
+import java.util.LinkedList;
 import java.util.Collections;
 import java.util.stream.Stream;
+import java.util.stream.Collectors;
 
-final class Span implements FormatingElement {
-  StringBuilder text = new StringBuilder();
+/**
+ * A Span is a formating element that can't be splitted.
+ */
+final public class Span implements FormatingElement {
+  private LinkedList<Element> elements = new LinkedList<>();
 
   private Span() { }
 
   @Override
   public int length() {
-    return text.length();
+    return elements.stream().mapToInt(Element::length).sum() + elements.size() - 1;
   }
 
   @Override
   public boolean isEmpty() {
-    return text.length() == 0;
+    return elements.isEmpty();
   }
 
   @Override
   public Span append(Object o) {
-    text.append(o);
-    return this;
+    if (o instanceof Element) {
+      elements.add((Element) o);
+      return this;
+    }
+    throw new IllegalArgumentException("can't add " + o);
   }
 
   @Override
@@ -46,27 +54,28 @@ final class Span implements FormatingElement {
 
   @Override
   public void reset() {
-    text.setLength(0);
+    elements.clear();
   }
 
   @Override
   public char lastChar() throws IndexOutOfBoundsException {
-    return text.charAt(text.length() - 1);
+    String v = elements.getLast().toString();
+    return v.charAt(v.length() - 1);
   }
 
   @Override
   public String toString() {
-    return text.toString();
+    return elements.stream().map(Element::toString).collect(Collectors.joining(" "));
   }
 
   public static Span empty() {
     return new Span();
   }
 
-  public static Span of(Object... objects) {
+  public static Span of(Element... objects) {
     Span s = new Span();
-    for (Object o : objects) {
-      s.append(o);
+    for (Element e : objects) {
+      s.append(e);
     }
     return s;
   }

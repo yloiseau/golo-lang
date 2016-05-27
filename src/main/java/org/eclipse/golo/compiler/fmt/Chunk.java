@@ -16,6 +16,9 @@ import java.util.Collections;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+/**
+ * A chunk is a block of code.
+ */
 class Chunk implements FormatingElement {
   private LinkedList<FormatingElement> children = new LinkedList<>();
   private Spliter splitStrategy;

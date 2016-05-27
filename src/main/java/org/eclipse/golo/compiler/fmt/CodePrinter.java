@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2015 Institut National des Sciences Appliquées de Lyon (INSA-Lyon)
+ * Copyright (c) 2012-2016 Institut National des Sciences Appliquées de Lyon (INSA-Lyon)
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -25,6 +25,9 @@ import gololang.ir.GoloIrVisitor;
 
 import static java.util.Arrays.asList;
 
+/**
+ * Builder for the formatted tree.
+ */
 public class CodePrinter {
 
   private static final Pattern LINE_SPLITER = Pattern.compile(" *(\r\n|\n|\r)");
@@ -79,13 +82,7 @@ public class CodePrinter {
 
   public void print(Object o) {
     if (o != null) {
-      String repr = o.toString();
-      if (repr.endsWith(NL)) {
-        currentLine().append(repr.trim());
-        newline();
-      } else {
-        currentLine().append(repr);
-      }
+      currentLine().append(o);
     }
   }
 
@@ -166,7 +163,7 @@ public class CodePrinter {
     if (mustIndent) {
       indent();
     } else if (mustPutSpace()) {
-      print(' ');
+      print(Element.space());
     }
   }
 
@@ -180,7 +177,7 @@ public class CodePrinter {
   }
 
   private void indent() {
-    print(indent);
+    print(Element.format(indent));
     mustIndent = false;
   }
 

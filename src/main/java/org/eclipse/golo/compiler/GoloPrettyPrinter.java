@@ -11,7 +11,7 @@ package org.eclipse.golo.compiler;
 
 import static org.eclipse.golo.compiler.utils.StringUnescaping.escape;
 import gololang.ir.*;
-import org.eclipse.golo.compiler.fmt.CodePrinter;
+import org.eclipse.golo.compiler.fmt.*;
 
 import java.util.Collections;
 import java.util.List;
@@ -21,8 +21,11 @@ import java.util.ArrayList;
 import java.util.function.Function;
 import static java.util.Arrays.asList;
 
-/* TODO:
- * - keep comments
+/**
+ * Visit the Golo IR and build a tree representing the printable representation.
+ *
+ * TODO:
+ * - keep comments!
  * - line wrapping!
  */
 public class GoloPrettyPrinter implements GoloIrVisitor {
@@ -72,7 +75,7 @@ public class GoloPrettyPrinter implements GoloIrVisitor {
     this.module = module;
     printer.reset();
     printDocumentation(module);
-    printer.println("module " + module.getPackageAndClass());
+    printer.println(Span.of(Element.keyword("module"), Element.name(module.getPackageAndClass())));
     printer.blankLine();
     module.walk(this);
     // TODO: don't print, create a specific method
@@ -175,7 +178,7 @@ public class GoloPrettyPrinter implements GoloIrVisitor {
     }
     int realArity = function.getArity() - startArguments;
     if (realArity != 0) {
-      printer.print("|");
+      printer.print(Element.delimiter("|"));
     }
     printer.join(function.getParameterNames().subList(
         startArguments,
@@ -184,7 +187,7 @@ public class GoloPrettyPrinter implements GoloIrVisitor {
       printer.print("...");
     }
     if (realArity != 0) {
-      printer.print("| ");
+      printer.print(Element.delimiter("|"));
     }
   }
 
@@ -212,9 +215,12 @@ public class GoloPrettyPrinter implements GoloIrVisitor {
     }
     printer.space();
     if (function.isLocal()) {
-      printer.print("local ");
+      printer.print(Element.keyword("local"));
     }
-    printer.printf("function %s = ", quoteReserved(function.getName()));
+    printer.print(Span.of(
+          Element.keyword("function"),
+          Element.name(quoteReserved(function.getName())),
+          Element.operator("=")));
     printFunctionExpression(function);
   }
 
@@ -331,12 +337,12 @@ public class GoloPrettyPrinter implements GoloIrVisitor {
   @Override
   public void visitReturnStatement(ReturnStatement returnStatement) {
     if (compactReturn()) {
-      printer.print("->");
+      printer.print(Element.operator("->"));
       printer.addBreak();
       returnStatement.walk(this);
     } else {
       if (!returnStatement.isSynthetic() || expanded) {
-        printer.print("return");
+        printer.print(Element.keywork("return"));
         if (!returnStatement.isReturningVoid()) {
           printer.space();
           returnStatement.walk(this);
