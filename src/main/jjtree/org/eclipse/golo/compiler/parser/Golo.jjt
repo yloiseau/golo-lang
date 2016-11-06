@@ -1501,7 +1501,12 @@ ASTLetOrVar LetOrVar():
   Token idToken;
 }
 {
-  <LET> idToken=<IDENTIFIER> "=" (BlankLine())? ExpressionStatement()
+  <LET> idToken=<IDENTIFIER> "=" (BlankLine())?
+  (
+    LOOKAHEAD(3) ExpressionStatement()
+    |
+    LOOKAHEAD(3) SpecialFunctionInvocation()
+  )
   {
     jjtThis.setType(ASTLetOrVar.Type.LET);
     jjtThis.setName(idToken.image);
@@ -1574,6 +1579,21 @@ void FunctionInvocation():
 {
   name=QualifiedName() (constant=<CONSTANT_INVOCATION>)? Arguments()
   (LOOKAHEAD(2) AnonymousFunctionInvocation())*
+  {
+    jjtThis.setName(name);
+    if (constant != null) {
+      jjtThis.setConstant(true);
+    }
+  }
+}
+
+void SpecialFunctionInvocation():
+{
+  String name;
+  Token constant = null;
+}
+{
+  name=QualifiedName() (constant=<CONSTANT_INVOCATION>)? (LOOKAHEAD(2) Arguments())? ExpressionStatement()
   {
     jjtThis.setName(name);
     if (constant != null) {
