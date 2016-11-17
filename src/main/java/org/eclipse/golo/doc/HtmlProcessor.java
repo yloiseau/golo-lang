@@ -13,6 +13,8 @@ import org.eclipse.golo.compiler.parser.ASTCompilationUnit;
 import gololang.FunctionReference;
 import gololang.Predefined;
 
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
 import java.nio.file.Path;
 import java.util.TreeMap;
 import java.util.Map;
@@ -29,6 +31,8 @@ public class HtmlProcessor extends AbstractProcessor {
   private Path targetFolder;
   private Path srcFile;
 
+  // private static final String WEBCONSOLE_URI = "http://localhost:8080/?code=";
+  private static final String WEBCONSOLE_URI = "http://golo-console.appspot.com/?code=";
 
   @Override
   public String render(ASTCompilationUnit compilationUnit) throws Throwable {
@@ -72,7 +76,15 @@ public class HtmlProcessor extends AbstractProcessor {
     Predefined.textToFile(index, targetFolder.resolve("index.html"));
   }
 
-  public static BlockEmitter blockHighlighter() {
+  private static String encodeLine(String line) {
+    try {
+      return URLEncoder.encode(line + "\n", "UTF-8").replace("+", "%20");
+    } catch (UnsupportedEncodingException e) {
+      return "";
+    }
+  }
+
+  public static BlockEmitter blockHighlighter(String moduleName) {
     return new BlockEmitter() {
       @Override
       public void emitBlock(StringBuilder out, List<String> lines, String meta) {
@@ -82,9 +94,15 @@ public class HtmlProcessor extends AbstractProcessor {
         } else {
           language = meta;
         }
-        out.append("<pre class=\"listing highlight highlightjs\">");
+        StringBuilder encodedCode = new StringBuilder(WEBCONSOLE_URI);
+        encodedCode.append(encodeLine("module Sample\n"));
+        encodedCode.append(encodeLine("import " + moduleName + "\n"));
+        encodedCode.append(encodeLine("function run = |context| {"));
+
+        out.append("<figure class=\"code-sample\"><pre class=\"listing highlight highlightjs\">");
         out.append(String.format("<code class=\"language-%s\" data-lang=\"%s\">", language, language));
         for (String rawLine : lines) {
+          encodedCode.append(encodeLine("  " + rawLine.replace("println(", "context: log(")));
           String line = rawLine
             .replace("&", "&amp;")
             .replace(">", "&gt;")
@@ -92,8 +110,14 @@ public class HtmlProcessor extends AbstractProcessor {
           out.append(line);
           out.append('\n');
         }
+        encodedCode.append(encodeLine("}"));
         out.append("</code></pre>");
-        out.append('\n');
+        if ("golo".equals(language)) {
+          out.append("<a target=\"_blank\" class=\"code-runner\" href=\"");
+          out.append(encodedCode);
+          out.append("\">Run</a>");
+        }
+        out.append("</figure>\n");
       }
     };
   }

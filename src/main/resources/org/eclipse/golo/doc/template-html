@@ -4,7 +4,7 @@
 <%
 let CONFIG = com.github.rjeschke.txtmark.Configuration.builder()
   : forceExtentedProfile()
-  : setCodeBlockEmitter(blockHighlighter())
+  : setCodeBlockEmitter(blockHighlighter(doc: moduleName()))
   : build()
 %>
 <html>
@@ -28,11 +28,8 @@ let CONFIG = com.github.rjeschke.txtmark.Configuration.builder()
       padding: 0.5em;
     }
     pre {
-      background-color: #eee;
-      -webkit-border-radius: 5px;
-      -moz-border-radius: 5px;
-      border-radius: 5px;
       overflow: auto;
+      margin: 0;
     }
     code {
       font-family: Menlo, Monaco, Consolas, "Courier New", monospace;
@@ -67,6 +64,32 @@ let CONFIG = com.github.rjeschke.txtmark.Configuration.builder()
       line-height: 1;
       text-transform: uppercase;
       color: #000;
+    }
+
+    .code-runner {
+      background-color: #ddd;
+      -webkit-border-radius: 0.5ex;
+      -moz-border-radius: 0.5ex;
+      border-radius: 0.5ex;
+      color: #eee;
+      padding: 0.2ex 0.8ex;
+      display: inline-block;
+      position: absolute;
+      bottom: 0.5ex;
+      right: 0.5ex;
+    }
+    .code-runner:hover {
+      background-color: #bbb;
+      color: #fff;
+    }
+    .code-runner:link, .code-runner:visited {
+      color: #eee;
+    }
+
+    .code-sample {
+      position: relative;
+      margin: 1em;
+      padding: 0;
     }
 
     li p {
