@@ -18,6 +18,8 @@ import java.util.Set;
 import org.eclipse.golo.compiler.parser.GoloASTNode;
 
 import static java.util.Arrays.asList;
+import static java.util.stream.Collectors.toSet;
+
 import static org.eclipse.golo.compiler.ir.Builders.*;
 
 public final class Struct extends GoloElement {
@@ -26,8 +28,7 @@ public final class Struct extends GoloElement {
 
   private PackageAndClass moduleName;
   private final String name;
-  private final Set<String> members = new LinkedHashSet<>();
-  private final Set<String> publicMembers = new LinkedHashSet<>();
+  private final Set<Member> members = new LinkedHashSet<>();
 
   @Override
   public Struct ofAST(GoloASTNode node) {
@@ -49,17 +50,16 @@ public final class Struct extends GoloElement {
   }
 
   public Struct members(Collection<String> members) {
-    for (String member : members) {
-      this.addMember(member);
-    }
+    members.forEach(this::addMember);
     return this;
   }
 
+  public void addMember(Member member) {
+    this.members.add(member);
+  }
+
   public void addMember(String name) {
-    this.members.add(name);
-    if (!name.startsWith("_")) {
-      publicMembers.add(name);
-    }
+    addMember(new Member(name));
   }
 
   public PackageAndClass getPackageAndClass() {
@@ -71,29 +71,45 @@ public final class Struct extends GoloElement {
   }
 
   public Set<String> getMembers() {
+    return members.stream()
+      .map(Member::getName)
+      .collect(toSet());
+  }
+
+  public Set<Member> _getMembers() {
     return Collections.unmodifiableSet(members);
   }
 
   public Set<String> getPublicMembers() {
-    return Collections.unmodifiableSet(publicMembers);
+    return members.stream()
+      .filter(Member::isPublic)
+      .map(Member::getName)
+      .collect(toSet());
   }
 
   public Set<GoloFunction> createFactories() {
     String fullName = getPackageAndClass().toString();
+    Object[] args = members.stream()
+              .map(Member::getName)
+              .map(ReferenceLookup::new)
+              .toArray();
+
     return new LinkedHashSet<GoloFunction>(asList(
-        functionDeclaration(name).synthetic().block(returns(call(fullName))),
+        functionDeclaration(name).synthetic()
+        .returns(call(fullName)),
 
         functionDeclaration(name).synthetic()
-        .withParameters(members)
-        .block(
-          returns(call(fullName)
-            .withArgs(members.stream().map(ReferenceLookup::new).toArray()))),
+        .withParameters(getMembers())
+        .returns(call(fullName)
+            .withArgs(args)),
 
         functionDeclaration("Immutable" + name).synthetic()
-        .withParameters(members)
-        .block(
-          returns(call(fullName + "." + IMMUTABLE_FACTORY_METHOD)
-            .withArgs(members.stream().map(ReferenceLookup::new).toArray())))));
+        .withParameters(getMembers())
+        .returns(call(fullName + "." + IMMUTABLE_FACTORY_METHOD)
+            .withArgs(members.stream()
+              .map(Member::getName)
+              .map(ReferenceLookup::new)
+              .toArray()))));
   }
 
   @Override
