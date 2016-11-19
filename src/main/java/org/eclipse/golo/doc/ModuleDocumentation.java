@@ -149,6 +149,12 @@ class ModuleDocumentation implements DocumentationElement {
     }
 
     @Override
+    public Object visit(ASTMemberDeclaration node, Object data) {
+      // TODO: default value documentation
+      return null;
+    }
+
+    @Override
     public Object visit(ASTStructDeclaration node, Object data) {
       structs.add(new StructDocumentation()
               .name(node.getName())

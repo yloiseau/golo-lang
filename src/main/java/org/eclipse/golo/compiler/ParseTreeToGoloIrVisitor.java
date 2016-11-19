@@ -219,6 +219,18 @@ public class ParseTreeToGoloIrVisitor implements GoloParserVisitor {
   }
 
   @Override
+  public Object visit(ASTMemberDeclaration node, Object data) {
+    Context context = (Context) data;
+    ExpressionStatement defaultValue = null;
+    if (node.jjtGetNumChildren() == 1) {
+      node.jjtGetChild(0).jjtAccept(this, context);
+      defaultValue = (ExpressionStatement) context.pop();
+      // TODO: construct a member value and push it
+    }
+    return context;
+  }
+
+  @Override
   public Object visit(ASTStructDeclaration node, Object data) {
     Context context = (Context) data;
     if (!context.checkExistingSubtype(node, node.getName())) {
