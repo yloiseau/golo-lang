@@ -15,10 +15,12 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.Set;
+import java.util.List;
 import org.eclipse.golo.compiler.parser.GoloASTNode;
 
 import static java.util.Arrays.asList;
 import static java.util.stream.Collectors.toSet;
+import static java.util.stream.Collectors.toList;
 
 import static org.eclipse.golo.compiler.ir.Builders.*;
 
@@ -70,21 +72,20 @@ public final class Struct extends GoloElement {
     this.moduleName = module;
   }
 
-  public Set<String> getMembers() {
+  private List<String> getMemberNames() {
     return members.stream()
       .map(Member::getName)
-      .collect(toSet());
+      .collect(toList());
   }
 
-  public Set<Member> _getMembers() {
+  public Set<Member> getMembers() {
     return Collections.unmodifiableSet(members);
   }
 
-  public Set<String> getPublicMembers() {
+  public List<Member> getPublicMembers() {
     return members.stream()
       .filter(Member::isPublic)
-      .map(Member::getName)
-      .collect(toSet());
+      .collect(toList());
   }
 
   public Set<GoloFunction> createFactories() {
@@ -99,12 +100,12 @@ public final class Struct extends GoloElement {
         .returns(call(fullName)),
 
         functionDeclaration(name).synthetic()
-        .withParameters(getMembers())
+        .withParameters(getMemberNames())
         .returns(call(fullName)
             .withArgs(args)),
 
         functionDeclaration("Immutable" + name).synthetic()
-        .withParameters(getMembers())
+        .withParameters(getMemberNames())
         .returns(call(fullName + "." + IMMUTABLE_FACTORY_METHOD)
             .withArgs(members.stream()
               .map(Member::getName)
