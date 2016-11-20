@@ -225,8 +225,8 @@ public class ParseTreeToGoloIrVisitor implements GoloParserVisitor {
     if (node.jjtGetNumChildren() == 1) {
       node.jjtGetChild(0).jjtAccept(this, context);
       defaultValue = (ExpressionStatement) context.pop();
-      // TODO: construct a member value and push it
     }
+    context.push(Member.withDefault(node.getName(), defaultValue));
     return context;
   }
 
@@ -234,12 +234,14 @@ public class ParseTreeToGoloIrVisitor implements GoloParserVisitor {
   public Object visit(ASTStructDeclaration node, Object data) {
     Context context = (Context) data;
     if (!context.checkExistingSubtype(node, node.getName())) {
-      // TODO: pick members in the stack
-      context.module.addStruct(structure(node.getName())
-        .ofAST(node)
-        .members(node.getMembers().toArray(new String[]{})));
+      Struct theStruct = structure(node.getName()).ofAST(node);
+      for (int i = 0; i < node.jjtGetNumChildren(); i++) {
+        node.jjtGetChild(i).jjtAccept(this, context);
+        theStruct.withMember(context.pop());
+      }
+      context.module.addStruct(theStruct);
     }
-    return node.childrenAccept(this, data);
+    return context;
   }
 
   @Override

@@ -156,11 +156,11 @@ class ModuleDocumentation implements DocumentationElement {
 
     @Override
     public Object visit(ASTStructDeclaration node, Object data) {
+      // TODO: add the members doc
       structs.add(new StructDocumentation()
               .name(node.getName())
               .documentation(node.getDocumentation())
               .line(node.getLineInSourceCode())
-              .members(node.getMembers())
       );
       return data;
     }

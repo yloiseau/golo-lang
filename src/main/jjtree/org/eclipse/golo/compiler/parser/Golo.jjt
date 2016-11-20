@@ -847,25 +847,16 @@ ASTMemberDeclaration MemberDeclaration():
 ASTStructDeclaration StructDeclaration():
 {
   Token name;
-  Token member;
-  LinkedHashSet<String> members = new LinkedHashSet<String>();
 }
 {
   <STRUCT> name=<IDENTIFIER> "=" "{" BlankLines()
-    member=<IDENTIFIER> BlankLines()
-    {
-      members.add(member.image);
-    }
+    MemberDeclaration() BlankLines()
     (
-      "," BlankLines() member=<IDENTIFIER> BlankLines()
-      {
-        members.add(member.image);
-      }
+      "," BlankLines() MemberDeclaration() BlankLines()
     )*
   "}"
   {
     jjtThis.setName(name.image);
-    jjtThis.setMembers(members);
     return jjtThis;
   }
 }
