@@ -20,11 +20,15 @@ public final class Member extends GoloElement {
   Member(String name, ExpressionStatement defaultValue) {
     super();
     this.name = requireNonNull(name);
-    this.defaultValue = defaultValue;
+    this.setDefaultValue(defaultValue);
   }
 
   Member(String name) {
     this(name, null);
+  }
+
+  public static Member withDefault(Object name, Object defaultValue) {
+    return new Member(name.toString(), (ExpressionStatement) defaultValue);
   }
 
   public String getName() {

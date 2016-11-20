@@ -47,21 +47,30 @@ public final class Struct extends GoloElement {
     return name;
   }
 
-  public Struct members(String... members) {
-    return this.members(asList(members));
-  }
-
-  public Struct members(Collection<String> members) {
-    members.forEach(this::addMember);
+  public Struct members(Object... members) {
+    for (Object member : members) {
+      withMember(member);
+    }
     return this;
   }
 
-  public void addMember(Member member) {
+  private void addMember(Member member) {
     this.members.add(member);
+    makeParentOf(member);
   }
 
-  public void addMember(String name) {
-    addMember(new Member(name));
+  public Struct withMember(Object name, Object defaultValue) {
+    addMember(Member.withDefault(name, defaultValue));
+    return this;
+  }
+
+  public Struct withMember(Object member) {
+    if (member instanceof Member) {
+      addMember((Member) member);
+    } else {
+      addMember(Member.withDefault(member, null));
+    }
+    return this;
   }
 
   public PackageAndClass getPackageAndClass() {

@@ -234,9 +234,10 @@ public class ParseTreeToGoloIrVisitor implements GoloParserVisitor {
   public Object visit(ASTStructDeclaration node, Object data) {
     Context context = (Context) data;
     if (!context.checkExistingSubtype(node, node.getName())) {
+      // TODO: pick members in the stack
       context.module.addStruct(structure(node.getName())
         .ofAST(node)
-        .members(node.getMembers()));
+        .members(node.getMembers().toArray(new String[]{})));
     }
     return node.childrenAccept(this, data);
   }
