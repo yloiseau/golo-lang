@@ -74,7 +74,9 @@ public final class Member extends GoloElement {
    */
   @Override
   public void walk(GoloIrVisitor visitor) {
-    defaultValue.accept(visitor);
+    if (defaultValue != null) {
+      defaultValue.accept(visitor);
+    }
   }
 
 

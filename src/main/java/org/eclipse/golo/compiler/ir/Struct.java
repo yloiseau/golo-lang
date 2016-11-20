@@ -11,7 +11,6 @@ package org.eclipse.golo.compiler.ir;
 
 import org.eclipse.golo.compiler.PackageAndClass;
 
-import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.Set;
@@ -19,7 +18,6 @@ import java.util.List;
 import org.eclipse.golo.compiler.parser.GoloASTNode;
 
 import static java.util.Arrays.asList;
-import static java.util.stream.Collectors.toSet;
 import static java.util.stream.Collectors.toList;
 
 import static org.eclipse.golo.compiler.ir.Builders.*;
@@ -129,7 +127,9 @@ public final class Struct extends GoloElement {
 
   @Override
   public void walk(GoloIrVisitor visitor) {
-    // nothing to do, not a composite
+    for (Member m : members) {
+      m.accept(visitor);
+    }
   }
 
   @Override
