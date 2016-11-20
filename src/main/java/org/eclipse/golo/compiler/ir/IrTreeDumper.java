@@ -77,9 +77,11 @@ public class IrTreeDumper implements GoloIrVisitor {
     System.out.println("Struct " + struct.getPackageAndClass().className());
     space();
     System.out.println(" - target class = " + struct.getPackageAndClass());
+    incr();
     space();
-    System.out.println(" - members: ");
+    System.out.println("Members: ");
     struct.walk(this);
+    decr();
     decr();
   }
 
@@ -460,14 +462,14 @@ public class IrTreeDumper implements GoloIrVisitor {
 
   @Override
   public void visitMember(Member member) {
-    incr();
     space();
+    System.out.print(" - ");
     System.out.print(member.getName());
     if (member.hasDefault()) {
       System.out.print(" (defaults to ");
       System.out.print(member.getDefaultValue());
+      System.out.print(")");
     }
     System.out.println();
-    decr();
   }
 }
