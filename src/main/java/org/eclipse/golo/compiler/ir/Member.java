@@ -9,13 +9,16 @@
 
 package org.eclipse.golo.compiler.ir;
 
+import org.eclipse.golo.compiler.parser.GoloASTNode;
+
 import static java.util.Objects.requireNonNull;
 
-public final class Member {
+public final class Member extends GoloElement {
   private final String name;
-  private final ExpressionStatement defaultValue;
+  private ExpressionStatement defaultValue;
 
   Member(String name, ExpressionStatement defaultValue) {
+    super();
     this.name = requireNonNull(name);
     this.defaultValue = defaultValue;
   }
@@ -40,8 +43,54 @@ public final class Member {
     return !name.startsWith("_");
   }
 
+  private void setDefaultValue(ExpressionStatement defaultValue) {
+    this.defaultValue = defaultValue;
+    makeParentOf(defaultValue);
+  }
+
+  /**
+   * @inheritDoc
+   */
+  @Override
+  public Member ofAST(GoloASTNode node) {
+    super.ofAST(node);
+    return this;
+  }
+
+  /**
+   * @inheritDoc
+   */
+  @Override
+  public void accept(GoloIrVisitor visitor) {
+    visitor.visitMember(this);
+  }
+
+  /**
+   * @inheritDoc
+   */
+  @Override
+  public void walk(GoloIrVisitor visitor) {
+    defaultValue.accept(visitor);
+  }
+
+
+  /**
+   * @inheritDoc
+   */
+  @Override
+  protected void replaceElement(GoloElement original, GoloElement newElement) {
+    if (original.equals(defaultValue) && newElement instanceof ExpressionStatement) {
+      setDefaultValue((ExpressionStatement) newElement);
+    } else {
+      throw cantReplace(original, newElement);
+    }
+  }
+
+  /**
+   * @inheritDoc
+   */
   @Override
   public String toString() {
-    return defaultValue == null ? name : name + "=" + defaultValue;
+    return defaultValue == null ? name : name + " = " + defaultValue;
   }
 }

@@ -812,4 +812,11 @@ class JavaBytecodeGenerationGoloIrVisitor implements GoloIrVisitor {
     unaryOperation.getExpressionStatement().accept(this);
     methodVisitor.visitInvokeDynamicInsn(name, goloFunctionSignature(1), OPERATOR_HANDLE, (Integer) 1);
   }
+
+  @Override
+  public void visitMember(Member member) {
+    // Do nothing since default values are dealt with at an earlier stage
+    // and member names are dealt with by the specific generator.
+  }
+
 }
