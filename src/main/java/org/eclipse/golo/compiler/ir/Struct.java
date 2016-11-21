@@ -134,7 +134,6 @@ public final class Struct extends GoloElement {
         .block(call("raise").withArgs(constant(
                 "Can't call the default constructor of a structure with dependant default value.")));
     }
-    defaultFactory.insertMissingReturnStatement();
     return defaultFactory;
   }
 

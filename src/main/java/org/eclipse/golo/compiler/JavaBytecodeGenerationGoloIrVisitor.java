@@ -11,7 +11,6 @@ package org.eclipse.golo.compiler;
 
 import org.eclipse.golo.compiler.ir.*;
 import org.eclipse.golo.compiler.parser.GoloParser;
-import org.eclipse.golo.runtime.OperatorType;
 import gololang.FunctionReference;
 import org.objectweb.asm.*;
 

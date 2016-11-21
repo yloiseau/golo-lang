@@ -355,7 +355,6 @@ public class ParseTreeToGoloIrVisitor implements GoloParserVisitor {
     } else {
       node.childrenAccept(this, data);
     }
-    function.insertMissingReturnStatement();
     if (function.isSynthetic()) {
       context.pop();
       context.push(function.asClosureReference());

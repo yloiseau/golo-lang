@@ -43,9 +43,9 @@ class LocalReferenceAssignmentAndVerificationVisitor extends AbstractGoloIrVisit
     }
   }
 
-  public LocalReferenceAssignmentAndVerificationVisitor() { }
+  LocalReferenceAssignmentAndVerificationVisitor() { }
 
-  public LocalReferenceAssignmentAndVerificationVisitor(GoloCompilationException.Builder builder) {
+  LocalReferenceAssignmentAndVerificationVisitor(GoloCompilationException.Builder builder) {
     this();
     setExceptionBuilder(builder);
   }
