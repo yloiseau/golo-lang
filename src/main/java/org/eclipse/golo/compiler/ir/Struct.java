@@ -16,8 +16,8 @@ import java.util.LinkedHashSet;
 import java.util.Set;
 import java.util.List;
 import org.eclipse.golo.compiler.parser.GoloASTNode;
+import org.eclipse.golo.compiler.ClosureCaptureGoloIrVisitor;
 
-import static java.util.Arrays.asList;
 import static java.util.stream.Collectors.toList;
 
 import static org.eclipse.golo.compiler.ir.Builders.*;
@@ -85,6 +85,13 @@ public final class Struct extends GoloElement {
       .collect(toList());
   }
 
+  private List<String> getNonDefaultMemberNames() {
+    return members.stream()
+      .filter(m -> !m.hasDefault())
+      .map(Member::getName)
+      .collect(toList());
+  }
+
   public Set<Member> getMembers() {
     return Collections.unmodifiableSet(members);
   }
@@ -95,29 +102,76 @@ public final class Struct extends GoloElement {
       .collect(toList());
   }
 
+  public boolean hasDefaults() {
+    return members.stream().anyMatch(Member::hasDefault);
+  }
+
+  private String getFullName() {
+    return getPackageAndClass().toString();
+  }
+
+  private Object[] getFullArgs() {
+    return members.stream()
+      .map(Member::getName)
+      .map(ReferenceLookup::new)
+      .toArray();
+  }
+
+  private Object[] getDefaultArgs() {
+    return members.stream()
+      .map(Member::getDefaultOrRef)
+      .toArray();
+  }
+
+  private GoloFunction createDefaultConstructor() {
+    GoloFunction defaultFactory = functionDeclaration(name).synthetic()
+      .returns(call(getFullName())
+        .withArgs(members.stream().map(Member::getDefaultOrNull).toArray()));
+    defaultFactory.accept(new ClosureCaptureGoloIrVisitor());
+    if (defaultFactory.getSyntheticParameterCount() > 0) {
+      // we use a dependant default value. The default factory must raise an exception
+      defaultFactory = functionDeclaration(name).synthetic()
+        .block(call("raise").withArgs(constant(
+                "Can't call the default constructor of a structure with dependant default value.")));
+    }
+    defaultFactory.insertMissingReturnStatement();
+    return defaultFactory;
+  }
+
+  private GoloFunction createFullArgsConstructor() {
+    return functionDeclaration(name).synthetic()
+      .withParameters(getMemberNames())
+      .returns(call(getFullName()).withArgs(getFullArgs()));
+  }
+
+  private GoloFunction createFullArgsImmutableConstructor() {
+    return functionDeclaration("Immutable" + name).synthetic()
+      .withParameters(getMemberNames())
+      .returns(call(getFullName() + "." + IMMUTABLE_FACTORY_METHOD).withArgs(getFullArgs()));
+  }
+
+  private GoloFunction createDefaultArgsConstructor() {
+    return functionDeclaration(name).synthetic()
+      .withParameters(getNonDefaultMemberNames())
+      .returns(call(getFullName()).withArgs(getDefaultArgs()));
+  }
+
+  private GoloFunction createDefaultArgsImmutableConstructor() {
+    return functionDeclaration("Immutable" + name).synthetic()
+      .withParameters(getNonDefaultMemberNames())
+      .returns(call(getFullName() + "." + IMMUTABLE_FACTORY_METHOD).withArgs(getDefaultArgs()));
+  }
+
   public Set<GoloFunction> createFactories() {
-    String fullName = getPackageAndClass().toString();
-    Object[] args = members.stream()
-              .map(Member::getName)
-              .map(ReferenceLookup::new)
-              .toArray();
-
-    return new LinkedHashSet<GoloFunction>(asList(
-        functionDeclaration(name).synthetic()
-        .returns(call(fullName)),
-
-        functionDeclaration(name).synthetic()
-        .withParameters(getMemberNames())
-        .returns(call(fullName)
-            .withArgs(args)),
-
-        functionDeclaration("Immutable" + name).synthetic()
-        .withParameters(getMemberNames())
-        .returns(call(fullName + "." + IMMUTABLE_FACTORY_METHOD)
-            .withArgs(members.stream()
-              .map(Member::getName)
-              .map(ReferenceLookup::new)
-              .toArray()))));
+    Set<GoloFunction> factories = new LinkedHashSet<>();
+    factories.add(createDefaultConstructor());
+    factories.add(createFullArgsConstructor());
+    factories.add(createFullArgsImmutableConstructor());
+    if (hasDefaults()) {
+      factories.add(createDefaultArgsConstructor());
+      factories.add(createDefaultArgsImmutableConstructor());
+    }
+    return factories;
   }
 
   @Override

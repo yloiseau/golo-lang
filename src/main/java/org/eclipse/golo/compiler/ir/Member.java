@@ -39,6 +39,22 @@ public final class Member extends GoloElement {
     return defaultValue;
   }
 
+  public ExpressionStatement getDefaultOrRef() {
+    if (defaultValue != null) {
+      return defaultValue;
+    } else {
+      return new ReferenceLookup(name);
+    }
+  }
+
+  public ExpressionStatement getDefaultOrNull() {
+    if (defaultValue != null) {
+      return defaultValue;
+    } else {
+      return new ConstantStatement(null);
+    }
+  }
+
   public boolean hasDefault() {
     return defaultValue != null;
   }
