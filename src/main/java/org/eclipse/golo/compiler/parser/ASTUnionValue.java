@@ -14,7 +14,6 @@ import java.util.LinkedHashSet;
 public class ASTUnionValue extends GoloASTNode implements NamedNode {
 
   private String name;
-  private LinkedHashSet<String> members;
 
   public ASTUnionValue(int id) {
     super(id);
@@ -32,14 +31,6 @@ public class ASTUnionValue extends GoloASTNode implements NamedNode {
     this.name = name;
   }
 
-  public LinkedHashSet<String> getMembers() {
-    return members;
-  }
-
-  public void setMembers(LinkedHashSet<String> members) {
-    this.members = members;
-  }
-
   @Override
   public Object jjtAccept(GoloParserVisitor visitor, Object data) {
     return visitor.visit(this, data);
@@ -47,6 +38,6 @@ public class ASTUnionValue extends GoloASTNode implements NamedNode {
 
   @Override
   public String toString() {
-    return String.format("ASTUnionValue{name='%s', members=%s}", name, members);
+    return String.format("ASTUnionValue{name='%s'}", name);
   }
 }

@@ -154,7 +154,6 @@ class ModuleDocumentation implements DocumentationElement {
       // TODO: default value documentation
       currentMemberHolder.addMember(node.getName())
         .documentation(node.getDocumentation())
-        .defaultRepresentation(
         .line(node.getLineInSourceCode());
       return data;
     }
@@ -184,10 +183,10 @@ class ModuleDocumentation implements DocumentationElement {
 
     @Override
     public Object visit(ASTUnionValue node, Object data) {
+      // TODO: add members
       this.currentUnion.addValue(node.getName())
           .documentation(node.getDocumentation())
-          .line(node.getLineInSourceCode())
-          .members(node.getMembers());
+          .line(node.getLineInSourceCode());
       return data;
     }
 

@@ -226,7 +226,7 @@ public class ParseTreeToGoloIrVisitor implements GoloParserVisitor {
       node.jjtGetChild(0).jjtAccept(this, context);
       defaultValue = (ExpressionStatement) context.pop();
     }
-    context.push(Member.withDefault(node.getName(), defaultValue));
+    context.push(Member.withDefault(node.getName(), defaultValue).ofAST(node));
     return context;
   }
 
@@ -258,11 +258,18 @@ public class ParseTreeToGoloIrVisitor implements GoloParserVisitor {
   @Override
   public Object visit(ASTUnionValue node, Object data) {
     Context context = (Context) data;
-    if (!((Union) context.peek()).addValue(node.getName(), node.getMembers())) {
+    Union currentUnion = (Union) context.peek();
+    UnionValue value = currentUnion.createValue(node.getName()).ofAST(node);
+    for (int i = 0; i < node.jjtGetNumChildren(); i++) {
+      node.jjtGetChild(i).jjtAccept(this, context);
+      value.withMember(context.pop());
+    }
+
+    if (!currentUnion.addValue(value)) {
       context.errorMessage(AMBIGUOUS_DECLARATION, node,
           String.format("Declaring the union value `%s` twice", node.getName()));
     }
-    return node.childrenAccept(this, data);
+    return data;
   }
 
   @Override
