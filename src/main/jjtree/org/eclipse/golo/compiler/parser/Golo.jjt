@@ -835,11 +835,14 @@ void ToplevelDeclaration():
 ASTMemberDeclaration MemberDeclaration():
 {
   Token name;
+  String documentation = null;
 }
 {
+  (documentation=Documentation())?
   name=<IDENTIFIER> ("=" ExpressionStatement())?
   {
     jjtThis.setName(name.image);
+    jjtThis.setDocumentation(documentation);
     return jjtThis;
   }
 }
