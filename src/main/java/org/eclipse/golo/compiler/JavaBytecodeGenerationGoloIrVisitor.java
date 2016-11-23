@@ -55,7 +55,6 @@ class JavaBytecodeGenerationGoloIrVisitor implements GoloIrVisitor {
   private Context context;
   private GoloModule currentModule;
   private static final JavaBytecodeStructGenerator STRUCT_GENERATOR = new JavaBytecodeStructGenerator();
-  private static final JavaBytecodeUnionGenerator UNION_GENERATOR = new JavaBytecodeUnionGenerator();
 
   private static final class Context {
     private final Deque<ReferenceTable> referenceTableStack = new LinkedList<>();
@@ -259,12 +258,12 @@ class JavaBytecodeGenerationGoloIrVisitor implements GoloIrVisitor {
 
   @Override
   public void visitUnion(Union union) {
-    this.generationResults.addAll(UNION_GENERATOR.compile(union, this.sourceFilename));
+    this.generationResults.addAll(new JavaBytecodeUnionGenerator(this).compile(union, this.sourceFilename));
   }
 
   @Override
   public void visitUnionValue(UnionValue value) {
-    // dealt in the UNION_GENERATOR visitor
+    // dealt in the union generator visitor
   }
 
   @Override

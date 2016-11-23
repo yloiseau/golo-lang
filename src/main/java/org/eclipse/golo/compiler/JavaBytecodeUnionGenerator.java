@@ -9,9 +9,8 @@
 
 package org.eclipse.golo.compiler;
 
-import org.eclipse.golo.compiler.ir.Union;
-import org.eclipse.golo.compiler.ir.UnionValue;
-import org.eclipse.golo.compiler.ir.Member;
+import org.eclipse.golo.compiler.ir.*;
+
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
@@ -27,6 +26,11 @@ import static org.objectweb.asm.ClassWriter.COMPUTE_MAXS;
 import static org.objectweb.asm.Opcodes.*;
 
 class JavaBytecodeUnionGenerator {
+  private JavaBytecodeGenerationGoloIrVisitor visitor;
+
+  JavaBytecodeUnionGenerator(JavaBytecodeGenerationGoloIrVisitor visitor) {
+    this.visitor = visitor;
+  }
 
   public Collection<CodeGenerationResult> compile(Union union, String sourceFilename) {
     LinkedList<CodeGenerationResult> results = new LinkedList<>();
@@ -41,6 +45,9 @@ class JavaBytecodeUnionGenerator {
       results.add(makeUnionValue(classWriter, sourceFilename, value));
       if (value.hasMembers()) {
         makeStaticFactory(classWriter, value);
+        if (value.hasDefaults()) {
+          makeFactoryWithDefaults(classWriter, value);
+        }
       } else {
         staticFields.put(value.getName(), value.getPackageAndClass());
       }
@@ -75,6 +82,31 @@ class JavaBytecodeUnionGenerator {
     for (int i = 0; i < value.getMembers().size(); i++) {
       mv.visitVarInsn(ALOAD, i);
     }
+    mv.visitMethodInsn(INVOKESPECIAL, value.getPackageAndClass().toJVMType(), "<init>",
+        argsSignature(value.getMembers().size()) + "V", false);
+    mv.visitInsn(ARETURN);
+    mv.visitMaxs(0, 0);
+    mv.visitEnd();
+  }
+
+  private void makeFactoryWithDefaults(ClassWriter cw, UnionValue value) {
+    int arity = (int) value.getMembers().stream().filter(m -> !m.hasDefault()).count();
+    MethodVisitor mv = cw.visitMethod(ACC_PUBLIC + ACC_STATIC, value.getName(),
+        argsSignature(arity) + value.getUnion().getPackageAndClass().toJVMRef(),
+        null, null);
+    mv.visitCode();
+    mv.visitTypeInsn(NEW, value.getPackageAndClass().toJVMType());
+    mv.visitInsn(DUP);
+    for (int i = 0; i < arity; i++) {
+      mv.visitVarInsn(ALOAD, i);
+    }
+    for (Member member : value.getMembers()) {
+      if (member.hasDefault()) {
+        visitor.setMethodVisitor(mv);
+        member.getDefaultValue().accept(visitor);
+      }
+    }
+
     mv.visitMethodInsn(INVOKESPECIAL, value.getPackageAndClass().toJVMType(), "<init>",
         argsSignature(value.getMembers().size()) + "V", false);
     mv.visitInsn(ARETURN);
@@ -325,4 +357,5 @@ class JavaBytecodeUnionGenerator {
     mv.visitMaxs(0, 0);
     mv.visitEnd();
   }
+
 }

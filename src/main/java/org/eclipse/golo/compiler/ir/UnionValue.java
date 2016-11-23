@@ -46,6 +46,10 @@ public final class UnionValue extends GoloElement {
     return !this.members.isEmpty();
   }
 
+  public boolean hasDefaults() {
+    return members.stream().anyMatch(Member::hasDefault);
+  }
+
   private void addMember(Member member) {
     this.members.add(member);
     makeParentOf(member);
