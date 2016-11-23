@@ -15,12 +15,12 @@ import java.util.LinkedHashSet;
 import java.util.Collection;
 import static java.util.Collections.unmodifiableSet;
 
-class StructDocumentation implements Comparable<StructDocumentation>, DocumentationElement {
+class StructDocumentation implements Comparable<StructDocumentation>, DocumentationElement, MemberHolder {
 
   private String name;
   private String documentation;
   private int line;
-  private Set<String> members = new LinkedHashSet<>();
+  private Set<MemberDocumentation> members = new LinkedHashSet<>();
 
   public String name() {
     return name;
@@ -45,17 +45,23 @@ class StructDocumentation implements Comparable<StructDocumentation>, Documentat
   }
 
   public StructDocumentation line(int l) {
-    line= l;
+    line = l;
     return this;
   }
 
-  public Set<String> members() {
+  public Set<MemberDocumentation> members() {
     return unmodifiableSet(members);
   }
 
-  public StructDocumentation members(Collection<String> m) {
+  public StructDocumentation members(Collection<MemberDocumentation> m) {
     members.addAll(m);
     return this;
+  }
+
+  public MemberDocumentation addMember(String name) {
+    MemberDocumentation doc = new MemberDocumentation().name(name);
+    members.add(doc);
+    return doc;
   }
 
   @Override

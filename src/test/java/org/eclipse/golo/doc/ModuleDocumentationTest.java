@@ -79,6 +79,6 @@ public class ModuleDocumentationTest {
 
     assertThat(doc.moduleStates().size(), is(2));
     assertThat(doc.moduleStates(), hasKey("letState"));
-    assertThat(doc.moduleStates().get("letState"), is(69));
+    assertThat(doc.moduleStates().get("letState"), is(80));
   }
 }

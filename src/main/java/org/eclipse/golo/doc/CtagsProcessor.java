@@ -148,8 +148,8 @@ public class CtagsProcessor extends AbstractProcessor {
     }
     for (StructDocumentation struct : documentation.structs()) {
       ctagsStruct(struct.name(), struct.line());
-      for (String member : struct.members()) {
-        ctagsStructMember(struct.name(), member, struct.line());
+      for (MemberDocumentation member : struct.members()) {
+        ctagsStructMember(struct.name(), member.name(), member.line());
       }
     }
     for (UnionDocumentation unionDoc : documentation.unions()) {

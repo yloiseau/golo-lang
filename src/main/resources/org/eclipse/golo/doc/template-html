@@ -294,15 +294,18 @@ let CONFIG = com.github.rjeschke.txtmark.Configuration.builder()
                             rel="source" title="Link to the corresponding source">Source</a></nav>
     <% } %>
 
-    <h5>Members</h5>
-    <ul>
-    <% foreach member in structDoc: members() { %>
-      <li><code><%= member %></code></li>
-  <% } %>
-    </ul>
     <div class="golodoc">
       <%= process(structDoc: documentation(), 3, CONFIG) %>
     </div>
+
+    <h5>Members</h5>
+    <ul>
+    <% foreach member in structDoc: members() { %>
+      <li><code><%= member: name() %></code>
+          <%= process(member: documentation(), 5, CONFIG) %>
+      </li>
+  <% } %>
+    </ul>
   <% } %>
 <% } %>
 

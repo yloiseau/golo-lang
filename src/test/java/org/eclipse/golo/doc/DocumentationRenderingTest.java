@@ -118,10 +118,10 @@ public class DocumentationRenderingTest {
     assertThat(result, containsString("Point\tfile\t/^struct[:blank:]+Point[:blank:]+=/;\"\ts\tline:67\tlanguage:golo"));
     assertThat(result, containsString("java.lang.String\tfile\t/^augment[:blank:]+java\\.lang\\.String/;\"\ta\tline:47\tlanguage:golo"));
     assertThat(result, containsString("java.util.Map\tfile\t/^import[:blank:]+java\\.util\\.Map/;\"\ti\tline:15\tlanguage:golo"));
-    assertThat(result, containsString("letState\tfile\t(let|var)[:blank:]+letState[:blank:]+=/;\"\tv\taccess:private\tfile:\tline:69\tlanguage:golo"));
+    assertThat(result, containsString("letState\tfile\t(let|var)[:blank:]+letState[:blank:]+=/;\"\tv\taccess:private\tfile:\tline:80\tlanguage:golo"));
     assertThat(result, containsString("plop\tfile\t/function[:blank:]+plop[:blank:]+=/;\"\tf\tline:49\taccess:public\tsignature:(this)\taugment:java.lang.String\tlanguage:golo"));
     assertThat(result, containsString("should_be_hidden\tfile\t/function[:blank:]+should_be_hidden[:blank:]+=/;\"\tf\tline:19\taccess:private\tfile:\tsignature:(foo)\tlanguage:golo"));
-    assertThat(result, containsString("x\tfile\t/struct[:blank:]+Point[:blank:]+=/;\"\tm\tline:67\taccess:public\tstruct:Point\tlanguage:golo"));
+    assertThat(result, containsString("x\tfile\t/struct[:blank:]+Point[:blank:]+=/;\"\tm\tline:69\taccess:public\tstruct:Point\tlanguage:golo"));
     assertThat(result, containsString("zig\tfile\t/function[:blank:]+zig[:blank:]+=/;\"\tf\tline:58\taccess:public\tsignature:(this, x)\taugment:java.lang.String\tlanguage:golo"));
   }
 

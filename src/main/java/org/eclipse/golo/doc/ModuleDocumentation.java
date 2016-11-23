@@ -120,6 +120,7 @@ class ModuleDocumentation implements DocumentationElement {
     private Deque<Set<FunctionDocumentation>> functionContext = new LinkedList<>();
     private FunctionDocumentation currentFunction = null;
     private UnionDocumentation currentUnion;
+    private MemberHolder currentMemberHolder;
 
     @Override
     public Object visit(ASTCompilationUnit node, Object data) {
@@ -151,18 +152,24 @@ class ModuleDocumentation implements DocumentationElement {
     @Override
     public Object visit(ASTMemberDeclaration node, Object data) {
       // TODO: default value documentation
-      return null;
+      currentMemberHolder.addMember(node.getName())
+        .documentation(node.getDocumentation())
+        .defaultRepresentation(
+        .line(node.getLineInSourceCode());
+      return data;
     }
 
     @Override
     public Object visit(ASTStructDeclaration node, Object data) {
-      // TODO: add the members doc
-      structs.add(new StructDocumentation()
+      StructDocumentation doc = new StructDocumentation()
               .name(node.getName())
               .documentation(node.getDocumentation())
-              .line(node.getLineInSourceCode())
-      );
-      return data;
+              .line(node.getLineInSourceCode());
+      structs.add(doc);
+      currentMemberHolder = doc;
+      Object result = node.childrenAccept(this, data);
+      currentMemberHolder = null;
+      return result;
     }
 
     @Override
