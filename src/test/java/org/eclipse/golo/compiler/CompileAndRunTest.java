@@ -1320,6 +1320,11 @@ public class CompileAndRunTest {
   }
 
   @Test
+  public void unions_default() throws Throwable {
+    runTests(SRC, "unions-default.golo", classLoader(this));
+  }
+
+  @Test
   @SuppressWarnings("unchecked")
   public void adapters() throws Throwable {
     Class<?> moduleClass = compileAndLoadGoloModule(SRC, "adapters.golo");
