@@ -23,8 +23,12 @@ public class VersionCommand implements CliCommand {
   @Override
   public void execute() throws Throwable {
     if (this.full) {
-      System.out.println("Golo: " + Metadata.VERSION + " (build " + Metadata.TIMESTAMP + ")");
-      System.out.println("JVM: " + System.getProperty("java.version"));
+      System.out.format("Golo: %s (build %s)%n", Metadata.VERSION, Metadata.TIMESTAMP);
+      System.out.format(" JVM: %s %s%n", System.getProperty("java.vendor"), System.getProperty("java.version"));
+      System.out.format("  OS: %s %s %s%n",
+          System.getProperty("os.name"),
+          System.getProperty("os.arch"),
+          System.getProperty("os.version"));
     } else {
       System.out.println(Metadata.VERSION);
     }

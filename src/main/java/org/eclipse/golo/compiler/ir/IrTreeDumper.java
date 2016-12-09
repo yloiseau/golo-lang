@@ -13,6 +13,7 @@ package org.eclipse.golo.compiler.ir;
 public class IrTreeDumper implements GoloIrVisitor {
 
   private int spacing = 0;
+  private boolean withLines = true;
 
   private void space() {
     System.out.print("# ");
@@ -27,6 +28,13 @@ public class IrTreeDumper implements GoloIrVisitor {
 
   private void decr() {
     spacing = spacing - 2;
+  }
+
+  private String lineNumber(GoloElement element) {
+    if (withLines) {
+      return String.format(" (line %s)", element.positionInSourceCode().getStartLine());
+    }
+    return "";
   }
 
   @Override
@@ -49,7 +57,7 @@ public class IrTreeDumper implements GoloIrVisitor {
   public void visitNamedAugmentation(NamedAugmentation namedAugmentation) {
     incr();
     space();
-    System.out.println("Named Augmentation " + namedAugmentation.getName());
+    System.out.println("Named Augmentation " + namedAugmentation.getName() + lineNumber(namedAugmentation));
     namedAugmentation.walk(this);
     decr();
   }
@@ -58,7 +66,7 @@ public class IrTreeDumper implements GoloIrVisitor {
   public void visitAugmentation(Augmentation augmentation) {
     incr();
     space();
-    System.out.println("Augmentation on " + augmentation.getTarget());
+    System.out.println("Augmentation on " + augmentation.getTarget() + lineNumber(augmentation));
     if (augmentation.hasNames()) {
       incr();
       for (String name : augmentation.getNames()) {
@@ -75,7 +83,7 @@ public class IrTreeDumper implements GoloIrVisitor {
   public void visitStruct(Struct struct) {
     incr();
     space();
-    System.out.println("Struct " + struct.getPackageAndClass().className());
+    System.out.println("Struct " + struct.getPackageAndClass().className() + lineNumber(struct));
     space();
     System.out.println(" - target class = " + struct.getPackageAndClass());
     incr();
@@ -90,7 +98,7 @@ public class IrTreeDumper implements GoloIrVisitor {
   public void visitUnion(Union union) {
     incr();
     space();
-    System.out.println("Union " + union.getPackageAndClass().className());
+    System.out.println("Union " + union.getPackageAndClass().className() + lineNumber(union));
     space();
     System.out.println(" - target class = " + union.getPackageAndClass());
     union.walk(this);
@@ -101,7 +109,7 @@ public class IrTreeDumper implements GoloIrVisitor {
   public void visitUnionValue(UnionValue value) {
     incr();
     space();
-    System.out.println("Value " + value.getPackageAndClass().className());
+    System.out.println("Value " + value.getPackageAndClass().className() + lineNumber(value));
     space();
     System.out.println(" - target class = " + value.getPackageAndClass());
     if (value.hasMembers()) {
@@ -141,7 +149,7 @@ public class IrTreeDumper implements GoloIrVisitor {
         System.out.print(" (selfname: " + function.getSyntheticSelfName() + ")");
       }
     }
-    System.out.println();
+    System.out.println(lineNumber(function));
     function.walk(this);
   }
 
@@ -159,7 +167,7 @@ public class IrTreeDumper implements GoloIrVisitor {
     if (block.isEmpty()) { return; }
     incr();
     space();
-    System.out.println("Block");
+    System.out.println("Block" + lineNumber(block));
     block.walk(this);
     decr();
   }
@@ -176,7 +184,7 @@ public class IrTreeDumper implements GoloIrVisitor {
   public void visitConstantStatement(ConstantStatement constantStatement) {
     incr();
     space();
-    System.out.println("Constant = " + constantStatement.getValue());
+    System.out.println("Constant = " + constantStatement.getValue() + lineNumber(constantStatement));
     decr();
   }
 
@@ -197,7 +205,8 @@ public class IrTreeDumper implements GoloIrVisitor {
         + ", on reference? -> " + functionInvocation.isOnReference()
         + ", on module state? -> " + functionInvocation.isOnModuleState()
         + ", anonymous? -> " + functionInvocation.isAnonymous()
-        + ", named arguments? -> " + functionInvocation.usesNamedArguments());
+        + ", named arguments? -> " + functionInvocation.usesNamedArguments()
+        + lineNumber(functionInvocation));
 
     functionInvocation.walk(this);
     printLocalDeclarations(functionInvocation);
@@ -209,7 +218,8 @@ public class IrTreeDumper implements GoloIrVisitor {
     incr();
     space();
     System.out.print("Assignment: " + assignmentStatement.getLocalReference());
-    System.out.println(assignmentStatement.isDeclaring() ? " (declaring)" : "");
+    System.out.print(assignmentStatement.isDeclaring() ? " (declaring)" : "");
+    System.out.println(lineNumber(assignmentStatement));
     assignmentStatement.walk(this);
     decr();
   }
@@ -219,9 +229,10 @@ public class IrTreeDumper implements GoloIrVisitor {
     incr();
     space();
     System.out.format(
-        "Destructuring assignement: {declaring=%s, varargs=%s}%n",
+        "Destructuring assignement: {declaring=%s, varargs=%s}%s%n",
         assignment.isDeclaring(),
-        assignment.isVarargs());
+        assignment.isVarargs(),
+        lineNumber(assignment));
     assignment.walk(this);
     decr();
   }
@@ -230,7 +241,7 @@ public class IrTreeDumper implements GoloIrVisitor {
   public void visitReferenceLookup(ReferenceLookup referenceLookup) {
     incr();
     space();
-    System.out.println("Reference lookup: " + referenceLookup.getName());
+    System.out.println("Reference lookup: " + referenceLookup.getName() + lineNumber(referenceLookup));
     printLocalDeclarations(referenceLookup);
     decr();
   }
@@ -239,7 +250,7 @@ public class IrTreeDumper implements GoloIrVisitor {
   public void visitConditionalBranching(ConditionalBranching conditionalBranching) {
     incr();
     space();
-    System.out.println("Conditional");
+    System.out.println("Conditional" + lineNumber(conditionalBranching));
     conditionalBranching.walk(this);
     decr();
   }
@@ -248,7 +259,7 @@ public class IrTreeDumper implements GoloIrVisitor {
   public void visitCaseStatement(CaseStatement caseStatement) {
     incr();
     space();
-    System.out.println("Case");
+    System.out.println("Case" + lineNumber(caseStatement));
     incr();
     for (WhenClause<Block> c : caseStatement.getClauses()) {
       c.accept(this);
@@ -263,7 +274,7 @@ public class IrTreeDumper implements GoloIrVisitor {
   public void visitMatchExpression(MatchExpression matchExpression) {
     incr();
     space();
-    System.out.println("Match");
+    System.out.println("Match" + lineNumber(matchExpression));
     incr();
     for (WhenClause<?> c : matchExpression.getClauses()) {
       c.accept(this);
@@ -288,7 +299,7 @@ public class IrTreeDumper implements GoloIrVisitor {
   public void visitBinaryOperation(BinaryOperation binaryOperation) {
     incr();
     space();
-    System.out.println("Binary operator: " + binaryOperation.getType());
+    System.out.println("Binary operator: " + binaryOperation.getType() + lineNumber(binaryOperation));
     binaryOperation.walk(this);
     printLocalDeclarations(binaryOperation);
     decr();
@@ -298,7 +309,7 @@ public class IrTreeDumper implements GoloIrVisitor {
   public void visitUnaryOperation(UnaryOperation unaryOperation) {
     incr();
     space();
-    System.out.println("Unary operator: " + unaryOperation.getType());
+    System.out.println("Unary operator: " + unaryOperation.getType() + lineNumber(unaryOperation));
     unaryOperation.getExpressionStatement().accept(this);
     printLocalDeclarations(unaryOperation);
     decr();
@@ -308,7 +319,7 @@ public class IrTreeDumper implements GoloIrVisitor {
   public void visitLoopStatement(LoopStatement loopStatement) {
     incr();
     space();
-    System.out.println("Loop");
+    System.out.println("Loop" + lineNumber(loopStatement));
     loopStatement.walk(this);
     decr();
   }
@@ -317,7 +328,7 @@ public class IrTreeDumper implements GoloIrVisitor {
   public void visitForEachLoopStatement(ForEachLoopStatement foreachStatement) {
     incr();
     space();
-    System.out.println("Foreach");
+    System.out.println("Foreach" + lineNumber(foreachStatement));
     incr();
     for (LocalReference ref : foreachStatement.getReferences()) {
       ref.accept(this);
@@ -337,9 +348,10 @@ public class IrTreeDumper implements GoloIrVisitor {
   public void visitMethodInvocation(MethodInvocation methodInvocation) {
     incr();
     space();
-    System.out.format("Method invocation: %s, null safe? -> %s%n",
+    System.out.format("Method invocation: %s, null safe? -> %s%s%n",
         methodInvocation.getName(),
-        methodInvocation.isNullSafeGuarded());
+        methodInvocation.isNullSafeGuarded(),
+        lineNumber(methodInvocation));
     methodInvocation.walk(this);
     printLocalDeclarations(methodInvocation);
     decr();
@@ -358,7 +370,7 @@ public class IrTreeDumper implements GoloIrVisitor {
   public void visitTryCatchFinally(TryCatchFinally tryCatchFinally) {
     incr();
     space();
-    System.out.println("Try");
+    System.out.println("Try" + lineNumber(tryCatchFinally));
     tryCatchFinally.getTryBlock().accept(this);
     if (tryCatchFinally.hasCatchBlock()) {
       space();
@@ -385,9 +397,11 @@ public class IrTreeDumper implements GoloIrVisitor {
       decr();
     } else {
       System.out.printf(
-          "Closure reference: %s, regular arguments at index %d%n",
+          "Closure reference: %s%s, regular arguments at index %d%s%n",
           target.getName(),
-          target.getSyntheticParameterCount());
+          lineNumber(target),
+          target.getSyntheticParameterCount(),
+          lineNumber(closureReference));
       incr();
       for (String refName : closureReference.getCapturedReferenceNames()) {
         space();
@@ -402,7 +416,8 @@ public class IrTreeDumper implements GoloIrVisitor {
   public void visitLoopBreakFlowStatement(LoopBreakFlowStatement loopBreakFlowStatement) {
     incr();
     space();
-    System.out.println("Loop break flow: " + loopBreakFlowStatement.getType().name());
+    System.out.println("Loop break flow: " + loopBreakFlowStatement.getType().name()
+        + lineNumber(loopBreakFlowStatement));
     decr();
   }
 
@@ -410,7 +425,7 @@ public class IrTreeDumper implements GoloIrVisitor {
   public void visitCollectionLiteral(CollectionLiteral collectionLiteral) {
     incr();
     space();
-    System.out.println("Collection literal of type: " + collectionLiteral.getType());
+    System.out.println("Collection literal of type: " + collectionLiteral.getType() + lineNumber(collectionLiteral));
     collectionLiteral.walk(this);
     printLocalDeclarations(collectionLiteral);
     decr();
@@ -420,7 +435,7 @@ public class IrTreeDumper implements GoloIrVisitor {
   public void visitCollectionComprehension(CollectionComprehension collectionComprehension) {
     incr();
     space();
-    System.out.println("Collection comprehension of type: " + collectionComprehension.getType());
+    System.out.println("Collection comprehension of type: " + collectionComprehension.getType() + lineNumber(collectionComprehension));
     incr();
     space();
     System.out.println("Expression: ");

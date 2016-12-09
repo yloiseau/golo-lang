@@ -13,6 +13,7 @@ package org.eclipse.golo.cli;
 import com.beust.jcommander.*;
 
 import org.eclipse.golo.cli.command.spi.CliCommand;
+import gololang.Runtime;
 
 import java.io.*;
 import java.util.*;
@@ -42,6 +43,29 @@ public final class Main {
       if (!commandNames.contains(value)) {
         throw new ParameterException(message("command_error", commandNames));
       }
+    }
+  }
+
+  private static void handleThrowable(Throwable t) {
+    // TODO: localize
+    // TODO: move in CliCommand
+    System.err.println("[error] " + (t.getMessage().isEmpty() ? t.toString() : t.getMessage()));
+    if (Runtime.debugMode()) {
+      System.err.println(t.toString());
+      for (StackTraceElement s : t.getStackTrace()) {
+        if (!s.getClassName().startsWith("java") && !s.getClassName().startsWith("org.eclipse.golo")) {
+          System.err.format("\tat %s(%s:%s)%n",
+              s.getClassName(),
+              s.getFileName(),
+              s.getLineNumber(),
+              s.getMethodName());
+        }
+      }
+    }
+    if (t.getCause() != null) {
+      handleThrowable(t.getCause());
+    } else {
+      System.exit(1);
     }
   }
 
@@ -79,6 +103,12 @@ public final class Main {
       if (cmd.getParsedCommand() != null) {
         cmd.usage(cmd.getParsedCommand());
       }
+      System.exit(2);
+    } catch (IOException exception) {
+      System.err.println(exception.getMessage());
+      System.exit(1);
+    } catch (Throwable t) {
+      handleThrowable(t);
     }
   }
 }

@@ -12,12 +12,12 @@ package org.eclipse.golo.cli.command.spi;
 
 import org.eclipse.golo.compiler.GoloCompilationException;
 import gololang.Messages;
+import gololang.Runtime;
 
 import java.lang.invoke.MethodHandle;
 
 import static java.lang.invoke.MethodHandles.publicLookup;
 import static java.lang.invoke.MethodType.methodType;
-
 
 public interface CliCommand {
 
@@ -37,10 +37,15 @@ public interface CliCommand {
   }
 
   default void handleCompilationException(GoloCompilationException e) {
-    handleCompilationException(e, true);
+    handleCompilationException(e, true, Runtime.debugMode());
   }
 
   default void handleCompilationException(GoloCompilationException e, boolean exit) {
+    handleCompilationException(e, exit, Runtime.debugMode());
+  }
+
+  default void handleCompilationException(GoloCompilationException e, boolean exit, boolean withStack) {
+    handleThrowable(e, false);
     Messages.error(e.getMessage());
     for (GoloCompilationException.Problem problem : e.getProblems()) {
       Messages.error(problem.getDescription());
@@ -67,6 +72,9 @@ public interface CliCommand {
       Messages.printStackTrace(e);
     } else {
       Messages.error(Messages.message("use_debug"));
+    }
+    if (withStack) {
+      e.printStackTrace();
     }
     if (exit) {
       System.exit(1);

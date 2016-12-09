@@ -110,31 +110,30 @@ public class ParseException extends Exception {
       if (maxSize < expectedTokenSequences[i].length) {
         maxSize = expectedTokenSequences[i].length;
       }
+      expected.append("   ");
       for (int j = 0; j < expectedTokenSequences[i].length; j++) {
-        expected.append(tokenImage[expectedTokenSequences[i][j]]).append(' ');
+        expected.append(' ').append(tokenImage[expectedTokenSequences[i][j]]);
       }
-      if (expectedTokenSequences[i][expectedTokenSequences[i].length - 1] != 0) {
-        expected.append("...");
-      }
-      expected.append(EOL).append("    ");
+      expected.append(EOL);
     }
-    String retval = message("unexpected_token");
+    StringBuffer retval = new StringBuffer(message("unexpected_token"));
     Token tok = currentToken.next;
     for (int i = 0; i < maxSize; i++) {
-      if (i != 0) retval += " ";
+      if (i != 0) {
+        retval.append(' ');
+      }
       if (tok.kind == 0) {
-        retval += tokenImage[0];
+        retval.append(tokenImage[0]);
         break;
       }
-      retval += " " + tokenImage[tok.kind];
-      retval += " `";
-      retval += add_escapes(tok.image);
-      retval += "` ";
+      retval.append(" `").append(add_escapes(tok.image)).append("` ");
       tok = tok.next;
     }
-    retval += message("source_position", currentToken.next.beginLine, currentToken.next.beginColumn);
+    retval.append(message("source_position", currentToken.next.beginLine, currentToken.next.beginColumn));
+    // TODO: localize
+    // retval.append(EOL).append("Was expecting one of:").append(EOL).append(expected);
 
-    return retval;
+    return retval.toString();
   }
 
   /**
@@ -162,12 +161,12 @@ public class ParseException extends Exception {
         case '\r':
           retval.append("\\r");
           continue;
-        case '\"':
-          retval.append("\\\"");
-          continue;
-        case '\'':
-          retval.append("\\\'");
-          continue;
+        // case '\"':
+        //   retval.append("\\\"");
+        //   continue;
+        // case '\'':
+        //   retval.append("\\\'");
+        //   continue;
         case '\\':
           retval.append("\\\\");
           continue;

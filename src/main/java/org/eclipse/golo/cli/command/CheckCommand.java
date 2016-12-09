@@ -22,6 +22,8 @@ import org.eclipse.golo.cli.command.spi.CliCommand;
 import org.eclipse.golo.compiler.GoloCompilationException;
 import org.eclipse.golo.compiler.GoloCompiler;
 
+import gololang.Runtime;
+
 import static gololang.Messages.*;
 
 @Parameters(commandNames = {"check"}, resourceBundle = "commands", commandDescriptionKey = "check")
@@ -62,7 +64,7 @@ public class CheckCommand implements CliCommand {
       } catch (IOException e) {
         error(message("file_not_found", file));
       } catch (GoloCompilationException e) {
-        handleCompilationException(e, exit);
+        handleCompilationException(e, exit, verbose || Runtime.debugMode());
       }
     }
   }
