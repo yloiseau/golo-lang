@@ -92,9 +92,15 @@ function test_two_mixed_loops = {
 }
 
 function test_more_loops = {
-  let l = list[ [x,y,z] foreach x in [0,1,2] when (x % 2) == 1
-                        foreach y in [1,2,3] when y < 2
-                        foreach z in [1] ]
+  let l = list[
+    [x,y,z]
+    foreach x 
+      in [0,1,2] 
+      when (x % 2) == 1
+    foreach y
+      in [1,2,3]
+      when y < 2
+    foreach z in [1] ]
   require(l == list[[1,1,1]], "more_loops failed")
 }
 

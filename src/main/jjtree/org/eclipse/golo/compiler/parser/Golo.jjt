@@ -1126,18 +1126,18 @@ void ForEachLoop():
   <FOREACH>
   (
     LOOKAHEAD(2)(
-      (elementId=<IDENTIFIER> <IN> ExpressionStatement() (<WHEN> ExpressionStatement())?)
+      (elementId=<IDENTIFIER> BlankLines() <IN> ExpressionStatement() (LOOKAHEAD(2) BlankLines() <WHEN> ExpressionStatement())?)
       |
-      ("(" elementId=<IDENTIFIER> <IN> ExpressionStatement() (<WHEN> ExpressionStatement())? ")")
+      ("(" elementId=<IDENTIFIER> BlankLines() <IN> ExpressionStatement() (BlankLines() <WHEN> ExpressionStatement())? ")")
     )
     {
       jjtThis.setElementIdentifier(elementId.image);
     }
     |
     LOOKAHEAD(2)(
-      (names=DestructuredNames()(varargsToken="...")? <IN> ExpressionStatement() (<WHEN> ExpressionStatement())?)
+      (names=DestructuredNames()(varargsToken="...")? BlankLines() <IN> ExpressionStatement() (LOOKAHEAD(2) BlankLines() <WHEN> ExpressionStatement())?)
       |
-      ("(" names=DestructuredNames()(varargsToken="...")? <IN> ExpressionStatement() (<WHEN> ExpressionStatement())? ")")
+      ("(" names=DestructuredNames()(varargsToken="...")? BlankLines() <IN> ExpressionStatement() (BlankLines() <WHEN> ExpressionStatement())? ")")
     )
     {
       jjtThis.setNames(names);
@@ -1203,7 +1203,7 @@ void Atom() #void: {}
   |
   Function()
   |
-  CollectionLiteral()
+  Collection()
   |
   "(" (BlankLine())? ExpressionStatement() (BlankLine())? ")"
 }
@@ -1503,30 +1503,24 @@ void Literal():
   )
 }
 
+void Collection() #void: {}
+{
+  LOOKAHEAD(2) CollectionLiteral()
+  |
+  LOOKAHEAD(2) CollectionComprehension()
+  |
+  LOOKAHEAD(2) RangeLiteral()
+}
+
 void CollectionLiteral():
 {
   Token token;
-  boolean isRange = false;
-  boolean isComprehension = false;
 }
 {
-  token=<COLL_START> (BlankLine())?
+  token=<COLL_START> BlankLines()
   (
     ExpressionStatement()
-    (
-      ("," (BlankLine())? ExpressionStatement())+
-      |
-      ".." ExpressionStatement()
-      {
-        isRange = true;
-      }
-      |
-      (ForEachLoop()|ForLoop())+
-      {
-        isComprehension = true;
-      }
-    )?
-    (BlankLine())?
+    ("," BlankLines() ExpressionStatement())*
   )?
   "]"
   {
@@ -1535,10 +1529,36 @@ void CollectionLiteral():
     if (jjtThis.getType().isEmpty()) {
       jjtThis.setType("tuple");
     }
-    if (isRange) {
-      jjtThis.setType("range");
+  }
+}
+
+void RangeLiteral():
+{
+  Token token;
+}
+{
+  token=<COLL_START> ExpressionStatement() ".." ExpressionStatement() "]"
+  {
+    if (token.image.length() > 1) {
+      throw new TokenMgrError("Invalid range litteral notation", 0);
     }
-    jjtThis.setComprehension(isComprehension);
+  }
+}
+
+void CollectionComprehension():
+{
+  Token token;
+}
+{
+  token=<COLL_START> BlankLines()
+  ExpressionStatement()
+  (LOOKAHEAD(2) BlankLines() (ForEachLoop()|ForLoop()))+
+  {
+    String image = token.image;
+    jjtThis.setType(image.substring(0, image.length() - 1));
+    if (jjtThis.getType().isEmpty()) {
+      jjtThis.setType("tuple");
+    }
   }
 }
 

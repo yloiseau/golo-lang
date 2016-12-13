@@ -511,9 +511,6 @@ public class ParseTreeToGoloIrVisitor implements GoloParserVisitor {
 
   @Override
   public Object visit(ASTCollectionLiteral node, Object data) {
-    if (node.isComprehension()) {
-      return createCollectionComprehension(node, (Context) data);
-    }
     return createCollectionLiteral(node, (Context) data);
   }
 
@@ -527,7 +524,9 @@ public class ParseTreeToGoloIrVisitor implements GoloParserVisitor {
     return context;
   }
 
-  private Object createCollectionComprehension(ASTCollectionLiteral node, Context context) {
+  @Override
+  public Object visit(ASTCollectionComprehension node, Object data) {
+    Context context = (Context) data;
     CollectionComprehension col = CollectionComprehension.of(node.getType()).ofAST(node);
     node.jjtGetChild(0).jjtAccept(this, context);
     col.expression(context.pop());
@@ -537,6 +536,11 @@ public class ParseTreeToGoloIrVisitor implements GoloParserVisitor {
     }
     context.push(col);
     return context;
+  }
+
+  @Override
+  public Object visit(ASTRangeLiteral node, Object data) {
+    return createCollectionLiteral(node, (Context) data);
   }
 
   @Override
