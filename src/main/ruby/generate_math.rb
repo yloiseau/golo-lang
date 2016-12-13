@@ -13,7 +13,10 @@ OPS_SYMB = {
   :minus => '-',
   :divide => '/',
   :times => '*',
-  :modulo => '%',
+  :modulo => '%'
+}
+
+BOOL_OPS = {
   :equals => '==',
   :notequals => '!=',
   :less => '<',
@@ -38,30 +41,34 @@ WEIGHT = {
   :Double => 5
 }
 
-PRIM.each do |type, prim|
-  OPS_SYMB.each do |op, symb|
-    puts "  public static Object #{op}(#{type} a, #{type} b) {"
+def generateMethod(out, op, symb, left, right, prim)
+    puts "  public static #{out} #{op}(#{left} a, #{right} b) {"
     puts "    return ((#{prim}) a) #{symb} ((#{prim}) b);"
     puts "  }"
     puts
-  end
 end
 
-combinations = PRIM.keys().combination(2).to_a
-combinations = combinations + combinations.map { |pair| [pair[1], pair[0]] }
+combinations =  PRIM.keys().combination(2).to_a
+combinations += combinations.map { |pair| [pair[1], pair[0]] }
+combinations += PRIM.keys().map { |v| [v, v] }
 combinations.each do |pair|
   left = pair[0]
   right = pair[1]
+  if WEIGHT[left] < WEIGHT[right]
+      type = PRIM[right]
+      out = right
+  else
+      type = PRIM[left]
+      out = left
+  end
+  if type == :char
+    out = :Integer
+  end
   OPS_SYMB.each do |op, symb|
-    puts "  public static Object #{op}(#{left} a, #{right} b) {"
-    if WEIGHT[left] < WEIGHT[right]
-        type = PRIM[right]
-    else
-        type = PRIM[left]
-    end
-    puts "    return ((#{type}) a) #{symb} ((#{type}) b);"
-    puts "  }"
-    puts
+    generateMethod(out, op, symb, left, right, type)
+  end
+  BOOL_OPS.each do |op, symb|
+    generateMethod(:Boolean, op, symb, left, right, type)
   end
 end
 
@@ -70,7 +77,6 @@ end
 
 INT_NUMBERS = [ :Integer, :Long, :BigInteger ]
 REAL_NUMBERS = [ :Float, :Double ]
-COMPARISONS = [ :equals, :notequals, :less, :lessorequals, :more, :moreorequals ]
 OPS_METH = {
   :plus => :add,
   :minus => :subtract,
@@ -79,50 +85,54 @@ OPS_METH = {
   :modulo => :remainder
 }
 
-toBigDecimal = -> (arg, type) { case type
-  when :BigDecimal then arg
-  else "new BigDecimal(#{arg})"
+CONVERTERS = {
+  :BigDecimal => -> (arg, type) { case type
+    when :BigDecimal then arg
+    else "new BigDecimal(#{arg})"
+    end },
+
+  :BigInteger => -> (arg, type) { case type
+    when :BigInteger then arg
+    when :BigDecimal then "#{arg}.toBigInteger()"
+    else "BigInteger.valueOf(#{arg}.longValue())"
   end }
+}
 
+def generateComparison(op, symb, left, right, convert)
+  puts "  public static Boolean #{op}(#{left} a, #{right} b) {"
+  puts "    return (#{convert.("a", left)}).compareTo(#{convert.("b", right)}) #{symb} 0;"
+  puts "  }"
+  puts
+end
 
-toBigInteger = -> (arg, type) { case type
-  when :BigInteger then arg
-  when :BigDecimal then "#{arg}.toBigInteger()"
-  else "BigInteger.valueOf(#{arg}.longValue())"
-end }
+def generateMathMethod(out, op, meth, left, right, convert)
+  puts "  public static #{out} #{op}(#{left} a, #{right} b) {"
+  puts "    return (#{convert.("a", left)}).#{meth}(#{convert.("b", right)});"
+  puts "  }"
+  puts
+end
 
-def generateOperators(numbers, the_type, the_conversion)
+def generateOperators(numbers, the_type, output)
+  the_conversion = CONVERTERS[output]
   numbers.each do |type|
-    COMPARISONS.each do |op|
-      puts "  public static Object #{op}(#{the_type} a, #{type} b) {"
-      puts "    return (#{the_conversion.("a", the_type)}).compareTo(#{the_conversion.("b", type)}) #{OPS_SYMB[op]} 0;"
-      puts "  }"
-      puts
+    BOOL_OPS.each do |op, symb|
+      generateComparison(op, symb, the_type, type, the_conversion)
       if type != the_type
-        puts "  public static Object #{op}(#{type} a, #{the_type} b) {"
-        puts "    return (#{the_conversion.("a", type)}).compareTo(#{the_conversion.("b", the_type)}) #{OPS_SYMB[op]} 0;"
-        puts "  }"
-        puts
+        generateComparison(op, symb, type, the_type, the_conversion)
       end
     end
     OPS_METH.each do |op, meth|
-      puts "  public static Object #{op}(#{the_type} a, #{type} b) {"
-      puts "    return (#{the_conversion.("a", the_type)}).#{meth}(#{the_conversion.("b", type)});"
-      puts "  }"
-      puts
+      generateMathMethod(output, op, meth, the_type, type, the_conversion)
       if type != the_type
-        puts "  public static Object #{op}(#{type} a, #{the_type} b) {"
-        puts "    return (#{the_conversion.("a", type)}).#{meth}(#{the_conversion.("b", the_type)});"
-        puts "  }"
-        puts
+        generateMathMethod(output, op, meth, type, the_type, the_conversion)
       end
     end
   end
 end
 
-
-generateOperators(INT_NUMBERS, :BigDecimal, toBigDecimal)
-generateOperators(REAL_NUMBERS + [ :BigDecimal ], :BigDecimal, toBigDecimal)
-generateOperators(INT_NUMBERS, :BigInteger, toBigInteger)
-generateOperators(REAL_NUMBERS, :BigInteger, toBigDecimal)
+puts "  // ....................................................."
+generateOperators(INT_NUMBERS, :BigDecimal, :BigDecimal)
+generateOperators(REAL_NUMBERS + [ :BigDecimal ], :BigDecimal, :BigDecimal)
+generateOperators(INT_NUMBERS, :BigInteger, :BigInteger)
+generateOperators(REAL_NUMBERS, :BigInteger, :BigDecimal)
 

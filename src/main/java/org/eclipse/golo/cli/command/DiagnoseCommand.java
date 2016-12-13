@@ -115,6 +115,8 @@ public class DiagnoseCommand implements CliCommand {
         GoloModule module = compiler.transform(compiler.parse(goloFile));
         if ("refined".equals(this.stage)) {
           compiler.refine(module);
+          // TODO: add a stage for typing
+          compiler.inferTypes(module);
         }
         module.accept(dumper);
       } catch (IOException e) {

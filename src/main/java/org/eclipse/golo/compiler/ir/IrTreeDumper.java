@@ -28,6 +28,13 @@ public class IrTreeDumper implements GoloIrVisitor {
     spacing = spacing - 2;
   }
 
+  private String inferedType(GoloElement element) {
+    if (element instanceof ExpressionStatement) {
+      return " [" + ((ExpressionStatement) element).getInferedStaticType() + "]";
+    }
+    return "";
+  }
+
   @Override
   public void visitModule(GoloModule module) {
     space();
@@ -138,7 +145,7 @@ public class IrTreeDumper implements GoloIrVisitor {
         System.out.print(" (selfname: " + function.getSyntheticSelfName() + ")");
       }
     }
-    System.out.println();
+    System.out.println(inferedType(function));
     function.walk(this);
   }
 
@@ -173,7 +180,7 @@ public class IrTreeDumper implements GoloIrVisitor {
   public void visitConstantStatement(ConstantStatement constantStatement) {
     incr();
     space();
-    System.out.println("Constant = " + constantStatement.getValue());
+    System.out.format("Constant = %s%s%n", constantStatement.getValue(), inferedType(constantStatement));
     decr();
   }
 
@@ -298,7 +305,7 @@ public class IrTreeDumper implements GoloIrVisitor {
   public void visitBinaryOperation(BinaryOperation binaryOperation) {
     incr();
     space();
-    System.out.println("Binary operator: " + binaryOperation.getType());
+    System.out.println("Binary operator: " + binaryOperation.getType() + inferedType(binaryOperation));
     binaryOperation.walk(this);
     decr();
   }
@@ -307,7 +314,7 @@ public class IrTreeDumper implements GoloIrVisitor {
   public void visitUnaryOperation(UnaryOperation unaryOperation) {
     incr();
     space();
-    System.out.println("Unary operator: " + unaryOperation.getType());
+    System.out.println("Unary operator: " + unaryOperation.getType() + inferedType(unaryOperation));
     unaryOperation.getExpressionStatement().accept(this);
     decr();
   }

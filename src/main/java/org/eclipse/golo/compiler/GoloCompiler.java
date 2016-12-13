@@ -209,6 +209,7 @@ public class GoloCompiler {
   public final GoloModule check(ASTCompilationUnit compilationUnit) {
     GoloModule goloModule = transform(compilationUnit);
     refine(goloModule);
+    inferTypes(goloModule);
     return goloModule;
   }
 
@@ -225,6 +226,11 @@ public class GoloCompiler {
     throwIfErrorEncountered();
   }
 
+  public final void inferTypes(GoloModule goloModule) {
+    if (goloModule != null) {
+      goloModule.accept(new TypingIrVisitor());
+    }
+  }
 
   /**
    * Makes a Golo parser from a reader.

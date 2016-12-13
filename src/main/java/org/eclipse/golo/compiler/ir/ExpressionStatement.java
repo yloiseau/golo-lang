@@ -9,7 +9,25 @@
 
 package org.eclipse.golo.compiler.ir;
 
+import org.eclipse.golo.compiler.types.*;
+
 public abstract class ExpressionStatement extends GoloStatement {
+
+  private GoloType inferedStaticType = Value.of(Object.class);
+
+  public GoloType getInferedStaticType() {
+    return inferedStaticType;
+  }
+
+  public void setInferedStaticType(GoloType type) {
+    inferedStaticType = type;
+  }
+
+  public void setTypeIfMoreSpecific(GoloType type) {
+    if (type.isSubtypeOf(inferedStaticType)) {
+      inferedStaticType = type;
+    }
+  }
 
   public static ExpressionStatement of(Object expr) {
     if (expr instanceof ExpressionStatement) {
