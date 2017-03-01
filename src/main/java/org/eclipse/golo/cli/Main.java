@@ -16,7 +16,7 @@ import org.eclipse.golo.cli.command.spi.CliCommand;
 import java.io.*;
 import java.util.*;
 
-public class Main {
+public final class Main {
 
   private Main() {
     // utility class
