@@ -131,25 +131,13 @@ public final class FunctionCallSupport {
     Class<?> callerClass = caller.lookupClass();
     String[] argumentNames = callSite.argumentNames;
 
-    MethodHandle handle = null;
-    Object result = findStaticMethodOrField(callerClass, functionName, args);
-    if (result == null) {
-      result = findClassWithStaticMethodOrField(callerClass, functionName, args);
-    }
-    if (result == null) {
-      result = findClassWithStaticMethodOrFieldFromImports(callerClass, functionName, args);
-    }
-    if (result == null) {
-      result = findClassWithConstructor(callerClass, functionName, args);
-    }
-    if (result == null) {
-      result = findClassWithConstructorFromImports(callerClass, functionName, args);
-    }
+    Object result = findCandidate(callerClass, functionName, args);
     if (result == null) {
       throw new NoSuchMethodError(functionName + type.toMethodDescriptorString());
     }
 
     Class<?>[] types = null;
+    MethodHandle handle = null;
     if (result instanceof Method) {
       Method method = (Method) result;
       checkLocalFunctionCallFromSameModuleAugmentation(method, callerClass.getName());
@@ -194,6 +182,23 @@ public final class FunctionCallSupport {
       callSite.setTarget(handle);
       return handle.invokeWithArguments(args);
     }
+  }
+
+  private static Object findCandidate(Class<?> callerClass, String functionName, Object[] args) {
+    Object result = findStaticMethodOrField(callerClass, functionName, args);
+    if (result == null) {
+      result = findClassWithStaticMethodOrField(callerClass, functionName, args);
+    }
+    if (result == null) {
+      result = findClassWithStaticMethodOrFieldFromImports(callerClass, functionName, args);
+    }
+    if (result == null) {
+      result = findClassWithConstructor(callerClass, functionName, args);
+    }
+    if (result == null) {
+      result = findClassWithConstructorFromImports(callerClass, functionName, args);
+    }
+    return result;
   }
 
   private static boolean isVarargsWithNames(Method method, Class<?>[] types, Object[] args, String[] argumentNames) {
@@ -266,6 +271,7 @@ public final class FunctionCallSupport {
 
   private static Object findClassWithConstructor(Class<?> callerClass, String classname, Object[] args) {
     try {
+      System.out.println("### find constructor for " + classname + " with " + callerClass.getClassLoader());
       Class<?> targetClass = Class.forName(classname, true, callerClass.getClassLoader());
       for (Constructor<?> constructor : targetClass.getConstructors()) {
         if (TypeMatching.argumentsMatch(constructor, args)) {
@@ -292,9 +298,13 @@ public final class FunctionCallSupport {
       try {
         Class<?> importedClass;
         try {
+          System.out.println("### load import " + importedClassName + " with " + callerClass.getClassLoader());
           importedClass = Class.forName(importedClassName, true, callerClass.getClassLoader());
         } catch (ClassNotFoundException expected) {
           if (classAndMethod == null) {
+            if (Package.getPackage(importedClassName) != null) {
+              continue;
+            }
             throw expected;
           }
           importedClass = Class.forName(importedClassName + "." + classAndMethod[0], true, callerClass.getClassLoader());
@@ -306,7 +316,7 @@ public final class FunctionCallSupport {
         }
       } catch (ClassNotFoundException ignored) {
         // ignored to try the next strategy
-        Warnings.unavailableClass(importedClassName, callerClass.getName());
+        Warnings.unavailableClass(importedClassName + " import", callerClass.getName());
       }
     }
     return null;
@@ -318,11 +328,12 @@ public final class FunctionCallSupport {
       String className = functionName.substring(0, methodClassSeparatorIndex);
       String methodName = functionName.substring(methodClassSeparatorIndex + 1);
       try {
+        System.out.println("### find method " + functionName + " with " + callerClass.getClassLoader());
         Class<?> targetClass = Class.forName(className, true, callerClass.getClassLoader());
         return findStaticMethodOrField(targetClass, methodName, args);
       } catch (ClassNotFoundException ignored) {
         // ignored to try the next strategy
-        Warnings.unavailableClass(className, callerClass.getName());
+        Warnings.unavailableClass(className + " module", callerClass.getName());
       }
     }
     return null;
