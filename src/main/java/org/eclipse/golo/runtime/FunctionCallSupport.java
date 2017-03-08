@@ -28,6 +28,7 @@ import static gololang.Messages.message;
 import static gololang.Messages.info;
 import static org.eclipse.golo.runtime.Extractors.checkDeprecation;
 import static org.eclipse.golo.runtime.NamedArgumentsHelper.*;
+import static org.eclipse.golo.runtime.OptionalParametersHelpers.*;
 
 public final class FunctionCallSupport {
   private static final boolean DEBUG = Boolean.getBoolean("golo.debug.function-resolution");
@@ -176,12 +177,12 @@ public final class FunctionCallSupport {
         }
         //TODO: improve varargs support on named arguments. Matching the last param type + according argument
         if (isVarargsWithNames(method, types, args, argumentNames)) {
-          handle = handle.asFixedArity().asType(type);
-        } else {
-          handle = handle.asType(type);
+          handle = handle.asFixedArity();
         }
       }
       handle = reorderArguments(method, handle, argumentNames);
+      handle = completeOptionalArguments(method, handle, args.length);
+      handle = handle.asType(type);
     } else if (result instanceof Constructor) {
       Constructor<?> constructor = (Constructor<?>) result;
       types = constructor.getParameterTypes();
@@ -222,10 +223,14 @@ public final class FunctionCallSupport {
 
   private static int[] getArgumentsOrder(Method method, List<String> parameterNames, String[] argumentNames) {
     int[] argumentsOrder = new int[parameterNames.size()];
-    for (int i = 0; i < argumentNames.length; i++) {
+    int i = 0;
+    for (; i < argumentNames.length; i++) {
       int actualPosition = parameterNames.indexOf(argumentNames[i]);
       checkArgumentPosition(actualPosition, argumentNames[i], method.getName() + parameterNames);
       argumentsOrder[actualPosition] = i;
+    }
+    for (; i < argumentsOrder.length; i++) {
+      argumentsOrder[i] = i;
     }
     return argumentsOrder;
   }
@@ -392,6 +397,7 @@ public final class FunctionCallSupport {
     if (!method.getName().equals(name) || !isStatic(method.getModifiers())) { return false; }
     if (isMethodDecorated(method)) { return true; }
     if (TypeMatching.argumentsMatch(method, arguments, varargs)) { return true; }
+    if (hasOptionalParameters(method) && optionalArgumentsMatch(method, arguments)) { return true; }
     if (method.isAnnotationPresent(WithCaller.class) && tryCaller) {
       Object[] argsWithCaller = new Object[arguments.length + 1];
       argsWithCaller[0] = caller;

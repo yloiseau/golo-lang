@@ -16,6 +16,7 @@ import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodHandles.Lookup;
 import java.lang.invoke.MethodType;
 import java.lang.reflect.Method;
+import java.lang.reflect.Executable;
 
 import static java.lang.invoke.MethodType.methodType;
 
@@ -43,11 +44,11 @@ public final class DecoratorsHelper {
   private DecoratorsHelper() {
   }
 
-  public static boolean isMethodDecorated(Method method) {
+  public static boolean isMethodDecorated(Executable method) {
     return method.isAnnotationPresent(DecoratedBy.class);
   }
 
-  public static Method getDecoratorMethod(Method decorated) {
+  public static Method getDecoratorMethod(Executable decorated) {
     try {
       return decorated.getDeclaringClass().getDeclaredMethod(decorated.getAnnotation(DecoratedBy.class).value(), Object.class);
     } catch (NoSuchMethodException | SecurityException ex) {

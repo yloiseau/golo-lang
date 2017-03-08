@@ -13,6 +13,7 @@ package org.eclipse.golo.runtime;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.lang.reflect.Executable;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.List;
@@ -169,28 +170,22 @@ public final class TypeMatching {
            || (isVarArgs && argsNumber >= paramsNumber - 1);
   }
 
-  public static boolean argumentsNumberMatches(Method method, int argsNumber) {
+  public static boolean argumentsNumberMatches(Executable method, int argsNumber) {
     return argumentsNumberMatches(method.getParameterCount(), argsNumber, method.isVarArgs());
   }
 
-  public static boolean argumentsMatch(Method method, Object[] arguments) {
+  public static boolean argumentsMatch(Executable method, Object[] arguments) {
     return argumentsMatch(method, arguments, method.isVarArgs());
   }
 
-  public static boolean argumentsMatch(Method method, Object[] arguments, boolean varargs) {
-    Object[] args = Modifier.isStatic(method.getModifiers())
+  public static boolean argumentsMatch(Executable method, Object[] arguments, boolean varargs) {
+    Object[] args = (Modifier.isStatic(method.getModifiers()) || method instanceof Constructor)
       ? arguments
       : copyOfRange(arguments, 1, arguments.length);
     return
       isMethodDecorated(method)
       || (argumentsNumberMatches(method.getParameterCount(), args.length, varargs)
           && canAssign(method.getParameterTypes(), args, varargs));
-  }
-
-  public static boolean argumentsMatch(Constructor<?> constructor, Object[] arguments) {
-    return
-      argumentsNumberMatches(constructor.getParameterCount(), arguments.length, constructor.isVarArgs())
-      && canAssign(constructor.getParameterTypes(), arguments, constructor.isVarArgs());
   }
 
   public static boolean returnsValue(Method m) {
