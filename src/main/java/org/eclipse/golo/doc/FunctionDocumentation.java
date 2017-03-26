@@ -14,7 +14,7 @@ import java.util.List;
 import java.util.LinkedList;
 import java.util.Objects;
 
-class FunctionDocumentation implements DocumentationElement {
+public class FunctionDocumentation implements DocumentationElement {
 
   private String name;
   private int line;

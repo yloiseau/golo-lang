@@ -14,6 +14,10 @@ some predefined extractors.
 ----
 module gololang.testing.suites
 
+function Test = |description| -> ^gololang.Functions::id
+
+function doctest = |path, loader| -> gololang.testing.suites.DocTestExtractor.extract(path, loader)
+
 function factory = |path, loader| -> gololang.testing.suites.FactoryExtractor.extractor!("$suites")(path, loader)
 
 ----

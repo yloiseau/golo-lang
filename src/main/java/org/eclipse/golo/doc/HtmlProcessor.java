@@ -184,12 +184,8 @@ public class HtmlProcessor extends AbstractProcessor {
     return new BlockEmitter() {
       @Override
       public void emitBlock(StringBuilder out, List<String> lines, String meta) {
-        String language;
-        if ("".equals(meta)) {
-          language = "golo";
-        } else {
-          language = meta;
-        }
+        if (isHidden(meta)) { return; }
+        String language = getLanguage(meta).orElse("golo");
         out.append("<pre class=\"listing\">");
         out.append(String.format("<code class=\"lang-%s\" data-lang=\"%s\">", language, language));
         for (String rawLine : lines) {

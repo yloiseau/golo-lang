@@ -14,15 +14,31 @@ import gololang.FunctionReference;
 import gololang.TemplateEngine;
 import gololang.IO;
 
-import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.nio.file.Path;
-import java.nio.file.FileSystems;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.util.*;
+import java.nio.file.FileSystems;
+import java.nio.file.Path;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.TreeMap;
+import java.util.TreeSet;
 
 public abstract class AbstractProcessor {
+
+  private static final Set<String> NOT_LANGUAGES = new HashSet<>();
+  static {
+    NOT_LANGUAGES.add("");
+    NOT_LANGUAGES.add("test");
+    NOT_LANGUAGES.add("hidden");
+  }
 
   public abstract String render(ModuleDocumentation module) throws Throwable;
 
@@ -182,4 +198,32 @@ public abstract class AbstractProcessor {
     }
     return output.toString();
   }
+
+  protected static String[] getMeta(String meta) {
+    return meta.trim().split("[ ,;]");
+  }
+
+  protected static Optional<String> getLanguage(String meta) {
+    String[] values = getMeta(meta);
+    if (values.length == 0) {
+      return Optional.empty();
+    }
+    if (values.length == 1) {
+      String value = values[0].trim();
+      return value.isEmpty() ? Optional.empty() : Optional.of(value);
+    }
+
+    return Arrays.stream(getMeta(meta))
+      .filter((s) -> !NOT_LANGUAGES.contains(s))
+      .findFirst();
+  }
+
+  protected static boolean isTest(String meta) {
+    return Arrays.asList(getMeta(meta)).contains("test");
+  }
+
+  protected static boolean isHidden(String meta) {
+    return Arrays.asList(getMeta(meta)).contains("hidden");
+  }
+
 }
