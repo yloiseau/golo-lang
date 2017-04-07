@@ -35,12 +35,16 @@ public class ParseTreeToGoloIrVisitor implements GoloParserVisitor {
   }
 
   private static final class Context {
-    public GoloModule module;
+    private Deque<GoloModule> modules = new LinkedList<>();
     private Deque<FunctionContainer> functionContainersStack = new LinkedList<>();
     private Deque<Object> objectStack = new LinkedList<>();
     private Deque<ReferenceTable> referenceTableStack = new LinkedList<>();
     public boolean inLocalDeclaration = false;
     private GoloCompilationException.Builder exceptionBuilder;
+
+    public GoloModule module() {
+      return modules.peek();
+    }
 
     public void push(Object object) {
       objectStack.push(object);
@@ -64,16 +68,30 @@ public class ParseTreeToGoloIrVisitor implements GoloParserVisitor {
       referenceTableStack.pop();
     }
 
-    public GoloModule createModule(String name) {
+    public GoloModule createModule(PackageAndClass name) {
       ReferenceTable global = new ReferenceTable();
       referenceTableStack.push(global);
-      module = new GoloModule(PackageAndClass.fromString(name), global);
+      GoloModule module = new GoloModule(name, global);
       functionContainersStack.push(module);
+      if (!modules.isEmpty()) {
+        module().addSubModule(module);
+      }
+      modules.push(module);
       return module;
     }
 
+    public GoloModule enterSubModule(ASTSubModuleDeclaration node) {
+      return createModule(PackageAndClass.fromString(node.getName())).ofAST(node);
+    }
+
+    public void leaveSubModule() {
+      modules.pop();
+      referenceTableStack.pop();
+      functionContainersStack.pop();
+    }
+
     public void enterAugmentation(ASTAugmentDeclaration node) {
-      functionContainersStack.push(this.module.addAugmentation(
+      functionContainersStack.push(this.module().addAugmentation(
             augment(node.getTarget()).with(node.getAugmentationNames()).ofAST(node)));
     }
 
@@ -84,7 +102,7 @@ public class ParseTreeToGoloIrVisitor implements GoloParserVisitor {
     public void enterNamedAugmentation(ASTNamedAugmentationDeclaration node) {
       NamedAugmentation namedAugmentation = augmentation(node.getName()).ofAST(node);
       functionContainersStack.push(namedAugmentation);
-      this.module.addNamedAugmentation(namedAugmentation);
+      this.module().addNamedAugmentation(namedAugmentation);
     }
 
     public void leaveNamedAugmentation() {
@@ -109,7 +127,7 @@ public class ParseTreeToGoloIrVisitor implements GoloParserVisitor {
     }
 
     public boolean checkExistingSubtype(GoloASTNode node, String name) {
-      GoloElement<?> existing = module.getSubtypeByName(name);
+      GoloElement<?> existing = module().getSubtypeByName(name);
       if (existing != null) {
         errorMessage(AMBIGUOUS_DECLARATION, node,
             message("ambiguous_type_declaration",
@@ -170,7 +188,7 @@ public class ParseTreeToGoloIrVisitor implements GoloParserVisitor {
 
     private GoloCompilationException.Builder getOrCreateExceptionBuilder() {
       if (exceptionBuilder == null) {
-        exceptionBuilder = new GoloCompilationException.Builder(module.getPackageAndClass().toString());
+        exceptionBuilder = new GoloCompilationException.Builder(module().getPackageAndClass().toString());
       }
       return exceptionBuilder;
     }
@@ -192,7 +210,7 @@ public class ParseTreeToGoloIrVisitor implements GoloParserVisitor {
     Context context = new Context();
     context.setExceptionBuilder(builder);
     visit(compilationUnit, context);
-    return context.module.sourceFile(compilationUnit.getFilename());
+    return context.module().sourceFile(compilationUnit.getFilename());
   }
 
   @Override
@@ -208,7 +226,7 @@ public class ParseTreeToGoloIrVisitor implements GoloParserVisitor {
   @Override
   public Object visit(ASTModuleDeclaration node, Object data) {
     Context context = (Context) data;
-    context.createModule(node.getName()).ofAST(node);
+    context.createModule(PackageAndClass.fromString(node.getName())).ofAST(node);
     return node.childrenAccept(this, data);
   }
 
@@ -217,15 +235,15 @@ public class ParseTreeToGoloIrVisitor implements GoloParserVisitor {
     Context context = (Context) data;
     PackageAndClass name;
     if (node.isRelative()) {
-      name = context.module.getPackageAndClass().createSiblingClass(node.getName());
+      name = context.module().getPackageAndClass().createSiblingClass(node.getName());
     } else {
       name = PackageAndClass.fromString(node.getName());
     }
     if (node.getMultiple().isEmpty()) {
-      context.module.addImport(moduleImport(name).ofAST(node));
+      context.module().addImport(moduleImport(name).ofAST(node));
     } else {
       for (String sub : node.getMultiple()) {
-        context.module.addImport(moduleImport(name.createSubPackage(sub)).ofAST(node));
+        context.module().addImport(moduleImport(name.createSubPackage(sub)).ofAST(node));
       }
     }
     return node.childrenAccept(this, data);
@@ -252,7 +270,7 @@ public class ParseTreeToGoloIrVisitor implements GoloParserVisitor {
         node.jjtGetChild(i).jjtAccept(this, context);
         theStruct.withMember(context.pop());
       }
-      context.module.addStruct(theStruct);
+      context.module().addStruct(theStruct);
     }
     return context;
   }
@@ -263,7 +281,7 @@ public class ParseTreeToGoloIrVisitor implements GoloParserVisitor {
     if (!context.checkExistingSubtype(node, node.getName())) {
       context.push(union(node.getName()).ofAST(node));
       node.childrenAccept(this, data);
-      context.module.addUnion((Union) context.pop());
+      context.module().addUnion((Union) context.pop());
     }
     return data;
   }
@@ -444,7 +462,7 @@ public class ParseTreeToGoloIrVisitor implements GoloParserVisitor {
       .as(context.pop())
       .ofAST(node);
     if (node.isModuleState()) {
-      context.module.addModuleStateInitializer(assignmentStatement);
+      context.module().addModuleStateInitializer(assignmentStatement);
     } else {
       context.push(assignmentStatement);
     }
@@ -904,6 +922,15 @@ public class ParseTreeToGoloIrVisitor implements GoloParserVisitor {
       }
     }
     context.inLocalDeclaration = oldState;
+    return data;
+  }
+
+  @Override
+  public Object visit(ASTSubModuleDeclaration node, Object data) {
+    Context context = (Context) data;
+    context.enterSubModule(node);
+    node.childrenAccept(this, context);
+    context.leaveSubModule();
     return data;
   }
 }

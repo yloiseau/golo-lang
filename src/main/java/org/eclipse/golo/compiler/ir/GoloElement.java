@@ -35,7 +35,7 @@ public abstract class GoloElement<T extends GoloElement<T>> {
   }
 
   public final boolean hasParent() {
-    return this.parent != null;
+    return this.parent != null && this.parent != this;
   }
 
   public final GoloElement<?> parent() {

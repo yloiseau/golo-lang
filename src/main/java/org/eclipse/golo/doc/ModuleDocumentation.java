@@ -379,5 +379,7 @@ public class ModuleDocumentation implements DocumentationElement {
     @Override
     public void visitNamedArgument(NamedArgument namedArgument) {
     }
+
+    // TODO: submodules documentation
   }
 }

@@ -821,6 +821,7 @@ void ToplevelDeclaration():
   ASTStructDeclaration structDecl;
   ASTUnionDeclaration unionDecl;
   ASTNamedAugmentationDeclaration namedAugmentationDecl;
+  ASTSubModuleDeclaration subModuleDecl;
   ASTLetOrVar state;
   Token local = null;
   String documentation = null;
@@ -856,12 +857,44 @@ void ToplevelDeclaration():
       {
         namedAugmentationDecl.setDocumentation(documentation);
       }
+      |
+      subModuleDecl=SubModuleDeclaration()
+      {
+        subModuleDecl.setDocumentation(documentation);
+      }
     )
   )
   |
   state=LetOrVar()
   {
     state.setModuleState(true);
+  }
+}
+
+ASTSubModuleDeclaration SubModuleDeclaration():
+{
+  Token name = null;
+}
+{
+  try {
+    <MODULE> name=<IDENTIFIER> "=" "{" BlankLines()
+    ( ImportDeclaration() BlankLines() )*
+    (
+      try {
+        ToplevelDeclaration() BlankLines()
+      }
+      catch (ParseException e) {
+        skipto(NEWLINE, e, jjtThis);
+      }
+    )*
+    "}"
+  }
+  catch (ParseException e) {
+    skipto(NEWLINE, e, jjtThis);
+  }
+  {
+    jjtThis.setName(name.image);
+    return jjtThis;
   }
 }
 

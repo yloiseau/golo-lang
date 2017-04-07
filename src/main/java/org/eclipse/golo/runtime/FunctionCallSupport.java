@@ -154,6 +154,7 @@ public final class FunctionCallSupport {
     if (result instanceof Method) {
       Method method = (Method) result;
       checkLocalFunctionCallFromSameModuleAugmentation(method, callerClass.getName());
+      checkLocalFuncionCallFromSubmodule(method, callerClass);
       if (isMethodDecorated(method)) {
         handle = getDecoratedMethodHandle(caller, method, type.parameterCount());
       } else {
@@ -249,6 +250,15 @@ public final class FunctionCallSupport {
       if (method.getDeclaringClass().getName().equals(prefix)) {
         method.setAccessible(true);
       }
+    }
+  }
+
+  /**
+  * Make private method accessible to methods in submodule (inner class).
+  */
+  private static void checkLocalFuncionCallFromSubmodule(Method method, Class<?> callerClass) {
+    if (callerClass.equals(method.getDeclaringClass().getDeclaringClass())) {
+      method.setAccessible(true);
     }
   }
 

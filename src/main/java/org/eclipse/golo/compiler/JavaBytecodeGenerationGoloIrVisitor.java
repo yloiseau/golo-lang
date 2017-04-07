@@ -49,14 +49,14 @@ class JavaBytecodeGenerationGoloIrVisitor implements GoloIrVisitor {
   private static final Handle CLOSURE_INVOCATION_HANDLE = makeHandle(
       "ClosureCallSupport", "[Ljava/lang/Object;");
 
-  private ClassWriter classWriter;
+  private Deque<ClassWriter> classWriters = new LinkedList<>();
   private String klass;
   private String jvmKlass;
   private MethodVisitor currentMethodVisitor;
   private List<CodeGenerationResult> generationResults;
   private String sourceFilename;
-  private Context context;
-  private GoloModule currentModule;
+  private Deque<Context> contexts = new LinkedList<>();
+  private Deque<GoloModule> modules = new LinkedList<>();
   private static final JavaBytecodeStructGenerator STRUCT_GENERATOR = new JavaBytecodeStructGenerator();
   private static final JavaBytecodeUnionGenerator UNION_GENERATOR = new JavaBytecodeUnionGenerator();
 
@@ -78,22 +78,26 @@ class JavaBytecodeGenerationGoloIrVisitor implements GoloIrVisitor {
     return new IllegalStateException(prefixed("bug", message("no_element_remains", element.getClass())));
   }
 
-  public MethodVisitor getMethodVisitor() {
-    return currentMethodVisitor;
+  private ClassWriter classWriter() {
+    return this.classWriters.peek();
   }
 
-  public void setMethodVisitor(MethodVisitor visitor) {
-    currentMethodVisitor = visitor;
+  private void newClassWriter() {
+    this.classWriters.push(new ClassWriter(COMPUTE_FRAMES | COMPUTE_MAXS));
+  }
+
+  private GoloModule currentModule() {
+    return this.modules.peek();
+  }
+
+  private Context context() {
+    return contexts.peek();
   }
 
   public List<CodeGenerationResult> generateBytecode(GoloModule module, String sourceFilename) {
     this.sourceFilename = sourceFilename;
-    this.classWriter = new ClassWriter(COMPUTE_FRAMES | COMPUTE_MAXS);
     this.generationResults = new LinkedList<>();
-    this.context = new Context();
     module.accept(this);
-    this.classWriter.visitEnd();
-    this.generationResults.add(new CodeGenerationResult(classWriter.toByteArray(), module.getPackageAndClass()));
     return this.generationResults;
   }
 
@@ -129,15 +133,31 @@ class JavaBytecodeGenerationGoloIrVisitor implements GoloIrVisitor {
 
   @Override
   public void visitModule(GoloModule module) {
-    this.currentModule = module;
-    classWriter.visit(V1_8, ACC_PUBLIC | ACC_SUPER, module.getPackageAndClass().toJVMType(), null, JOBJECT, null);
-    classWriter.visitSource(sourceFilename, null);
+    ClassWriter parentClassWriter = null;
+    if (module.hasParent()) {
+      parentClassWriter = classWriter();
+    }
+    this.jvmKlass = module.getPackageAndClass().toJVMType();
+    this.klass = module.getPackageAndClass().toString();
+    newClassWriter();
+    this.modules.push(module);
+    this.contexts.push(new Context());
+    classWriter().visit(V1_8, ACC_PUBLIC | ACC_SUPER, this.jvmKlass, null, JOBJECT, null);
+    classWriter().visitSource(sourceFilename, null);
+    if (parentClassWriter != null) {
+      String parentClass = ((GoloModule) module.parent()).getPackageAndClass().toJVMType();
+      classWriter().visitInnerClass(this.jvmKlass, parentClass, module.getPackageAndClass().className(), ACC_PUBLIC | ACC_FINAL | ACC_STATIC);
+      parentClassWriter.visitInnerClass(this.jvmKlass, parentClass, module.getPackageAndClass().className(), ACC_PUBLIC | ACC_FINAL | ACC_STATIC);
+    }
     writeImportMetaData(module.getImports());
-    klass = module.getPackageAndClass().toString();
-    jvmKlass = module.getPackageAndClass().toJVMType();
-    writeAugmentsMetaData();
-    writeAugmentationApplicationsMetaData();
+    writeAugmentsMetaData(module);
+    writeAugmentationApplicationsMetaData(module);
     module.walk(this);
+    classWriter().visitEnd();
+    this.generationResults.add(new CodeGenerationResult(classWriter().toByteArray(), module.getPackageAndClass()));
+    this.contexts.pop();
+    this.modules.pop();
+    this.classWriters.pop();
   }
 
   @Override
@@ -149,16 +169,16 @@ class JavaBytecodeGenerationGoloIrVisitor implements GoloIrVisitor {
   public void visitLocalReference(LocalReference moduleState) {
     if (moduleState.isModuleState()) {
       String name = moduleState.getName();
-      classWriter.visitField(ACC_PRIVATE | ACC_STATIC, name, "Ljava/lang/Object;", null, null).visitEnd();
+      classWriter().visitField(ACC_PRIVATE | ACC_STATIC, name, "Ljava/lang/Object;", null, null).visitEnd();
 
-      MethodVisitor mv = classWriter.visitMethod(ACC_PRIVATE | ACC_STATIC | ACC_SYNTHETIC, name, "()Ljava/lang/Object;", null, null);
+      MethodVisitor mv = classWriter().visitMethod(ACC_PRIVATE | ACC_STATIC | ACC_SYNTHETIC, name, "()Ljava/lang/Object;", null, null);
       mv.visitCode();
       mv.visitFieldInsn(GETSTATIC, jvmKlass, name, "Ljava/lang/Object;");
       mv.visitInsn(ARETURN);
       mv.visitMaxs(0, 0);
       mv.visitEnd();
 
-      mv = classWriter.visitMethod(ACC_PRIVATE | ACC_STATIC | ACC_SYNTHETIC, name, "(Ljava/lang/Object;)V", null, null);
+      mv = classWriter().visitMethod(ACC_PRIVATE | ACC_STATIC | ACC_SYNTHETIC, name, "(Ljava/lang/Object;)V", null, null);
       mv.visitCode();
       mv.visitVarInsn(ALOAD, 0);
       mv.visitFieldInsn(PUTSTATIC, jvmKlass, name, "Ljava/lang/Object;");
@@ -169,7 +189,7 @@ class JavaBytecodeGenerationGoloIrVisitor implements GoloIrVisitor {
   }
 
   private void writeMetaData(String name, String[] data) {
-    MethodVisitor mv = classWriter.visitMethod(
+    MethodVisitor mv = classWriter().visitMethod(
         ACC_PUBLIC | ACC_STATIC | ACC_SYNTHETIC,
         "$" + name,
         "()[Ljava/lang/String;",
@@ -188,12 +208,12 @@ class JavaBytecodeGenerationGoloIrVisitor implements GoloIrVisitor {
     mv.visitEnd();
   }
 
-  private void writeAugmentationApplicationsMetaData() {
+  private void writeAugmentationApplicationsMetaData(GoloModule module) {
     /* create a metadata method that given a target class name hashcode
      * returns a String array containing the names of applied
      * augmentations
      */
-    List<Augmentation> applications = new ArrayList<>(this.currentModule.getAugmentations());
+    List<Augmentation> applications = new ArrayList<>(module.getAugmentations());
     int applicationsSize = applications.size();
     writeMetaData("augmentationApplications",
         applications.stream()
@@ -213,7 +233,7 @@ class JavaBytecodeGenerationGoloIrVisitor implements GoloIrVisitor {
       namesArrays[i] = application.getNames().toArray(new String[application.getNames().size()]);
       i++;
     }
-    MethodVisitor mv = classWriter.visitMethod(
+    MethodVisitor mv = classWriter().visitMethod(
         ACC_PUBLIC | ACC_STATIC | ACC_SYNTHETIC,
         "$augmentationApplications",
         "(I)[Ljava/lang/String;",
@@ -249,9 +269,9 @@ class JavaBytecodeGenerationGoloIrVisitor implements GoloIrVisitor {
         .toArray(String[]::new));
   }
 
-  private void writeAugmentsMetaData() {
+  private void writeAugmentsMetaData(GoloModule module) {
     writeMetaData("augmentations",
-        currentModule.getAugmentations().stream()
+        module.getAugmentations().stream()
         .map(Augmentation::getTarget)
         .map(PackageAndClass::toString)
         .toArray(String[]::new));
@@ -286,11 +306,11 @@ class JavaBytecodeGenerationGoloIrVisitor implements GoloIrVisitor {
     if (functions.isEmpty()) {
       return;
     }
-    ClassWriter mainClassWriter = classWriter;
+    ClassWriter mainClassWriter = classWriter();
     String mangledClass = target.mangledName();
-    PackageAndClass packageAndClass = this.currentModule.getPackageAndClass().createInnerClass(mangledClass);
+    PackageAndClass packageAndClass = currentModule().getPackageAndClass().createInnerClass(mangledClass);
     String augmentationClassInternalName = packageAndClass.toJVMType();
-    String outerName = this.currentModule.getPackageAndClass().toJVMType();
+    String outerName = currentModule().getPackageAndClass().toJVMType();
 
     mainClassWriter.visitInnerClass(
         augmentationClassInternalName,
@@ -298,22 +318,22 @@ class JavaBytecodeGenerationGoloIrVisitor implements GoloIrVisitor {
         mangledClass,
         ACC_PUBLIC | ACC_STATIC);
 
-    classWriter = new ClassWriter(COMPUTE_FRAMES | COMPUTE_MAXS);
-    classWriter.visit(V1_8, ACC_PUBLIC | ACC_SUPER, augmentationClassInternalName, null, JOBJECT, null);
-    classWriter.visitSource(sourceFilename, null);
-    classWriter.visitOuterClass(outerName, null, null);
+    newClassWriter();
+    classWriter().visit(V1_8, ACC_PUBLIC | ACC_SUPER, augmentationClassInternalName, null, JOBJECT, null);
+    classWriter().visitSource(sourceFilename, null);
+    classWriter().visitOuterClass(outerName, null, null);
 
     for (GoloFunction function : functions) {
       function.accept(this);
     }
 
-    Set<ModuleImport> imports = new HashSet<>(this.currentModule.getImports());
-    imports.add(Builders.moduleImport(this.currentModule.getPackageAndClass()));
+    Set<ModuleImport> imports = new HashSet<>(currentModule().getImports());
+    imports.add(Builders.moduleImport(currentModule().getPackageAndClass()));
     writeImportMetaData(imports);
 
-    classWriter.visitEnd();
-    generationResults.add(new CodeGenerationResult(classWriter.toByteArray(), packageAndClass));
-    classWriter = mainClassWriter;
+    classWriter().visitEnd();
+    generationResults.add(new CodeGenerationResult(classWriter().toByteArray(), packageAndClass));
+    this.classWriters.pop();
   }
 
   @Override
@@ -333,7 +353,7 @@ class JavaBytecodeGenerationGoloIrVisitor implements GoloIrVisitor {
     if (function.isSynthetic() || function.isDecorator()) {
       accessFlags = accessFlags | ACC_SYNTHETIC;
     }
-    currentMethodVisitor = classWriter.visitMethod(
+    currentMethodVisitor = classWriter().visitMethod(
         accessFlags | ACC_STATIC,
         function.getName(),
         signature,
@@ -372,7 +392,7 @@ class JavaBytecodeGenerationGoloIrVisitor implements GoloIrVisitor {
   @Override
   public void visitBlock(Block block) {
     ReferenceTable referenceTable = block.getReferenceTable();
-    context.referenceTableStack.push(referenceTable);
+    context().referenceTableStack.push(referenceTable);
     Label blockStart = new Label();
     Label blockEnd = new Label();
     currentMethodVisitor.visitLabel(blockStart);
@@ -389,7 +409,7 @@ class JavaBytecodeGenerationGoloIrVisitor implements GoloIrVisitor {
       currentMethodVisitor.visitLocalVariable(localReference.getName(), TOBJECT, null,
           blockStart, blockEnd, localReference.getIndex());
     }
-    context.referenceTableStack.pop();
+    context().referenceTableStack.pop();
   }
 
   private void insertMissingPop(GoloStatement<?> statement) {
@@ -511,7 +531,7 @@ class JavaBytecodeGenerationGoloIrVisitor implements GoloIrVisitor {
     List<Object> bootstrapArgs = new ArrayList<>();
     bootstrapArgs.add(functionInvocation.isConstant() ? 1 : 0);
     if (functionInvocation.isOnReference()) {
-      ReferenceTable table = context.referenceTableStack.peek();
+      ReferenceTable table = context().referenceTableStack.peek();
       currentMethodVisitor.visitVarInsn(ALOAD, table.get(functionInvocation.getName()).getIndex());
     }
     if (functionInvocation.isOnModuleState()) {
@@ -558,7 +578,7 @@ class JavaBytecodeGenerationGoloIrVisitor implements GoloIrVisitor {
 
   @Override
   public void visitReferenceLookup(ReferenceLookup referenceLookup) {
-    LocalReference reference = referenceLookup.resolveIn(context.referenceTableStack.peek());
+    LocalReference reference = referenceLookup.resolveIn(context().referenceTableStack.peek());
     if (reference.isModuleState()) {
       currentMethodVisitor.visitInvokeDynamicInsn(
           (klass + "." + referenceLookup.getName()).replaceAll("\\.", "#"),
@@ -602,8 +622,8 @@ class JavaBytecodeGenerationGoloIrVisitor implements GoloIrVisitor {
     // TODO: handle init and post statement and potential reference scoping issues
     Label loopStart = new Label();
     Label loopEnd = new Label();
-    context.loopStartMap.put(loopStatement, loopStart);
-    context.loopEndMap.put(loopStatement, loopEnd);
+    context().loopStartMap.put(loopStatement, loopStart);
+    context().loopEndMap.put(loopStatement, loopEnd);
     if (loopStatement.hasInitStatement()) {
       loopStatement.getInitStatement().accept(this);
     }
@@ -623,9 +643,9 @@ class JavaBytecodeGenerationGoloIrVisitor implements GoloIrVisitor {
   public void visitLoopBreakFlowStatement(LoopBreakFlowStatement loopBreakFlowStatement) {
     Label jumpTarget;
     if (LoopBreakFlowStatement.Type.BREAK.equals(loopBreakFlowStatement.getType())) {
-      jumpTarget = context.loopEndMap.get(loopBreakFlowStatement.getEnclosingLoop());
+      jumpTarget = context().loopEndMap.get(loopBreakFlowStatement.getEnclosingLoop());
     } else {
-      jumpTarget = context.loopStartMap.get(loopBreakFlowStatement.getEnclosingLoop());
+      jumpTarget = context().loopStartMap.get(loopBreakFlowStatement.getEnclosingLoop());
     }
     currentMethodVisitor.visitLdcInsn(0);
     currentMethodVisitor.visitJumpInsn(IFEQ, jumpTarget);
@@ -714,7 +734,7 @@ class JavaBytecodeGenerationGoloIrVisitor implements GoloIrVisitor {
       loadInteger(currentMethodVisitor, 0);
       loadInteger(currentMethodVisitor, syntheticCount);
       currentMethodVisitor.visitTypeInsn(ANEWARRAY, "java/lang/Object");
-      ReferenceTable table = context.referenceTableStack.peek();
+      ReferenceTable table = context().referenceTableStack.peek();
       for (int i = 0; i < syntheticCount; i++) {
         currentMethodVisitor.visitInsn(DUP);
         loadInteger(currentMethodVisitor, i);
@@ -763,7 +783,7 @@ class JavaBytecodeGenerationGoloIrVisitor implements GoloIrVisitor {
   }
 
   private void orIfNullOperator(BinaryOperation binaryOperation) {
-    int idx = context.referenceTableStack.peek().size();
+    int idx = context().referenceTableStack.peek().size();
     Label nullLabel = new Label();
     Label exitLabel = new Label();
     binaryOperation.getLeftExpression().accept(this);

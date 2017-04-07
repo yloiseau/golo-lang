@@ -12,7 +12,7 @@ package org.eclipse.golo.compiler.ir;
 
 public class IrTreeDumper implements GoloIrVisitor {
 
-  private int spacing = 0;
+  private int spacing = -2;
 
   private void space() {
     System.out.print("# ");
@@ -31,9 +31,12 @@ public class IrTreeDumper implements GoloIrVisitor {
 
   @Override
   public void visitModule(GoloModule module) {
+    incr();
     space();
+    System.out.print("Module ");
     System.out.println(module.getPackageAndClass());
     module.walk(this);
+    decr();
   }
 
   @Override

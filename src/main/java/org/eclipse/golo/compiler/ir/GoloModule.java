@@ -29,6 +29,7 @@ public final class GoloModule extends GoloElement<GoloModule> implements Functio
   private final Set<Struct> structs = new LinkedHashSet<>();
   private final Set<Union> unions = new LinkedHashSet<>();
   private final Set<LocalReference> moduleState = new LinkedHashSet<>();
+  private final Set<GoloModule> subModules = new LinkedHashSet<>();
   private GoloFunction moduleStateInitializer = null;
   private boolean hasMain = false;
 
@@ -54,6 +55,9 @@ public final class GoloModule extends GoloElement<GoloModule> implements Functio
   protected GoloModule self() { return this; }
 
   public PackageAndClass getPackageAndClass() {
+    if (hasParent()) {
+      return ((GoloModule) parent()).getPackageAndClass().createInnerClass(packageAndClass.className());
+    }
     return packageAndClass;
   }
 
@@ -70,6 +74,12 @@ public final class GoloModule extends GoloElement<GoloModule> implements Functio
     Set<ModuleImport> imp = new LinkedHashSet<>();
     if (!structs.isEmpty() || !unions.isEmpty()) {
       imp.add(new ModuleImport(this.getPackageAndClass().createSubPackage("types"), true));
+    }
+    for (GoloModule subModule : subModules) {
+      imp.add(new ModuleImport(subModule.getPackageAndClass()));
+    }
+    if (parent() != this && parent() instanceof GoloModule) {
+      imp.add(new ModuleImport(((GoloModule) parent()).getPackageAndClass()));
     }
     imp.addAll(imports);
     if (this.packageAndClass.hasPackage()) {
@@ -129,7 +139,7 @@ public final class GoloModule extends GoloElement<GoloModule> implements Functio
   // TODO: refactor to not return the value...
   public Augmentation addAugmentation(Augmentation augment) {
     if (augment.hasLocalTarget()) {
-      augment.setTargetPackage(packageAndClass + ".types");
+      augment.setTargetPackage(getPackageAndClass().createSubPackage("types").toString());
     }
     if (augmentations.containsKey(augment.getTarget())) {
       augmentations.get(augment.getTarget()).merge(augment);
@@ -185,6 +195,11 @@ public final class GoloModule extends GoloElement<GoloModule> implements Functio
     return String.format("GoloModule{name=%s, src=%s}", this.packageAndClass, this.sourceFile);
   }
 
+  public void addSubModule(GoloModule subModule) {
+    subModules.add(subModule);
+    makeParentOf(subModule);
+  }
+
   @Override
   public void accept(GoloIrVisitor visitor) {
     visitor.visitModule(this);
@@ -194,6 +209,9 @@ public final class GoloModule extends GoloElement<GoloModule> implements Functio
   public void walk(GoloIrVisitor visitor) {
     for (ModuleImport moduleImport : getImports()) {
       moduleImport.accept(visitor);
+    }
+    for (GoloModule subModule : subModules) {
+      subModule.accept(visitor);
     }
     for (Union union : unions) {
       union.accept(visitor);
