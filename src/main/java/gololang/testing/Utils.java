@@ -12,11 +12,16 @@ import gololang.FunctionReference;
 import gololang.Predefined;
 import org.eclipse.golo.compiler.GoloClassLoader;
 import java.util.stream.Stream;
-import java.nio.charset.Charset;
 import java.nio.file.*;
 import java.io.*;
 import java.util.List;
 import java.util.LinkedList;
+import java.util.Objects;
+
+import gololang.IO;
+import gololang.Messages;
+
+import static java.util.stream.Collectors.toList;
 
 /**
  * Misc utility functions to help creating test components (extractors, runners and reporters).
@@ -32,69 +37,22 @@ public final class Utils {
    * @param path the path to search for golo files
    * @return a stream of golo file paths.
    */
-  public static Stream<Path> goloFiles(Path path) throws IOException {
-    return Files.walk(path)
+  public static Stream<Path> goloFiles(Object path) throws IOException {
+    return Files.walk(gololang.IO.toPath(path))
       .filter(p -> p.toString().endsWith(".golo"))
       .map(Path::toAbsolutePath);
   }
 
-  /**
-   * Create an {@code PrintStream} from the specified value.
-   * <p>
-   * If the given string is "-", {@link java.lang.System.out} is used. Otherwise, a {@link java.nio.file.Path} is created with {@link gololang.Predefined.toPath}.
-   * The returned {@code PrintStream} is buffered and uses the default charset. Parent directory is created. If the file
-   * exists, it is overwritten.
-   *
-   * @param output the file to use; "-" means standard output
-   * @return a buffered {@code PrintStream} or {@link java.lang.System.out}
-   * @see java.nio.charset.Charset.defaultCharset
-   * @see gololang.Predefined.toPath
-   */
-  public static PrintStream printStreamFrom(Object output) throws IOException {
-    return printStreamFrom(output, Charset.defaultCharset().name());
-  }
-
-  /**
-   * Create an {@code PrintStream} from the specified value.
-   * <p>
-   * If the given string is "-", {@link java.lang.System.out} is used. Otherwise, a {@link java.nio.file.Path} is created with {@link gololang.Predefined.toPath}.
-   * The returned {@code PrintStream} is buffered and uses the given charset. Parent directory is created. If the file
-   * exists, it is overwritten.
-   *
-   * @param output the file to use; "-" means standard output
-   * @param charset the charset to use, as a {@link java.lang.String} or a {@link java.nio.charset.Charset}
-   * @return a buffered {@code PrintStream} or {@link java.lang.System.out}
-   * @see java.nio.charset.Charset.defaultCharset
-   * @see gololang.Predefined.toPath
-   */
-  public static PrintStream printStreamFrom(Object output, Object charset) throws IOException {
-    if ("-".equals(output)) {
-      return System.out;
-    }
-    if (output instanceof PrintStream) {
-      return (PrintStream) output;
-    }
-    OutputStream out;
-    if (output instanceof OutputStream) {
-      out = (OutputStream) output;
-    } else {
-      Path outputPath = gololang.IO.toPath(output);
-      if (outputPath.getParent() != null) {
-        Files.createDirectories(outputPath.getParent());
-      }
-      out = Files.newOutputStream(outputPath);
-    }
-    String encoding;
-    if (charset instanceof String) {
-      encoding = (String) charset;
-    } else {
-      Predefined.require(charset instanceof Charset, "not a charset");
-      encoding = ((Charset) charset).name();
-    }
-    return new PrintStream(
-      new BufferedOutputStream(out),
-      true,
-      encoding);
+  public static List<Class<?>> getModulesFrom(Object rootPath, GoloClassLoader loader) throws IOException {
+    return goloFiles(rootPath)
+      .map(path -> {
+        try {
+          return loader.load(path);
+        } catch (IOException e) {
+          Messages.warning(Messages.message("file_not_found", path));
+          return null;
+        }
+      }).filter(Objects::nonNull).collect(toList());
   }
 
   /**
