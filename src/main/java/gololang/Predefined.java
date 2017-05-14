@@ -578,8 +578,8 @@ public final class Predefined {
    * @param ms time in milliseconds.
    * @throws InterruptedException in case the thread gets interrupted.
    */
-  public static void sleep(long ms) throws InterruptedException {
-    java.lang.Thread.sleep(ms);
+  public static void sleep(Object ms) throws InterruptedException {
+    java.lang.Thread.sleep(longValue(ms));
   }
 
   /**
@@ -709,9 +709,9 @@ public final class Predefined {
    * @return the Long value.
    * @throws IllegalArgumentException if {@code obj} is not a number or a String.
    */
-  public static Object longValue(Object obj) throws IllegalArgumentException {
+  public static Long longValue(Object obj) throws IllegalArgumentException {
     if (obj instanceof Long) {
-      return obj;
+      return (Long) obj;
     }
     if (obj instanceof Character) {
       char value = (Character) obj;

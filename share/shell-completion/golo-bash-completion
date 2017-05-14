@@ -15,7 +15,7 @@ _golo ()
 
 	# Find out if we have a special word and our previous flag.
 	for (( i=1; i < ${#COMP_WORDS[@]}-1; i++ )); do
-		if [[ ${COMP_WORDS[i]} == @(compile|check|run|golo|diagnose|doc|version|new) ]]; then
+		if [[ ${COMP_WORDS[i]} == @(compile|check|run|golo|diagnose|doc|version|new|test) ]]; then
 			special=${COMP_WORDS[i]}
 		fi
 		if [[ ${COMP_WORDS[i]} == -* ]]; then
@@ -27,7 +27,7 @@ _golo ()
 	# We probably want to show files.
 	if [[ $cur != -* && ! -z ${special} ]]; then
 		case "${lastflag}" in
-			--files|--classpath|--output|--path)
+			--files|--classpath|--output|--path|--sources|--tests)
 				_filedir
 				return 0
 				;;
@@ -36,7 +36,7 @@ _golo ()
 
 	# Our special wasn't defined. We need to start there.
 	if [ -z ${special} ]; then
-		COMPREPLY=( $( compgen -W 'version compile check run golo new doc diagnose --help' -- "$cur" ) )
+		COMPREPLY=( $( compgen -W 'version compile check run golo new doc diagnose --help test' -- "$cur" ) )
 		return 0
 	fi
 
@@ -94,6 +94,9 @@ _golo ()
 		doc)
 			COMPREPLY=( $( compgen -W '--format --output' -- "$cur" ) )
 			;;
+    test)
+      COMPREPLY=( $( compgen -W '--tests --sources --extractors --runner --reporter --output' -- "$cur" ) )
+      ;;
 	esac
 	return 0
 }
