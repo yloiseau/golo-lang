@@ -45,6 +45,7 @@ class JavaBytecodeStructGenerator {
     makeToArrayMethod(classWriter, struct);
     makeGetMethod(classWriter, struct);
     makeSetMethod(classWriter, struct);
+    makeMatchingMethod(classWriter, struct);
     classWriter.visitEnd();
     return new CodeGenerationResult(classWriter.toByteArray(), struct.getPackageAndClass());
   }
@@ -232,7 +233,7 @@ class JavaBytecodeStructGenerator {
       visitor.visitVarInsn(ALOAD, 0);
       visitor.visitFieldInsn(GETFIELD, owner, member.getName(), "Ljava/lang/Object;");
     }
-    visitor.visitMethodInsn(INVOKESPECIAL, owner, "<init>", allArgsConstructorSignature(struct), false);
+    visitor.visitMethodInsn(INVOKESPECIAL, owner, "<init>", allArgsSignature(struct, "V"), false);
     visitor.visitInsn(DUP);
     visitor.visitInsn(frozen ? ICONST_1 : ICONST_0);
     visitor.visitFieldInsn(PUTFIELD, owner, $_frozen, "Z");
@@ -275,7 +276,7 @@ class JavaBytecodeStructGenerator {
   }
 
   private void makeAllArgsConstructor(ClassWriter classWriter, Struct struct, String owner) {
-    MethodVisitor visitor = classWriter.visitMethod(ACC_PUBLIC, "<init>", allArgsConstructorSignature(struct), null, null);
+    MethodVisitor visitor = classWriter.visitMethod(ACC_PUBLIC, "<init>", allArgsSignature(struct, "V"), null, null);
     for (Member member : struct.getMembers()) {
       visitor.visitParameter(member.getName(), ACC_FINAL);
     }
@@ -299,7 +300,7 @@ class JavaBytecodeStructGenerator {
   }
 
   private void makeImmutableFactory(ClassWriter classWriter, Struct struct) {
-    String constructorDesc = allArgsConstructorSignature(struct);
+    String constructorDesc = allArgsSignature(struct, "V");
     String desc = constructorDesc.substring(0, constructorDesc.length() - 1);
     String classType = struct.getPackageAndClass().toJVMType();
     desc = desc + "L" + classType + ";";
@@ -338,12 +339,12 @@ class JavaBytecodeStructGenerator {
     visitor.visitFieldInsn(PUTFIELD, owner, "members", "[Ljava/lang/String;");
   }
 
-  private String allArgsConstructorSignature(Struct struct) {
+  private String allArgsSignature(Struct struct, String returned) {
     StringBuilder signatureBuilder = new StringBuilder("(");
     for (int i = 0; i < struct.getMembers().size(); i++) {
       signatureBuilder.append("Ljava/lang/Object;");
     }
-    signatureBuilder.append(")V");
+    signatureBuilder.append(")").append(returned);
     return signatureBuilder.toString();
   }
 
@@ -420,5 +421,33 @@ class JavaBytecodeStructGenerator {
     visitor.visitInsn(ARETURN);
     visitor.visitMaxs(0, 0);
     visitor.visitEnd();
+  }
+
+  private void makeMatchingMethod(ClassWriter classWriter, Struct struct) {
+    MethodVisitor mv = classWriter.visitMethod(ACC_PUBLIC, "is", allArgsSignature(struct, "Z"), null, null);
+    for (Member member : struct.getMembers()) {
+      mv.visitParameter(member.getName(), ACC_FINAL);
+    }
+    int i = 1;
+    Label allEquals = new Label();
+    Label notEqual = new Label();
+    String target = struct.getPackageAndClass().toJVMType();
+    for (Member member : struct.getMembers()) {
+      mv.visitVarInsn(ALOAD, i);
+      mv.visitVarInsn(ALOAD, 0);
+      mv.visitFieldInsn(GETFIELD, target, member.getName(), "Ljava/lang/Object;");
+      mv.visitMethodInsn(INVOKESTATIC, "java/util/Objects", "equals", "(Ljava/lang/Object;Ljava/lang/Object;)Z", false);
+      mv.visitJumpInsn(IFEQ, notEqual);
+      i++;
+    }
+    mv.visitInsn(ICONST_1);
+    mv.visitJumpInsn(GOTO, allEquals);
+    mv.visitLabel(notEqual);
+    mv.visitInsn(ICONST_0);
+    mv.visitLabel(allEquals);
+    mv.visitCode();
+    mv.visitInsn(IRETURN);
+    mv.visitMaxs(0, 0);
+    mv.visitEnd();
   }
 }
