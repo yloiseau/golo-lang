@@ -18,7 +18,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static java.lang.invoke.MethodHandles.Lookup;
-import static java.lang.invoke.MethodHandles.permuteArguments;
+import static java.lang.invoke.MethodHandles.*;
 import static java.lang.invoke.MethodType.methodType;
 import static java.lang.reflect.Modifier.isPrivate;
 import static java.lang.reflect.Modifier.isStatic;
@@ -54,6 +54,13 @@ public final class FunctionCallSupport {
   private static final MethodHandle SAM_FILTER;
   private static final MethodHandle FUNCTIONAL_INTERFACE_FILTER;
 
+  private static final MethodHandle OVERLOADED_GUARD_GENERIC;
+  private static final MethodHandle OVERLOADED_GUARD_1;
+  private static final MethodHandle OVERLOADED_GUARD_2;
+  private static final MethodHandle OVERLOADED_GUARD_3;
+  private static final MethodHandle OVERLOADED_GUARD_4;
+  private static final MethodHandle OVERLOADED_GUARD_5;
+
   static {
     try {
       MethodHandles.Lookup lookup = MethodHandles.lookup();
@@ -69,6 +76,38 @@ public final class FunctionCallSupport {
           FunctionCallSupport.class,
           "functionalInterfaceFilter",
           methodType(Object.class, Lookup.class, Class.class, Object.class));
+
+      OVERLOADED_GUARD_GENERIC = lookup.findStatic(
+          FunctionCallSupport.class,
+          "overloadedGuard_generic",
+          methodType(boolean.class, Class[].class, Object[].class));
+
+      OVERLOADED_GUARD_1 = lookup.findStatic(
+          FunctionCallSupport.class,
+          "overloadedGuard_1",
+          methodType(boolean.class, Class.class, Object.class));
+
+      OVERLOADED_GUARD_2 = lookup.findStatic(
+          FunctionCallSupport.class,
+          "overloadedGuard_2",
+          methodType(boolean.class, Class.class, Class.class, Object.class, Object.class));
+
+      OVERLOADED_GUARD_3 = lookup.findStatic(
+          FunctionCallSupport.class,
+          "overloadedGuard_3",
+          methodType(boolean.class, Class.class, Class.class, Class.class, Object.class, Object.class, Object.class));
+
+      OVERLOADED_GUARD_4 = lookup.findStatic(
+          FunctionCallSupport.class,
+          "overloadedGuard_4",
+          methodType(boolean.class, Class.class, Class.class, Class.class, Class.class, Object.class, Object.class, Object.class, Object.class));
+
+      OVERLOADED_GUARD_5 = lookup.findStatic(
+          FunctionCallSupport.class,
+          "overloadedGuard_5",
+          methodType(boolean.class, Class.class, Class.class, Class.class, Class.class, Class.class, Object.class, Object.class, Object.class, Object.class, Object.class));
+
+
     } catch (NoSuchMethodException | IllegalAccessException e) {
       throw new Error("Could not bootstrap the required method handles", e);
     }
@@ -105,6 +144,45 @@ public final class FunctionCallSupport {
     throw new RuntimeException(message("handle_conversion_failed", handle, type));
   }
 
+  public static boolean overloadedGuard_generic(Class<?>[] types, Object[] arguments) {
+    for (int i = 0; i < types.length; i++) {
+      if ((arguments[i] != null) && (arguments[i].getClass() != types[i])) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  public static boolean overloadedGuard_1(Class<?> t1, Object arg1) {
+    return (arg1 == null || arg1.getClass() == t1);
+  }
+
+  public static boolean overloadedGuard_2(Class<?> t1, Class<?> t2, Object arg1, Object arg2) {
+    return (arg1 == null || arg1.getClass() == t1)
+        && (arg2 == null || arg2.getClass() == t2);
+  }
+
+  public static boolean overloadedGuard_3(Class<?> t1, Class<?> t2, Class<?> t3, Object arg1, Object arg2, Object arg3) {
+    return (arg1 == null || arg1.getClass() == t1)
+        && (arg2 == null || arg2.getClass() == t2)
+        && (arg3 == null || arg3.getClass() == t3);
+  }
+
+  public static boolean overloadedGuard_4(Class<?> t1, Class<?> t2, Class<?> t3, Class<?> t4, Object arg1, Object arg2, Object arg3, Object arg4) {
+    return (arg1 == null || arg1.getClass() == t1)
+        && (arg2 == null || arg2.getClass() == t2)
+        && (arg3 == null || arg3.getClass() == t3)
+        && (arg4 == null || arg4.getClass() == t4);
+  }
+
+  public static boolean overloadedGuard_5(Class<?> t1, Class<?> t2, Class<?> t3, Class<?> t4, Class<?> t5, Object arg1, Object arg2, Object arg3, Object arg4, Object arg5) {
+    return (arg1 == null || arg1.getClass() == t1)
+        && (arg2 == null || arg2.getClass() == t2)
+        && (arg3 == null || arg3.getClass() == t3)
+        && (arg4 == null || arg4.getClass() == t4)
+        && (arg5 == null || arg5.getClass() == t5);
+  }
+
   public static CallSite bootstrap(Lookup caller, String name, MethodType type, Object... bsmArgs) throws IllegalAccessException, ClassNotFoundException {
     boolean constant = ((int) bsmArgs[0]) == 1;
     String[] argumentNames = new String[bsmArgs.length - 1];
@@ -125,14 +203,8 @@ public final class FunctionCallSupport {
     return callSite;
   }
 
-  public static Object fallback(FunctionCallSite callSite, Object[] args) throws Throwable {
-    String functionName = callSite.name;
-    MethodType type = callSite.type();
-    Lookup caller = callSite.callerLookup;
-    Class<?> callerClass = caller.lookupClass();
-    String[] argumentNames = callSite.argumentNames;
 
-    MethodHandle handle = null;
+  private static AccessibleObject findTarget(Class<?> callerClass, String functionName, Object[] args) {
     AccessibleObject result = findStaticMethodOrField(callerClass, callerClass, functionName, args);
     if (result == null) {
       result = findClassWithStaticMethodOrField(callerClass, functionName, args);
@@ -146,6 +218,18 @@ public final class FunctionCallSupport {
     if (result == null) {
       result = findClassWithConstructorFromImports(callerClass, functionName, args);
     }
+    return null;
+  }
+
+  public static Object fallback(FunctionCallSite callSite, Object[] args) throws Throwable {
+    String functionName = callSite.name;
+    MethodType type = callSite.type();
+    Lookup caller = callSite.callerLookup;
+    Class<?> callerClass = caller.lookupClass();
+    String[] argumentNames = callSite.argumentNames;
+
+    MethodHandle handle = null;
+    Object result = findTarget(callerClass, functionName, args);
     if (result == null) {
       throw new NoSuchMethodError(functionName + type.toMethodDescriptorString());
     }
@@ -199,6 +283,34 @@ public final class FunctionCallSupport {
       callSite.setTarget(handle);
       return handle.invokeWithArguments(args);
     }
+  }
+
+  private MethodHandle guardOnOverloaded(MethodHandle handle, Object[] args) {
+    Class<?>[] types = new Class<?>[args.length];
+    for (int i = 0; i < types.length; i++) {
+      types[i] = (args[i] == null) ? Object.class : args[i].getClass();
+    }
+    MethodHandle guard;
+    switch (args.length) {
+      case 1:
+        guard = insertArguments(OVERLOADED_GUARD_1, 0, types[0]);
+        break;
+      case 2:
+        guard = insertArguments(OVERLOADED_GUARD_2, 0, types[0], types[1]);
+        break;
+      case 3:
+        guard = insertArguments(OVERLOADED_GUARD_3, 0, types[0], types[1], types[2]);
+        break;
+      case 4:
+        guard = insertArguments(OVERLOADED_GUARD_4, 0, types[0], types[1], types[2], types[3]);
+        break;
+      case 5:
+        guard = insertArguments(OVERLOADED_GUARD_5, 0, types[0], types[1], types[2], types[3], types[4]);
+        break;
+      default:
+        guard = OVERLOADED_GUARD_GENERIC.bindTo(types).asCollector(Object[].class, types.length);
+    }
+    return guardWithTest(guard, target, inlineCache.resetFallback);
   }
 
   private static boolean isVarargsWithNames(Method method, Class<?>[] types, Object[] args, String[] argumentNames) {
