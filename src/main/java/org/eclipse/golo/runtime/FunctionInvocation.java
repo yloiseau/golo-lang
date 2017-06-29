@@ -10,8 +10,7 @@
 package org.eclipse.golo.runtime;
 
 import java.lang.invoke.MethodType;
-import java.lang.reflect.Member;
-import java.lang.reflect.Method;
+import java.lang.reflect.*;
 import org.eclipse.golo.compiler.PackageAndClass;
 
 import static java.lang.reflect.Modifier.*;
@@ -51,12 +50,12 @@ public class FunctionInvocation extends AbstractInvocation {
   @Override
   public boolean match(Member member) {
     if (member instanceof Constructor) {
-      return TypeMatching.argumentsMatch((Constructor) member, arguments);
+      return TypeMatching.argumentsMatch((Constructor) member, arguments());
     }
     return member.getName().equals(name.className())
       && isStatic(member.getModifiers())
       && ((member instanceof Field)
-          || (member instanceof Method && TypeMatching.argumentsMatch((Method) member, arguments)));
+          || (member instanceof Method && TypeMatching.argumentsMatch((Method) member, arguments())));
   }
 
   @Override

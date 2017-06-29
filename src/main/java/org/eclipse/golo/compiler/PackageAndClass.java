@@ -52,7 +52,7 @@ public final class PackageAndClass {
 
   public static PackageAndClass of(Object value) {
     if (value instanceof PackageAndClass) {
-      return value;
+      return (PackageAndClass) value;
     }
     if (value instanceof String) {
       return fromString((String) value);

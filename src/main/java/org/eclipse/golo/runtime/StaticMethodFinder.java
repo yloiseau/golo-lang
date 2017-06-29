@@ -12,6 +12,7 @@ package org.eclipse.golo.runtime;
 import java.lang.invoke.MethodHandle;
 import java.util.stream.*;
 import java.util.function.Function;
+import java.lang.reflect.Member;
 
 import static java.lang.invoke.MethodHandles.Lookup;
 
@@ -60,7 +61,7 @@ class StaticMethodFinder extends MethodFinder<FunctionInvocation> {
         findStaticMethodOrFieldInClass(callerClass),
         findFQNStaticMethodOrField(),
         findStaticMethodOrFieldFromImports(),
-        findConstructorForClass(invocation.PackageAndClass()),
+        findConstructorForClass(invocation.packageAndClass().toString()),
         findConstructorFromImports())
       .reduce(Stream.empty(), Stream::concat);
   }
@@ -70,9 +71,8 @@ class StaticMethodFinder extends MethodFinder<FunctionInvocation> {
   }
 
   private Stream<? extends Member> findFQNStaticMethodOrField() {
-    if (name.hasPackage()) {
-      Class<?> lookupClass = Loader.forClass(callerClass).load(name.packageName());
-      return findStaticMethodOrFieldInClass(lookupClass);
+    if (invocation.isQualified()) {
+      return findStaticMethodOrFieldInClass(loader.load(invocation.moduleName()));
     }
     return Stream.empty();
   }
@@ -101,7 +101,7 @@ class StaticMethodFinder extends MethodFinder<FunctionInvocation> {
   }
 
   private Stream<String> addConstructorFQN(String moduleName) {
-    if (!invocation.isQualified() && moduleName.endsWith("." + invocation.className())) {
+    if (!invocation.isQualified() && moduleName.endsWith("." + invocation.baseName())) {
       return Stream.of(
           moduleName,
           moduleName + "." + invocation.packageAndClass().toString());
