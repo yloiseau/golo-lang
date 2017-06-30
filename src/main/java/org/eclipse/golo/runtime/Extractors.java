@@ -13,6 +13,7 @@ import java.lang.reflect.Member;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Constructor;
+import java.util.Comparator;
 import java.util.stream.Stream;
 import java.lang.reflect.Modifier;
 import java.util.function.Predicate;
@@ -21,6 +22,39 @@ import static org.eclipse.golo.runtime.TypeMatching.argumentsNumberMatches;
 import static org.eclipse.golo.runtime.DecoratorsHelper.isMethodDecorated;
 
 public final class Extractors {
+
+  /**
+   * Define the priority order between methods.
+   *
+   * <ol>
+   * <li>defined in the most specific class
+   * <li>greatest arity first
+   * <li>fixed arity then varargs
+   * </ol>
+   */
+  public static final Comparator<Method> METHOD_COMPARATOR = (m1, m2) -> {
+    Class<?> m1Class = m1.getDeclaringClass();
+    Class<?> m2Class = m2.getDeclaringClass();
+    if (m1Class.isAssignableFrom(m2Class) && !m1Class.equals(m2Class)) {
+      return 1;
+    }
+    if (m2Class.isAssignableFrom(m1Class) && !m1Class.equals(m2Class)) {
+      return -1;
+    }
+    if (m1.getParameterCount() != m2.getParameterCount()) {
+      return -1 * Integer.compare(m1.getParameterCount(), m2.getParameterCount());
+    }
+    if (m1.isVarArgs() && !m2.isVarArgs()) {
+      return 1;
+    }
+    if (m2.isVarArgs() && !m1.isVarArgs()) {
+      return -1;
+    }
+    return 0;
+  };
+
+
+
   private Extractors() {
     throw new UnsupportedOperationException("don't instantiate");
   }
@@ -39,16 +73,8 @@ public final class Extractors {
     return Stream.concat(
         Stream.of(klass.getDeclaredMethods()),
         Stream.of(klass.getMethods()))
-      .distinct()
-      .sorted((m1, m2) -> {
-        if (m1.isVarArgs() && !m2.isVarArgs()) {
-          return 1;
-        }
-        if (m2.isVarArgs() && !m1.isVarArgs()) {
-          return -1;
-        }
-        return 0;
-      });
+      .sorted(METHOD_COMPARATOR)
+      .distinct();
   }
 
   public static Stream<Field> getFields(Class<?> klass) {

@@ -49,10 +49,13 @@ public class FunctionInvocation extends AbstractInvocation {
 
   @Override
   public boolean match(Member member) {
+    System.err.println("### matching " + member.getClass().getSimpleName() + ": " + member);
     if (member instanceof Constructor) {
       return TypeMatching.argumentsMatch((Constructor) member, arguments());
     }
+    System.err.println("     " + member.getName() + " -> " + name.toString());
     return member.getName().equals(name.className())
+      && (!name.hasPackage() || member.getDeclaringClass().getName().endsWith(name.packageName()))
       && isStatic(member.getModifiers())
       && ((member instanceof Field)
           || (member instanceof Method && TypeMatching.argumentsMatch((Method) member, arguments())));

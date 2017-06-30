@@ -30,7 +30,12 @@ class StaticMethodFinder extends MethodFinder<FunctionInvocation> {
 
   @Override
   public MethodHandle find() {
+    System.err.println("# Looking for " + invocation);
     return findMembers()
+      .map(m -> {
+        System.err.println("## Found " + m.getClass().getSimpleName() + ": " + m);
+        return m;
+      })
       .map(this::toMethodHandle)
       .filter(Optional::isPresent)
       .map(Optional::get)
@@ -44,8 +49,8 @@ class StaticMethodFinder extends MethodFinder<FunctionInvocation> {
         findFQNStaticMethodOrField(),
         findStaticMethodOrFieldFromImports(),
         findConstructorForClass(invocation.packageAndClass().toString()),
-        findConstructorFromImports())
-      .reduce(Stream.empty(), Stream::concat);
+        findConstructorFromImports()
+      ).reduce(Stream.empty(), Stream::concat);
   }
 
   private Stream<? extends Member> findStaticMethodOrFieldInClass(Class<?> lookupClass) {
@@ -99,7 +104,8 @@ class StaticMethodFinder extends MethodFinder<FunctionInvocation> {
       return Optional.empty();
     }
     // TODO: reorder named arguments ?
-    return Optional.of(invocation.coerce(handle));
+    handle = invocation.coerce(handle);
+    return Optional.of(handle);
   }
 
   @Override
