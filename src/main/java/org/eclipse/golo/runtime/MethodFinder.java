@@ -11,6 +11,7 @@ package org.eclipse.golo.runtime;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.reflect.Method;
+import java.lang.reflect.Field;
 import java.util.Optional;
 import java.util.List;
 import static org.eclipse.golo.runtime.DecoratorsHelper.getDecoratedMethodHandle;
@@ -37,13 +38,17 @@ abstract class MethodFinder<T extends AbstractInvocation> {
   public abstract MethodHandle find();
 
   protected int[] getArgumentsOrder(Method method, List<String> parameterNames, String[] argumentNames) {
+    int offset = 0;
+    if (!Extractors.isStatic(method)) {
+      offset = 1;
+    }
     // deal with the first parameter (implicit receiver).
-    int[] argumentsOrder = new int[parameterNames.size() + 1];
+    int[] argumentsOrder = new int[parameterNames.size() + offset];
     argumentsOrder[0] = 0;
     for (int i = 0; i < argumentNames.length; i++) {
       int actualPosition = parameterNames.indexOf(argumentNames[i]);
       checkArgumentPosition(actualPosition, argumentNames[i], method.getName() + parameterNames);
-      argumentsOrder[actualPosition + 1] = i + 1;
+      argumentsOrder[actualPosition + offset] = i + offset;
     }
     return argumentsOrder;
   }
@@ -66,14 +71,18 @@ abstract class MethodFinder<T extends AbstractInvocation> {
       try {
         target = lookup.unreflect(method);
       } catch (IllegalAccessException e) {
-        /* We need to give augmentations a chance, as IllegalAccessException can be noise in our resolution.
-         * Example: augmenting HashSet with a map function.
-         *  java.lang.IllegalAccessException: member is private: java.util.HashSet.map/java.util.HashMap/putField
-         */
         return Optional.empty();
       }
     }
     return Optional.of(invocation.coerce(reorderArguments(method, target)));
+  }
+
+  protected Optional<MethodHandle> toMethodHandle(Field field) {
+    try {
+      return Optional.of(lookup.unreflectGetter(field).asType(invocation.type()));
+    } catch (IllegalAccessException e) {
+      return Optional.empty();
+    }
   }
 
 }

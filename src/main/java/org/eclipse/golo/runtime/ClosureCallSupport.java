@@ -103,6 +103,7 @@ public final class ClosureCallSupport {
       invoker = invoker.asType(callSite.type());
     }
     if (callSite.constant) {
+      // TODO: reuse the function call one
       Object constantValue = invoker.invokeWithArguments(args);
       MethodHandle constant;
       if (constantValue == null) {

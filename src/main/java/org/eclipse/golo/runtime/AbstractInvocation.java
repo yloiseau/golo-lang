@@ -49,16 +49,18 @@ public abstract class AbstractInvocation {
   }
 
   private boolean isLastArgumentAnArray() {
-    return arity > 0
-      && arguments.length == arity
-      && arguments[arity - 1] instanceof Object[];
+    return TypeMatching.isLastArgumentAnArray(arity, arguments);
   }
 
   public MethodHandle coerce(MethodHandle target) {
-    if (target.isVarargsCollector() && isLastArgumentAnArray()) {
+    if (isVarargsCall(target)) {
       return target.asFixedArity().asType(type);
     }
     return target.asType(type);
+  }
+
+  private boolean isVarargsCall(MethodHandle target) {
+    return target.isVarargsCollector() && (isLastArgumentAnArray() || argumentNames.length > 0);
   }
 
   public abstract boolean match(Member member);

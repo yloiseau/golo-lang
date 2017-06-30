@@ -79,6 +79,10 @@ public final class Extractors {
     return m != null && Modifier.isPublic(m.getModifiers());
   }
 
+  public static boolean isPrivate(Member m) {
+    return m != null && Modifier.isPrivate(m.getModifiers());
+  }
+
   public static boolean isStatic(Member m) {
     return m != null && Modifier.isStatic(m.getModifiers());
   }

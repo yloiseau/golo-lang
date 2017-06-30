@@ -137,64 +137,8 @@ public final class FunctionCallSupport {
     return callSite;
   }
 
-  private static Supplier<NoSuchMethodError> notFound(FunctionCallSite callSite) {
-    return () -> new NoSuchMethodError(callSite.name + callSite.type().toMethodDescriptorString());
-  }
-
-  private static MethodHandle lookupFunction(FunctionCallSite callSite, Object[] args) throws Throwable {
-    return findMembers(callSite.callerLookup.lookupClass(), callSite.name, args)
-      .map(m -> toMethodHandle(m, callSite, args))
-      .findFirst()
-      .orElseThrow(notFound(callSite))
-      .get();
-  }
-
-  private static Result<MethodHandle, Throwable> toMethodHandle(Member result, FunctionCallSite callSite, Object[] args) {
-    try {
-      if (result instanceof Method) {
-        return Result.ok(toMethodHandle((Method) result, callSite, args));
-      } else if (result instanceof Constructor) {
-        return Result.ok(toMethodHandle((Constructor<?>) result, callSite, args));
-      } else {
-        return Result.ok(toMethodHandle((Field) result, callSite));
-      }
-    } catch (Throwable e) {
-      return Result.error(e);
-    }
-  }
-
-  private static MethodHandle toMethodHandle(Field field, FunctionCallSite callSite) throws Throwable  {
-    return callSite.callerLookup.unreflectGetter(field).asType(callSite.type());
-  }
-
-  private static MethodHandle toMethodHandle(Constructor<?> constructor, FunctionCallSite callSite, Object[] args) throws Throwable {
-    Lookup caller = callSite.callerLookup;
-    MethodHandle handle;
-    if (constructor.isVarArgs() && TypeMatching.isLastArgumentAnArray(constructor.getParameterTypes().length, args)) {
-      handle = caller.unreflectConstructor(constructor).asFixedArity().asType(callSite.type());
-    } else {
-      handle = caller.unreflectConstructor(constructor).asType(callSite.type());
-    }
-    return insertSAMFilter(handle, caller, constructor.getParameterTypes(), 0);
-  }
-
-  private static MethodHandle toMethodHandle(Method method, FunctionCallSite callSite, Object[] args) throws Throwable {
-    Lookup caller = callSite.callerLookup;
-    String[] argumentNames = callSite.argumentNames;
-    MethodHandle handle;
-    checkLocalFunctionCallFromSameModuleAugmentation(method, caller.lookupClass().getName());
-    if (isMethodDecorated(method)) {
-      handle = getDecoratedMethodHandle(caller, method, callSite.type().parameterCount());
-    } else {
-      //TODO: improve varargs support on named arguments. Matching the last param type + according argument
-      if (isVarargsWithNames(method, method.getParameterTypes(), args, argumentNames)) {
-        handle = caller.unreflect(method).asFixedArity().asType(callSite.type());
-      } else {
-        handle = caller.unreflect(method).asType(callSite.type());
-      }
-    }
-    handle = reorderArguments(method, handle, argumentNames);
-    return insertSAMFilter(handle, caller, method.getParameterTypes(), 0);
+  private static MethodHandle lookupFunction(FunctionInvocation call, MethodHandles.Lookup lookup) {
+    return new StaticMethodFinder(call, lookup).find();
   }
 
   private static Object internConstantCall(FunctionCallSite callSite, MethodHandle handle, Object[] args) throws Throwable {
@@ -213,39 +157,16 @@ public final class FunctionCallSupport {
 
   public static Object fallback(FunctionCallSite callSite, Object[] args) throws Throwable {
     FunctionInvocation call = callSite.toFunctionInvocation(args);
-    MethodHandle handle = lookupFunction(call);
+    MethodHandle handle = lookupFunction(call, callSite.callerLookup);
+    if (handle == null) {
+      throw new NoSuchMethodError(callSite.name + callSite.type().toMethodDescriptorString());
+    }
     if (callSite.constant) {
       return internConstantCall(callSite, handle, args);
     } else {
       callSite.setTarget(handle);
       return handle.invokeWithArguments(args);
     }
-  }
-
-  private static boolean isVarargsWithNames(Method method, Class<?>[] types, Object[] args, String[] argumentNames) {
-    return method.isVarArgs()
-      && (
-          TypeMatching.isLastArgumentAnArray(types.length, args)
-          || argumentNames.length > 0);
-  }
-
-  private static int[] getArgumentsOrder(Method method, List<String> parameterNames, String[] argumentNames) {
-    int[] argumentsOrder = new int[parameterNames.size()];
-    for (int i = 0; i < argumentNames.length; i++) {
-      int actualPosition = parameterNames.indexOf(argumentNames[i]);
-      checkArgumentPosition(actualPosition, argumentNames[i], method.getName() + parameterNames);
-      argumentsOrder[actualPosition] = i;
-    }
-    return argumentsOrder;
-  }
-
-  public static MethodHandle reorderArguments(Method method, MethodHandle handle, String[] argumentNames) {
-   if (argumentNames.length == 0) { return handle; }
-   if (hasNamedParameters(method)) {
-     return permuteArguments(handle, handle.type(), getArgumentsOrder(method, getParameterNames(method), argumentNames));
-   }
-   Warnings.noParameterNames(method.getName(), argumentNames);
-    return handle;
   }
 
   public static MethodHandle insertSAMFilter(MethodHandle handle, Lookup caller, Class<?>[] types, int startIndex) {
@@ -264,12 +185,7 @@ public final class FunctionCallSupport {
     return handle;
   }
 
-  private static void checkLocalFunctionCallFromSameModuleAugmentation(Method method, String callerClassName) {
-    // TODO: push up PackageAndClass
-    if (isPrivate(method.getModifiers()) && PackageAndClass.of(callerClassName).isInnerClassOf(PackageAndClass.of(method))) {
-      method.setAccessible(true);
-    }
-  }
+
 
 
 

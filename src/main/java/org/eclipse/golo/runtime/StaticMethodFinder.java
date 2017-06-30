@@ -12,38 +12,16 @@ package org.eclipse.golo.runtime;
 import java.lang.invoke.MethodHandle;
 import java.util.stream.*;
 import java.util.function.Function;
-import java.lang.reflect.Member;
+import java.lang.reflect.*;
+import java.util.Optional;
+
+import org.eclipse.golo.compiler.PackageAndClass;
 
 import static java.lang.invoke.MethodHandles.Lookup;
 
-// TODO: rename to FunctionFinder
 class StaticMethodFinder extends MethodFinder<FunctionInvocation> {
 
   private final Loader loader;
-
-  enum Scope { ABSOLUTE, LOCAL, IMPORT }
-
-  static class DefiningModule {
-    private final Class<?> module;
-    private final Scope scope;
-
-    DefiningModule(Class<?> module, Scope scope) {
-      this.module = module;
-      this.scope = scope;
-    }
-
-    public static DefiningModule ofImport(Class<?> module) {
-      return new DefiningModule(module, Scope.IMPORT);
-    }
-
-    public static DefiningModule ofAbs(Class<?> module) {
-      return new DefiningModule(module, Scope.ABSOLUTE);
-    }
-
-    public static DefiningModule ofLocal(Class<?> module) {
-      return new DefiningModule(module, Scope.LOCAL);
-    }
-  }
 
   StaticMethodFinder(FunctionInvocation invocation, Lookup lookup) {
     super(invocation, lookup);
@@ -52,8 +30,12 @@ class StaticMethodFinder extends MethodFinder<FunctionInvocation> {
 
   @Override
   public MethodHandle find() {
-    // TODO: find the function
-    return null;
+    return findMembers()
+      .map(this::toMethodHandle)
+      .filter(Optional::isPresent)
+      .map(Optional::get)
+      .findFirst()
+      .orElse(null);
   }
 
   private Stream<? extends Member> findMembers() {
@@ -107,5 +89,34 @@ class StaticMethodFinder extends MethodFinder<FunctionInvocation> {
           moduleName + "." + invocation.packageAndClass().toString());
     }
     return Stream.of(moduleName + "." + invocation.packageAndClass().toString());
+  }
+
+  private Optional<MethodHandle> toMethodHandle(Constructor<?> constructor) {
+    MethodHandle handle;
+    try {
+      handle = lookup.unreflectConstructor(constructor);
+    } catch (IllegalAccessException e) {
+      return Optional.empty();
+    }
+    // TODO: reorder named arguments ?
+    return Optional.of(invocation.coerce(handle));
+  }
+
+  @Override
+  protected Optional<MethodHandle> toMethodHandle(Method method) {
+    if (Extractors.isPrivate(method) && PackageAndClass.of(callerClass.getName()).isInnerClassOf(PackageAndClass.of(method))) {
+      method.setAccessible(true);
+    }
+    return super.toMethodHandle(method).map(h -> FunctionCallSupport.insertSAMFilter(h, lookup, method.getParameterTypes(), 0));
+  }
+
+  private Optional<MethodHandle> toMethodHandle(Member result) {
+    if (result instanceof Method) {
+      return toMethodHandle((Method) result);
+    } else if (result instanceof Constructor) {
+      return toMethodHandle((Constructor<?>) result);
+    } else {
+      return toMethodHandle((Field) result);
+    }
   }
 }

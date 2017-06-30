@@ -54,25 +54,21 @@ class RegularMethodFinder extends MethodFinder<MethodInvocation> {
       || (m.isVarArgs() && (m.getParameterCount() <= invocation.arity()));
   }
 
-  private Optional<MethodHandle> toMethodHandle(Field field) {
+  @Override
+  protected Optional<MethodHandle> toMethodHandle(Field field) {
     if (makeAccessible) {
       field.setAccessible(true);
     }
+    if (invocation.arity() == 1) {
+      return super.toMethodHandle(field);
+    }
     try {
-      if (invocation.arity() == 1) {
-        return Optional.of(lookup.unreflectGetter(field).asType(invocation.type()));
-      } else {
-        return Optional.of(
-            filterReturnValue(
-                lookup.unreflectSetter(field),
-                constant(invocation.receiverClass(), invocation.arguments()[0]))
-                .asType(invocation.type()));
-      }
+      return Optional.of(
+          filterReturnValue(
+            lookup.unreflectSetter(field),
+            constant(invocation.receiverClass(), invocation.arguments()[0]))
+          .asType(invocation.type()));
     } catch (IllegalAccessException e) {
-      /* We need to give augmentations a chance, as IllegalAccessException can be noise in our resolution.
-       * Example: augmenting HashSet with a map function.
-       *  java.lang.IllegalAccessException: member is private: java.util.HashSet.map/java.util.HashMap/putField
-       */
       return Optional.empty();
     }
   }
