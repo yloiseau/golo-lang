@@ -19,3 +19,13 @@ function ctor_varargs = ->
 
 function meth_varargs = ->
   SamVarargsSupportHelpers(|e| -> e: get(0) + e: get(1) + "!"): plopIt(|e| -> e: get(0) + e: get(1), "Yeah")
+
+function main = |args| {
+  require(func() == "Hey!Hey!", "err: func")
+  require(ctor() == "Plop!", "err: ctor")
+  require(meth() == "Yeah", "err: meth")
+  require(func_varargs() == "Hey!Hey!", "err: func_varargs")
+  require(ctor_varargs() == "PlopPlop!", "err: ctor_varargs")
+  require(meth_varargs() == "YeahYeah", "err: meth_varargs")
+  println("===== OK =====")
+}

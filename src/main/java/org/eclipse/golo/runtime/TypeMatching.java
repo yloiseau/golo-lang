@@ -77,10 +77,14 @@ public final class TypeMatching {
   }
 
   public static boolean samAssignment(Class<?> type, Object value) {
-    return isClosure(value) && isSAM(type);
+    System.err.print("Check SAM: " + type + " <> " + value);
+    boolean r = isClosure(value) && isSAM(type);
+    System.err.println(" : " + r);
+    return r;
   }
 
   public static boolean isSAM(Class<?> type) {
+    // TODO: deal with interfaces with default or static methods...
     return type.isInterface() && (type.getMethods().length == 1);
   }
 

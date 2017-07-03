@@ -104,12 +104,13 @@ class StaticMethodFinder extends MethodFinder<FunctionInvocation> {
       return Optional.empty();
     }
     // TODO: reorder named arguments ?
-    handle = invocation.coerce(handle);
+    handle = FunctionCallSupport.insertSAMFilter(invocation.coerce(handle), lookup, constructor.getParameterTypes(), 0);
     return Optional.of(handle);
   }
 
   @Override
   protected Optional<MethodHandle> toMethodHandle(Method method) {
+    // TODO: move insertSAMFilter to invocation.coerce or super.toMethodHandle ?
     if (Extractors.isPrivate(method) && PackageAndClass.of(callerClass.getName()).isInnerClassOf(PackageAndClass.of(method))) {
       method.setAccessible(true);
     }
