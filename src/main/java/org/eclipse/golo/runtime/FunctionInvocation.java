@@ -47,18 +47,30 @@ public class FunctionInvocation extends AbstractInvocation {
     return name;
   }
 
+  public FunctionInvocation resolve(String importedModule) {
+    return new FunctionInvocation(
+        name.resolve(importedModule),
+        constant,
+        type(),
+        arguments(),
+        argumentNames());
+  }
+
   @Override
   public boolean match(Member member) {
     System.err.println("### matching " + member.getClass().getSimpleName() + ": " + member);
     if (member instanceof Constructor) {
       return TypeMatching.argumentsMatch((Constructor) member, arguments());
     }
-    System.err.println("     " + member.getName() + " -> " + name.toString());
-    return member.getName().equals(name.className())
-      && (!name.hasPackage() || member.getDeclaringClass().getName().endsWith(name.packageName()))
+    System.err.print("     " + member.getName() + " ~= " + name.toString() + "?");
+    boolean r = member.getName().equals(name.className())
+      // && (!name.hasPackage() || member.getDeclaringClass().getName().endsWith(name.packageName()))
       && isStatic(member.getModifiers())
       && ((member instanceof Field)
           || (member instanceof Method && TypeMatching.argumentsMatch((Method) member, arguments())));
+    System.err.println(": " + r);
+    System.err.println("  from " + member.getDeclaringClass().getName());
+    return r;
   }
 
   @Override

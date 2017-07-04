@@ -96,4 +96,21 @@ public class PackageAndClassTest {
         is("Module.types"));
   }
 
+  @Test
+  public void test_resolve() {
+    assertThat(PackageAndClass.fromString("function").resolve("imported.package.Module").toString(), is("imported.package.Module.function"));
+    assertThat(PackageAndClass.fromString("Module.function").resolve("imported.package.Module").toString(), is("imported.package.Module.function"));
+    assertThat(PackageAndClass.fromString("Module.function").resolve("imported.package").toString(), is("imported.package.Module.function"));
+    assertThat(PackageAndClass.fromString("other.Module.function").resolve("imported.package").toString(), is("imported.package.other.Module.function"));
+    assertThat(PackageAndClass.fromString("other.Module.function").resolve("imported.package.Module").toString(), is("imported.package.Module.other.Module.function"));
+    assertThat(PackageAndClass.fromString("Module").resolve("imported.package.Module").toString(), is("imported.package.Module"));
+    assertThat(PackageAndClass.fromString("Module").resolve("imported.package").toString(), is("imported.package.Module"));
+    assertThat(PackageAndClass.fromString("Module").resolve("imported.package.Other").toString(), is("imported.package.Other.Module"));
+    assertThat(PackageAndClass.fromString("imported.package.Module.function").resolve("imported.package.Module").toString(), is("imported.package.Module.function"));
+    assertThat(PackageAndClass.fromString("imported.package.Module").resolve("imported.package.Module").toString(), is("imported.package.Module"));
+    assertThat(PackageAndClass.fromString("imported.package.Module").resolve("imported.package").toString(), is("imported.package.Module"));
+    assertThat(PackageAndClass.fromString("imported.package.Module.function").resolve("").toString(), is("imported.package.Module.function"));
+    assertThat(PackageAndClass.fromString("imported.package.Module.function").resolve(null).toString(), is("imported.package.Module.function"));
+  }
+
 }

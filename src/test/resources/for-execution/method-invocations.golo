@@ -52,6 +52,7 @@ function field_accessors = {
 
 function access_items_from_subclass = {
   org.eclipse.golo.compiler.testing.support.SomeClass.FOO()
+  SomeClass.bar()
   let receiver = SomeClass()
   receiver: c()
   receiver: a()
@@ -83,3 +84,7 @@ augment java.lang.String {
 function test_order_fixed = -> "":test(1)
 
 function test_order_var = -> "":test(1,2)
+
+function main = |args| {
+  access_items_from_subclass()
+}

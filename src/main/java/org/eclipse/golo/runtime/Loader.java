@@ -28,7 +28,11 @@ public final class Loader implements Function<String, Class<?>> {
   private final ClassLoader loader;
 
   Loader(ClassLoader loader) {
-    this.loader = loader;
+    if (loader == null) {
+      this.loader = Thread.currentThread().getContextClassLoader();
+    } else {
+      this.loader = loader;
+    }
   }
 
   /**

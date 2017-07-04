@@ -7,6 +7,8 @@
  * http://www.eclipse.org/legal/epl-v10.html
  */
 
+// TODO: we probably should reorder arguments and adapt for SAM/FI for every method (being static or not)
+
 package org.eclipse.golo.runtime;
 
 import java.lang.invoke.MethodHandle;
@@ -30,6 +32,7 @@ class StaticMethodFinder extends MethodFinder<FunctionInvocation> {
 
   @Override
   public MethodHandle find() {
+    System.err.println("\n\n====================================");
     System.err.println("# Looking for " + invocation);
     return findMembers()
       .map(m -> {
@@ -44,56 +47,29 @@ class StaticMethodFinder extends MethodFinder<FunctionInvocation> {
   }
 
   private Stream<? extends Member> findMembers() {
-    return Stream.of(
-        findStaticMethodOrFieldInClass(callerClass),
-        findFQNStaticMethodOrField(),
-        findStaticMethodOrFieldFromImports(),
-        findConstructorForClass(invocation.packageAndClass().toString()),
-        findConstructorFromImports()
-      ).reduce(Stream.empty(), Stream::concat);
+    return Stream.concat(Stream.of(callerClass.getName()), Extractors.getImportedNames(callerClass))
+      .flatMap(resolver())
+      .flatMap(this::findMemberFor);
   }
 
-  private Stream<? extends Member> findStaticMethodOrFieldInClass(Class<?> lookupClass) {
-    return Extractors.getMembers(lookupClass).filter(invocation::match);
-  }
-
-  private Stream<? extends Member> findFQNStaticMethodOrField() {
+  private Function<String, Stream<FunctionInvocation>> resolver() {
     if (invocation.isQualified()) {
-      return findStaticMethodOrFieldInClass(loader.load(invocation.moduleName()));
+      return s -> Stream.of(invocation, invocation.resolve(s));
     }
-    return Stream.empty();
+    return s -> Stream.of(invocation.resolve(s));
   }
 
-  private Stream<? extends Member> findStaticMethodOrFieldFromImports() {
-    return Extractors.getImportedNames(callerClass)
-      .map(addFQN())
-      .flatMap(name -> findStaticMethodOrFieldInClass(loader.load(name)));
-  }
-
-  private Function<String, String> addFQN() {
-    if (invocation.isQualified()) {
-      return moduleName -> moduleName + "." + invocation.moduleName();
-    }
-    return Function.identity();
-  }
-
-  private Stream<? extends Member> findConstructorForClass(String name) {
-    return Extractors.getConstructors(loader.load(name)).filter(invocation::match);
-  }
-
-  private Stream<? extends Member> findConstructorFromImports() {
-    return Extractors.getImportedNames(callerClass)
-      .flatMap(this::addConstructorFQN)
-      .flatMap(name -> findConstructorForClass(name));
-  }
-
-  private Stream<String> addConstructorFQN(String moduleName) {
-    if (!invocation.isQualified() && moduleName.endsWith("." + invocation.baseName())) {
-      return Stream.of(
-          moduleName,
-          moduleName + "." + invocation.packageAndClass().toString());
-    }
-    return Stream.of(moduleName + "." + invocation.packageAndClass().toString());
+  private Stream<? extends Member> findMemberFor(FunctionInvocation invoke) {
+    System.err.println("   resolved: " + invoke);
+    Class<?> cls = loader.load(invoke.moduleName());
+    return Stream.concat(
+        Extractors.getMembers(loader.load(invoke.moduleName())),
+        Extractors.getConstructors(loader.load(invoke.packageAndClass().toString())))
+      .map(m -> {
+        System.err.println("  -> " + m);
+        return m;
+      })
+      .filter(invoke::match);
   }
 
   private Optional<MethodHandle> toMethodHandle(Constructor<?> constructor) {

@@ -15,4 +15,8 @@ public abstract class SomeBaseClass implements SomeConstants {
   }
 
   public abstract void b();
+
+  public static String bar() {
+    return "bar";
+  }
 }

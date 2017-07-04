@@ -10,6 +10,8 @@
 package org.eclipse.golo.compiler;
 
 import java.lang.reflect.Member;
+import java.util.Arrays;
+import java.util.LinkedList;
 
 import static java.util.Objects.requireNonNull;
 
@@ -95,7 +97,7 @@ public final class PackageAndClass {
 
 
   /**
-   * Create an inner class.
+   * Creates an inner class.
    * <p>
    * For instance:
    * <pre class="listing"><code class="lang-java" data-lang="java">
@@ -112,7 +114,7 @@ public final class PackageAndClass {
   }
 
   /**
-   * Create a sibling class.
+   * Creates a sibling class.
    * <p>
    * For instance:
    * <pre class="listing"><code class="lang-java" data-lang="java">
@@ -127,7 +129,7 @@ public final class PackageAndClass {
   }
 
   /**
-   * Create a sub-package.
+   * Creates a sub-package.
    * <p>
    * For instance:
    * <pre class="listing"><code class="lang-java" data-lang="java">
@@ -143,7 +145,7 @@ public final class PackageAndClass {
   }
 
   /**
-   * Create a class in another package.
+   * Creates a class in another package.
    * <p>
    * For instance:
    * <pre class="listing"><code class="lang-java" data-lang="java">
@@ -159,7 +161,7 @@ public final class PackageAndClass {
   }
 
   /**
-   * Create a class in the same package as another one.
+   * Creates a class in the same package as another one.
    * <p>
    * For instance:
    * <pre class="listing"><code class="lang-java" data-lang="java">
@@ -176,6 +178,36 @@ public final class PackageAndClass {
   }
 
   /**
+   * Creates a new class relative to the given package.
+   *
+   * <p>Similar to {@link #inPackage(String)} but merge the packages instead of replacing it.
+   *
+   * <p>For instance:
+   * <pre class="listing"><code class="lang-java" data-lang="java">
+   * PackageAndClass pc = PackageAndClass.fromString("foo.bar.Baz");
+   * PackageAndClass newOne = pc.resolve("some.package"); // some.package.foo.bar.Baz
+   * </code></pre>
+   *
+   * @return a new {@code PackageAndClass} representing the same class with package resolved.
+   * @param parent the qualified name of the new package.
+   */
+  public PackageAndClass resolve(String parent) {
+    if (parent == null || parent.isEmpty() || parent.equals(packageName) || parent.equals(toString())) {
+      return this;
+    }
+    if (parent.endsWith(PACKAGE_CLASS_SEPARATOR + toString())) {
+      return fromString(parent);
+    }
+    if (packageName.isEmpty()) {
+      return new PackageAndClass(parent, className);
+    }
+    if (parent.endsWith(PACKAGE_CLASS_SEPARATOR + packageName)) {
+      return new PackageAndClass(parent, className);
+    }
+    return new PackageAndClass(parent + PACKAGE_CLASS_SEPARATOR + packageName, className);
+  }
+
+  /**
    * @return the package name.
    */
   public String packageName() {
@@ -183,7 +215,7 @@ public final class PackageAndClass {
   }
 
   /**
-   * Check if this {@code PackageAndClass} has a package component.
+   * Checks if this {@code PackageAndClass} has a package component.
    */
   public boolean hasPackage() {
     return !packageName.isEmpty();
