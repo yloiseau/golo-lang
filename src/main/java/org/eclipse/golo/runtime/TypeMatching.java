@@ -42,12 +42,12 @@ public final class TypeMatching {
     if (types.length == 0 || arguments.length == 0) {
       return true;
     }
-    for (int i = 0; i < types.length - 1; i++) {
+    final int last = types.length - 1;
+    for (int i = 0; i < last; i++) {
       if (!valueAndTypeMatch(types[i], arguments[i])) {
         return false;
       }
     }
-    final int last = types.length - 1;
     if (varArgs && arguments.length == last) {
       return true;
     }
@@ -67,8 +67,7 @@ public final class TypeMatching {
     return primitiveCompatible(type, value)
       || (type.isInstance(value)
           || value == null
-          || samAssignment(type, value)
-          || functionalInterfaceAssignment(type, value));
+          || lambdaAssignment(type, value));
   }
 
   public static boolean functionalInterfaceAssignment(Class<?> type, Object value) {
@@ -79,12 +78,42 @@ public final class TypeMatching {
     return isClosure(value) && isSAM(type);
   }
 
+  public static boolean lambdaAssignment(Class<?> type, Object value) {
+    return isClosure(value) && isLambdaCandidate(type);
+  }
+
   public static boolean isSAM(Class<?> type) {
     return type.isInterface() && (type.getMethods().length == 1);
   }
 
   public static boolean isFunctionalInterface(Class<?> type) {
     return type.isAnnotationPresent(FunctionalInterface.class);
+  }
+
+  private static boolean isFromObject(Method meth) {
+    switch (meth.getName()) {
+      case "toString":
+        return (meth.getReturnType() == String.class
+            && meth.getParameterCount() == 0);
+      case "hashCode":
+        return (meth.getReturnType() == int.class
+            && meth.getParameterCount() == 0);
+      case "equals":
+        return (meth.getReturnType() == boolean.class
+            && meth.getParameterCount() == 1
+            && meth.getParameterTypes()[0] == Object.class);
+      default:
+        return false;
+    }
+  }
+
+  private static boolean isSamMethod(Method meth) {
+    int mod = meth.getModifiers();
+    return Modifier.isAbstract(mod) && Modifier.isPublic(mod) && !Modifier.isStatic(mod) && !isFromObject(meth);
+  }
+
+  public static boolean isLambdaCandidate(Class<?> type) {
+    return isFunctionalInterface(type) || isSAM(type) || Extractors.getMethods(type).filter(TypeMatching::isSamMethod).count() == 1;
   }
 
   private static boolean primitiveCompatible(Class<?> type, Object value) {

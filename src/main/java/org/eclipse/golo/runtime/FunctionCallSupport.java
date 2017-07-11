@@ -227,7 +227,7 @@ public final class FunctionCallSupport {
       for (int i = 0; i < types.length; i++) {
         if (TypeMatching.isSAM(types[i])) {
           handle = MethodHandles.filterArguments(handle, startIndex + i, SAM_FILTER.bindTo(types[i]));
-        } else if (TypeMatching.isFunctionalInterface(types[i])) {
+        } else if (TypeMatching.isLambdaCandidate(types[i])) {
           handle = MethodHandles.filterArguments(
               handle,
               startIndex + i,
