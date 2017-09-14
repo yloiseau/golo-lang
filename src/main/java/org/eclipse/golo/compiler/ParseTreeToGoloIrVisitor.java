@@ -437,6 +437,12 @@ public class ParseTreeToGoloIrVisitor implements GoloParserVisitor {
   }
 
   @Override
+  public Object visit(ASTQualifiedReference node, Object data) {
+    ((Context) data).push(refLookup(node.getName()).ofAST(node));
+    return data;
+  }
+
+  @Override
   public Object visit(ASTLetOrVar node, Object data) {
     Context context = (Context) data;
     node.childrenAccept(this, data);

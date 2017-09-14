@@ -1015,9 +1015,9 @@ ASTDecoratorDeclaration DecoratorDeclaration():
   <DECORATOR>
   (constant=<CONSTANT_INVOCATION>)?
   (
-    LOOKAHEAD(2) InvocationExpression()
+    LOOKAHEAD(InvocationExpression()) InvocationExpression()
     |
-    LOOKAHEAD(2) Reference()
+    QualifiedReference()
   )
   BlankLines()
   {
@@ -1485,6 +1485,17 @@ void Reference():{}
   <IDENTIFIER>
   {
     jjtThis.setName(jjtThis.jjtGetFirstToken().image);
+  }
+}
+
+void QualifiedReference():
+{
+  String name;
+}
+{
+  name=QualifiedName()
+  {
+    jjtThis.setName(name);
   }
 }
 
