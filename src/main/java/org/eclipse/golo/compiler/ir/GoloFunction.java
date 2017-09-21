@@ -10,11 +10,8 @@
 
 package org.eclipse.golo.compiler.ir;
 
-import java.util.LinkedList;
-import java.util.List;
-import java.util.HashSet;
-import java.util.Set;
-import java.util.Collection;
+import java.util.*;
+import java.lang.invoke.MethodType;
 
 import static java.util.Collections.unmodifiableList;
 import static java.util.Arrays.asList;
@@ -24,11 +21,13 @@ import static java.util.Objects.requireNonNull;
 
 public final class GoloFunction extends ExpressionStatement<GoloFunction> {
 
+  private static final String OBJECT = "Ljava/lang/Object;";
   private static final SymbolGenerator SYMBOLS = new SymbolGenerator("function");
 
   private String name;
   private boolean isLocal = false;
   private Scope scope = Scope.MODULE;
+  private String returnType = OBJECT;
 
   private final List<String> parameterNames = new LinkedList<>();
   private final List<String> syntheticParameterNames = new LinkedList<>();
@@ -249,6 +248,36 @@ public final class GoloFunction extends ExpressionStatement<GoloFunction> {
     }
   }
 
+  public String getMethodDescriptor() {
+    if (isMain()) {
+      return "([Ljava/lang/String;)V";
+    }
+    if (isModuleInit()) {
+      return "()V";
+    }
+    if (isInAugment()) {
+      StringBuilder sig = new StringBuilder("(");
+      sig.append(getParentNode()
+        .filter(Augmentation.class::isInstance)
+        .map(o -> ((Augmentation) o).getTarget().toJVMRef())
+        .orElse(OBJECT));
+      for (int i = 1; i < getArity() - 1; i++) {
+        sig.append(OBJECT);
+      }
+      if (getArity() > 1) {
+        if (isVarargs()) {
+          sig.append('[');
+        }
+        sig.append(OBJECT);
+      }
+      sig.append(")").append(returnType);
+      return sig.toString();
+    }
+    if (isVarargs()) {
+      return MethodType.genericMethodType(getArity() - 1, true).toMethodDescriptorString();
+    }
+    return MethodType.genericMethodType(getArity()).toMethodDescriptorString();
+  }
   // decorators -----------------------------------------------------------------------------------
   public GoloFunction decoratedWith(Object... decorators) {
     for (Object deco : decorators) {

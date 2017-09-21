@@ -51,7 +51,11 @@ public class GoloClassLoader extends ClassLoader {
    * @throws GoloCompilationException if either of the compilation phase failed.
    */
   public synchronized Class<?> load(String goloSourceFilename, InputStream sourceCodeInputStream) throws GoloCompilationException {
-    List<CodeGenerationResult> results = compiler.compile(goloSourceFilename, sourceCodeInputStream);
+    return load(compiler.compile(goloSourceFilename, sourceCodeInputStream));
+  }
+
+
+  public synchronized Class<?> load(List<CodeGenerationResult> results) throws GoloCompilationException {
     Class<?> lastClassIsModule = null;
     for (CodeGenerationResult result : results) {
       byte[] bytecode = result.getBytecode();

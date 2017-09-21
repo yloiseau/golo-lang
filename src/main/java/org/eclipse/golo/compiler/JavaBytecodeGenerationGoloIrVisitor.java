@@ -318,17 +318,9 @@ class JavaBytecodeGenerationGoloIrVisitor implements GoloIrVisitor {
 
   @Override
   public void visitFunction(GoloFunction function) {
-    int accessFlags = function.isLocal() ? ACC_PRIVATE : ACC_PUBLIC;
-    String signature;
-    if (function.isMain()) {
-      signature = "([Ljava/lang/String;)V";
-    } else if (function.isVarargs()) {
-      accessFlags = accessFlags | ACC_VARARGS;
-      signature = goloVarargsFunctionSignature(function.getArity());
-    } else if (function.isModuleInit()) {
-      signature = "()V";
-    } else {
-      signature = goloFunctionSignature(function.getArity());
+    int accessFlags = ACC_STATIC | (function.isLocal() ? ACC_PRIVATE : ACC_PUBLIC);
+    if (function.isVarargs()) {
+      accessFlags |= ACC_VARARGS;
     }
     if (function.isSynthetic() || function.isDecorator()) {
       accessFlags = accessFlags | ACC_SYNTHETIC;
@@ -336,7 +328,7 @@ class JavaBytecodeGenerationGoloIrVisitor implements GoloIrVisitor {
     currentMethodVisitor = classWriter.visitMethod(
         accessFlags | ACC_STATIC,
         function.getName(),
-        signature,
+        function.getMethodDescriptor(),
         null, null);
     if (function.isDecorated()) {
       AnnotationVisitor annotation = currentMethodVisitor.visitAnnotation("Lgololang/annotations/DecoratedBy;", true);
@@ -478,6 +470,7 @@ class JavaBytecodeGenerationGoloIrVisitor implements GoloIrVisitor {
     if (returnStatement.isReturningVoid()) {
       currentMethodVisitor.visitInsn(RETURN);
     } else {
+      currentMethodVisitor.visitTypeInsn(CHECKCAST, JOBJECT);
       currentMethodVisitor.visitInsn(ARETURN);
     }
 
