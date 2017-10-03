@@ -44,14 +44,20 @@ the resulting list is lazy.
 module gololang.LazyLists
 
 import java.util
+import java.util.`function
 
 # ............................................................................................... #
 # Utils, constructors and conversions
 
 ----
 Returns the empty list.
+
+Deprecated, use `empty()`.
 ----
 function emptyList = -> gololang.LazyList.EMPTY()
+
+function empty = -> gololang.LazyList.EMPTY()
+
 
 ----
 Create a new lazy list from a head and tail values. Automatically wraps the
@@ -62,7 +68,6 @@ For example:
     let myList = cons(1, cons(2, cons(3, emptyList())))
 
 gives a lazy list equivalent to `list[1, 2, 3]`
-
 ----
 function cons = |head, tail| -> match {
   when isClosure(tail) then gololang.LazyList.cons(head, tail)
@@ -90,22 +95,25 @@ is the equivalent to
 function lazyList = |values...| -> iteratorToLazyList(values: asList(): iterator())
 
 ----
-Wraps any object implementing `Iterable` or `Iterator` in a lazy list.
+Wraps any object having an `iterator` method (e.g. a `java.lang.Iterable`) in a lazy list.
 The `next()` method of the underlying iterator is only called when the tail is
 used.
 
 NOTE:
 If called with an `Iterator` instance, the iterator is shared, so navigating
 through the list can have side effects if another object is using the same
-iterator.
+iterator. For instance:
+```golo
+  let it = list[1, 2, 3, 4, 5, 6]: iterator()
+  let l1 = fromIter(it)
+  let l2 = fromIter(it)
+  println(l1: head()) # prints 1
+  println(l2: head()) # prints 2
+  println(l1: tail(): head()) # prints 3
+  println(l2: tail(): head()) # prints 4
+```
 ----
-function fromIter = |it| -> match {
-  when it oftype Iterable.class then
-    iteratorToLazyList(it: iterator())
-  when it oftype Iterator.class then
-    iteratorToLazyList(it)
-  otherwise raise("Invalid argument for fromIter")
-}
+function fromIter = |it| -> iteratorToLazyList(it: iterator())
 
 augment java.lang.Iterable {
   ----
@@ -181,29 +189,6 @@ augment gololang.LazyList {
     when this: isEmpty() then null
     when pred(this: head()) then this: head()
     otherwise this: tail(): find(pred)
-  }
-
-  ----
-  Joins the elements into a string:
-
-      println(list[1, 2, 3]: join(", "))
-
-  * `this`: a list.
-  * `separator`: the element separator string.
-
-  The returned string is `""` when the list is empty.
-  ----
-  function join = |this, separator| {
-    if this: isEmpty() {
-      return ""
-    }
-    var it = this: iterator()
-    var buffer = java.lang.StringBuilder(it: next(): toString())
-    while it: hasNext() {
-        buffer: append(separator)
-        buffer: append(it: next())
-    }
-    return buffer: toString()
   }
 
   ----
@@ -287,6 +272,13 @@ augment gololang.LazyList {
   ----
   function subList = |this, from, to| -> this:drop(from):take(to - from)
 
+  ----
+  Prepend an element to this list, returning a new list.
+
+  * `elt`: the element to prepend
+  ----
+  function prepend = |this, elt| -> gololang.LazyList.cons(elt, -> this)
+
 }
 
 ----
@@ -326,7 +318,7 @@ local function False = |args...| -> false
 ----
 Produces a infinite list of values. If the argument is a closure, it must have
 no parameters, and it's used to produce the values (called for each `tail`
-access).
+access). Same if the value is a `java.util.function.Supplier`.
 
 For instance, `repeat(5)` will return an infinite lazy list of `5`s, and
 `repeat(^f)` will return a infinite lazy list of calls to `f`
@@ -334,10 +326,11 @@ For instance, `repeat(5)` will return an infinite lazy list of `5`s, and
 
 * `value`: a value or a closure
 ----
-function repeat = |value| -> match {
-  when isClosure(value) then generator(|seed| -> [value(), null], ^False, null)
-  otherwise generator(|seed| -> [value, null], ^False, null)
-}
+function repeat = |value| -> generator(match {
+  when isClosure(value) then |seed| -> [value(), null]
+  when value oftype Supplier.class then |seed| -> [value: get(), null]
+  otherwise |seed| -> [value, null]
+}, ^False, null)
 
 ----
 Returns an infinite lazy list produced by iterative application of a function

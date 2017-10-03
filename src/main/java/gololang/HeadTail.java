@@ -67,6 +67,16 @@ public interface HeadTail<E> extends Iterable<E> {
    */
   boolean isEmpty();
 
+
+  /**
+   * Destructuration helper.
+   *
+   * @return a tuple of head and tail
+   */
+  default Tuple destruct() {
+    return new Tuple(head(), tail());
+  }
+
   /**
    * Util method to wrap a {@code HeadTail} instance into an {@code Iterable}
    *
@@ -76,5 +86,4 @@ public interface HeadTail<E> extends Iterable<E> {
   static <E> Iterable<E> toIterable(HeadTail<E> headTail) {
     return () -> new HeadTailIterator<>(headTail);
   }
-
 }

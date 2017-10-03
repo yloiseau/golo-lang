@@ -10,6 +10,7 @@
 package gololang;
 
 import java.util.Iterator;
+import java.util.NoSuchElementException;
 
 /**
  * Wraps a {@code Headtail} into an iterator
@@ -21,18 +22,30 @@ public class HeadTailIterator<T> implements Iterator<T> {
     this.data = headTail;
   }
 
+  /**
+   * @inheritDoc
+   */
   @Override
   public boolean hasNext() {
     return !data.isEmpty();
   }
 
+  /**
+   * @inheritDoc
+   */
   @Override
   public T next() {
+    if (data.isEmpty()) {
+      throw new NoSuchElementException();
+    }
     T h = data.head();
     data = data.tail();
     return h;
   }
 
+  /**
+   * @inheritDoc
+   */
   @Override
   public void remove() {
     throw new UnsupportedOperationException("HeadTail object are immutable");

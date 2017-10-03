@@ -27,6 +27,8 @@ import java.util.Objects;
  * Since the tail closure will be called at most once, and we can't
  * guarantee when, or even if, it will be called, this closure must be
  * a pure, side-effect free, function.
+ *
+ * @see Generator
  */
 public class LazyList implements Collection<Object>, HeadTail<Object> {
 
@@ -232,16 +234,6 @@ public class LazyList implements Collection<Object>, HeadTail<Object> {
     return this.asList().toArray(a);
   }
 
-
-  /**
-   * Destructuration helper.
-   *
-   * @return a tuple of head and tail
-   */
-  public Tuple destruct() {
-    return new Tuple(head(), tail());
-  }
-
   /**
    * Returns the element at the specified position in this list.
    * <p>
@@ -251,8 +243,12 @@ public class LazyList implements Collection<Object>, HeadTail<Object> {
    * @return the element at the specified position in this list
    */
   public Object get(int index) {
-    if (index < 0 || this.isEmpty()) { throw new IndexOutOfBoundsException(); }
-    if (index == 0) { return this.head(); }
+    if (index < 0 || this.isEmpty()) {
+      throw new IndexOutOfBoundsException();
+    }
+    if (index == 0) {
+      return this.head();
+    }
     return this.tail().get(index - 1);
   }
 
@@ -261,8 +257,7 @@ public class LazyList implements Collection<Object>, HeadTail<Object> {
    * list.
    * <p>
    * Note that it evaluates the list up to the given element. Take care to
-   * <b>not use</b> this method on infinite lists, since
-   * no check is done.
+   * <b>not use</b> this method on infinite lists, since no check is done.
    *
    * @param o element to search for
    * @return the index of the first occurrence, or -1 if not present
@@ -270,7 +265,9 @@ public class LazyList implements Collection<Object>, HeadTail<Object> {
   public int indexOf(Object o) {
     int idx = 0;
     for (Object elt : this) {
-      if (elt.equals(o)) { return idx; }
+      if (elt.equals(o)) {
+        return idx;
+      }
       idx++;
     }
     return -1;
@@ -319,51 +316,55 @@ public class LazyList implements Collection<Object>, HeadTail<Object> {
     return String.format("LazyList<head=%s, tail=%s>", head, tail);
   }
 
+  private UnsupportedOperationException immutable() {
+    return new UnsupportedOperationException("a LazyList is immutable");
+  }
+
 
   @Override
   public boolean add(Object e) {
-    throw new UnsupportedOperationException("a LazyList is immutable");
+    throw immutable();
   }
 
   public void add(int index, Object element) {
-    throw new UnsupportedOperationException("a LazyList is immutable");
+    throw immutable();
   }
 
   @Override
   public boolean addAll(Collection<?> c) {
-    throw new UnsupportedOperationException("a LazyList is immutable");
+    throw immutable();
   }
 
   public boolean addAll(int index, Collection<?> c) {
-    throw new UnsupportedOperationException("a LazyList is immutable");
+    throw immutable();
   }
 
   @Override
   public boolean remove(Object e) {
-    throw new UnsupportedOperationException("a LazyList is immutable");
+    throw immutable();
   }
 
   public Object remove(int index) {
-    throw new UnsupportedOperationException("a LazyList is immutable");
+    throw immutable();
   }
 
   @Override
   public boolean removeAll(Collection<?> c) {
-    throw new UnsupportedOperationException("a LazyList is immutable");
+    throw immutable();
   }
 
   @Override
   public boolean retainAll(Collection<?> c) {
-    throw new UnsupportedOperationException("a LazyList is immutable");
+    throw immutable();
   }
 
   @Override
   public void clear() {
-    throw new UnsupportedOperationException("a LazyList is immutable");
+    throw immutable();
   }
 
   public Object set(int index, Object element) {
-    throw new UnsupportedOperationException("a LazyList is immutable");
+    throw immutable();
   }
 
 }

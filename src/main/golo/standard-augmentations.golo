@@ -43,25 +43,6 @@ local function _closureWithIndexArgument = |target| -> match {
     target
 }
 
-local function _join = |this, separator| {
-  let size = this: size()
-  case {
-    when size == 0 {
-      return ""
-    }
-    when size == 1 {
-      return this: get(0): toString()
-    }
-    otherwise {
-      let buffer = java.lang.StringBuilder(this: get(0): toString())
-      for (var i = 1, i < size, i = i + 1) {
-        buffer: append(separator): append(this: get(i): toString())
-      }
-      return buffer: toString()
-    }
-  }
-}
-
 # ............................................................................................... #
 
 ----
@@ -173,6 +154,7 @@ augment java.lang.String {
 Augmentations over `CharSequence` to view it as a "real" `char` collection.
 ----
 augment java.lang.CharSequence {
+  # TODO: all iterable/head-tail augmentations on CharSequence
 
   ----
   Returns the first `char` of the sequence, of `null` if empty.
@@ -200,78 +182,12 @@ augment java.lang.CharSequence {
 # ............................................................................................... #
 
 ----
-Augmentations over iterable collections.
+Augmentations over iterable.
 ----
-augment java.lang.Iterable {
+augment java.lang.Iterable with gololang.IterationAugmentations.InternalIterable
 
-  ----
-  General purpose reducing operation:
+augment java.util.Iterator with gololang.IterationAugmentations.InternalIterator
 
-      let data = [1, 2, 3, 4, 5]
-      println("sum = " + data: reduce(0, |acc, next| -> acc + next))
-
-  * `this`: an iterable.
-  * `initialValue`: the initial accumulator value for the reducing operation.
-  * `func`: the function to apply over an accumulator and the next value.
-  ----
-  function reduce = |this, initialValue, func| {
-    var acc = initialValue
-    foreach (element in this) {
-      acc = func(acc, element)
-    }
-    return acc
-  }
-
-  ----
-  Applies a function over each element:
-
-      [1, 2, 3]: each(|e| -> println(e))
-
-  * `this`: an iterable.
-  * `func`: the function to apply, taking the current element as a parameter.
-  ----
-  function each = |this, func| {
-    foreach (element in this) {
-      func(element)
-    }
-    return this
-  }
-
-  ----
-  Counts the number of elements that satisfy a predicate:
-
-      println([1, 2, 3, 4]: count(|n| -> (n % 2) == 0))
-
-  * `this`: an iterable.
-  * `pred`: a predicate function, taking an element and returning a boolean.
-  ----
-  function count = |this, pred| {
-    var result = 0
-    foreach element in this {
-      if pred(element) {
-        result = result + 1
-      }
-    }
-    return result
-  }
-
-  ----
-  Checks whether any element satisfied a predicate:
-
-      println([1, 2, 3, 4]: exists(|n| -> n > 3))
-
-  * `this`: an iterable.
-  * `pred` a predicate function, taking an element and returning a boolean.
-  ----
-  function exists = |this, pred| {
-    foreach element in this {
-      if pred(element) {
-        return true
-      }
-    }
-    return false
-  }
-}
 
 # ............................................................................................... #
 
@@ -291,7 +207,59 @@ augment java.util.Collection {
   * return a tuple of the values
   ----
   function destruct = |this| -> Tuple.fromArray(this: toArray())
+
+  ----
+  Filters elements based on a predicate:
+
+      println(list[1, 2, 3, 4]: filter(|n| -> (n % 2) == 0))
+
+  * `this`: a collection.
+  * `pred`: a predicate function taking an element and returning a boolean.
+
+  `filter` returns a new collection of the same type as the original one, hence
+  the original collection is kept intact.
+  ----
+  function filter = |this, pred| -> collectCollection(
+    this: iterator(): filter(pred),
+    this)
+
+  ----
+  Maps elements of a collection using a function:
+
+      println(list[1, 2, 3]: map(|n| -> n * 10))
+
+  * `this`: a collection.
+  * `func`: a transformation function.
+
+  `map` returns a new collection with the same type, keeping the original one intact.
+  ----
+  function map = |this, func| -> collectCollection(
+    this: iterator() : map(func),
+    this)
+
+  function drop = |this, nb| -> collectCollection(
+    this: iterator(): drop(nb),
+    this)
+
+  function dropWhile = |this, pred| -> collectCollection(
+    this: iterator(): dropWhile(pred),
+    this)
+
+  function take = |this, nb| -> collectCollection(
+    this: iterator(): take(nb),
+    this)
+
+  function takeWhile = |this, pred| -> collectCollection(
+    this: iterator(): takeWhile(pred),
+    this)
 }
+
+local function collectCollection = |iter, collect| -> iter: reduce(
+  collect: newWithSameType(),
+  |c, v| {
+    c: add(v)
+    return c
+  })
 
 # ............................................................................................... #
 
@@ -373,76 +341,6 @@ augment java.util.List {
   Convenience wrapper over `java.util.Collections.unmodifiableList`.
   ----
   function unmodifiableView = |this| -> java.util.Collections.unmodifiableList(this)
-
-  ----
-  Finds the first element of a list matching a predicate:
-
-      println(list[1, 2, 3, 4]: find(|n| -> n > 3))
-
-  * `this`: a list.
-  * `pred`: a predicate function taking an element and returning a boolean.
-
-  `find` returns `null` when no element satisfies `pred`.
-  ----
-  function find = |this, pred| {
-    foreach (element in this) {
-      if pred(element) {
-        return element
-      }
-    }
-    return null
-  }
-
-  ----
-  Filters elements based on a predicate:
-
-      println(list[1, 2, 3, 4]: filter(|n| -> (n % 2) == 0))
-
-  * `this`: a list.
-  * `pred`: a predicate function taking an element and returning a boolean.
-
-  `filter` returns a new collection of the same type as the original one, hence the original list is
-  kept intact.
-  ----
-  function filter = |this, pred| {
-    let filtered = this: newWithSameType()
-    foreach (element in this) {
-      if pred(element) {
-        filtered: append(element)
-      }
-    }
-    return filtered
-  }
-
-  ----
-  Maps elements of a list using a function:
-
-      println(list[1, 2, 3]: map(|n| -> n * 10))
-
-  * `this`: a list.
-  * `func`: a transformation function.
-
-  `map` returns a new list with the same type, keeping the original list intact.
-  ----
-  function map = |this, func| {
-    let mapped = this: newWithSameType()
-    foreach (element in this) {
-      mapped: append(func(element))
-    }
-    return mapped
-  }
-
-  ----
-  Join the elements into a string:
-
-      println(list[1, 2, 3]: join(", "))
-
-  * `this`: a list.
-  * `separator`: the element separator string.
-
-  The returned string is `""` when the list is empty.
-  ----
-  function join = |this, separator| -> _join(this, separator)
 
   ----
   Reverse the elements of the list and returns the list.
@@ -578,42 +476,6 @@ augment java.util.Set {
   ----
   function unmodifiableView = |this| -> java.util.Collections.unmodifiableSet(this)
 
-  ----
-  Finds the first element that satisfies a predicate `pred`, and returns it, or `null` if no element
-  matches.
-  ----
-  function find = |this, pred| {
-    foreach (element in this) {
-      if pred(element) {
-        return element
-      }
-    }
-    return null
-  }
-
-  ----
-  Filters the elements using a predicate, and returns a new collection.
-  ----
-  function filter = |this, pred| {
-    let filtered = this: newWithSameType()
-    foreach (element in this) {
-      if pred(element) {
-        filtered: include(element)
-      }
-    }
-    return filtered
-  }
-
-  ----
-  Transform each value using the `func` function, and returns a new set.
-  ----
-  function map = |this, func| {
-    let mapped = this: newWithSameType()
-    foreach (element in this) {
-      mapped: include(func(element))
-    }
-    return mapped
-  }
 }
 
 # ............................................................................................... #
@@ -730,33 +592,16 @@ augment java.util.Map {
 
   `pred` takes 2 arguments: a key and a value, and returns a boolean.
   ----
-  function find = |this, pred| {
-    foreach (entry in this: entrySet()) {
-      let key = entry: getKey()
-      let value = entry: getValue()
-      if pred(key, value) {
-        return entry
-      }
-    }
-    return null
-  }
+  function find = |this, pred| -> this: entrySet(): find(onEntry(pred))
 
   ----
   Filters elements using a predicate, and returns a new map.
 
   `pred` takes 2 arguments: a key and a value, and returns a boolean.
   ----
-  function filter = |this, pred| {
-    let filtered = this: newWithSameType()
-    foreach (entry in this: entrySet()) {
-      let key = entry: getKey()
-      let value = entry: getValue()
-      if pred(key, value) {
-        filtered: put(key, value)
-      }
-    }
-    return filtered
-  }
+  function filter = |this, pred| -> collectCollection(
+    this: entrySet(): iterator(): filter(onEntry(pred)),
+    this)
 
   ----
   Maps entries of the map using a function.
@@ -765,16 +610,9 @@ augment java.util.Map {
   `getValue()` to represent a map entry. We suggest using the predefined `mapEntry(key, value)`
   function as it returns such object.
   ----
-  function map = |this, func| {
-    let mapped = this: newWithSameType()
-    foreach (entry in this: entrySet()) {
-      let key = entry: getKey()
-      let value = entry: getValue()
-      let result = func(key, value)
-      mapped: put(result: getKey(), result: getValue())
-    }
-    return mapped
-  }
+  function map = |this, func| -> collectCollection(
+    this: entrySet(): iterator(): map(onEntry(func)),
+    this)
 
   ----
   Reduces the entries of a map.
@@ -785,41 +623,29 @@ augment java.util.Map {
   * a key for the next entry,
   * a value for the next entry.
   ----
-  function reduce = |this, initialValue, func| {
-    var acc = initialValue
-    foreach (entry in this: entrySet()) {
-      let key = entry: getKey()
-      let value = entry: getValue()
-      acc = func(acc, key, value)
-    }
-    return acc
-  }
+  function reduce = |this, initialValue, func| -> this: entrySet()
+    : reduce(initialValue,
+            |acc, entry| -> func(acc, entry: getKey(), entry: getValue()))
 
   ----
   Iterates over each entry of a map.
 
   `func` takes 2 arguments: the entry key and its value.
   ----
-  function each = |this, func| {
-    foreach (entry in this: entrySet()) {
-      func(entry: getKey(), entry: getValue())
-    }
-    return this
-  }
+  function each = |this, func| -> this: entrySet(): each(onEntry(func))
 
   ----
   Counts the number of elements satisfying a predicate.
   ----
-  function count = |this, pred| ->
-    this: filter(pred): size()
+  function count = |this, pred| -> this: entrySet(): count(onEntry(pred))
 
   ----
   Returns `true` if there is any value satisfying `pred`, `false` otherwise.
   ----
-  function exists = |this, pred| ->
-    this: filter(pred): size() > 0
+  function exists = |this, pred| -> this: entrySet(): exists(onEntry(pred))
 }
 
+local function onEntry = |f| -> |e| -> f(e: getKey(), e: getValue())
 
 augment java.util.Map$Entry {
   ----
@@ -838,18 +664,6 @@ augment java.util.Map$Entry {
 Augmentations for Golo tuples.
 ----
 augment gololang.Tuple {
-
-  ----
-  Returns the first element that satisfies a predicate, or `null` if none matches.
-  ----
-  function find = |this, pred| {
-    foreach (element in this) {
-      if pred(element) {
-        return element
-      }
-    }
-    return null
-  }
 
   ----
   Filters elements using a predicate, returning a new tuple.
@@ -874,11 +688,6 @@ augment gololang.Tuple {
     }
     return gololang.Tuple.fromArray(values: toArray())
   }
-
-  ----
-  Joins the elements of a tuple into a string and using a separator.
-  ----
-  function join = |this, separator| -> _join(this, separator)
 }
 
 # ............................................................................................... #
@@ -908,4 +717,28 @@ augment gololang.FunctionReference {
   ----
   function accept = |this, args...| -> this: invoke(args)
 }
+
+
+----
+Augment java stream to provide an interface more compatible with
+collections/iterators.
+----
+augment java.util.stream.Stream {
+
+  ----
+  TODO: doc
+  ----
+  function all = |this, pred| -> this
+    : allMatch(asInterfaceInstance(java.util.function.Predicate.class, pred))
+
+  ----
+  TODO: doc
+  ----
+  function exists = |this, pred| -> this
+    : anyMatch(asInterfaceInstance(java.util.function.Predicate.class, pred))
+}
+
+
+
+
 
