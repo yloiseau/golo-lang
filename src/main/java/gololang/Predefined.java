@@ -341,11 +341,10 @@ public final class Predefined {
    * @param target         the implementation function reference.
    * @return an instance of {@code interfaceClass}.
    * @see java.lang.invoke.MethodHandleProxies#asInterfaceInstance(Class, java.lang.invoke.MethodHandle)
+   * @see #asFunctionalInterface(Class, FunctionReference)
    */
-  public static Object asInterfaceInstance(Object interfaceClass, Object target) {
-    require(interfaceClass instanceof Class, "interfaceClass must be a Class");
-    require(target instanceof FunctionReference, "target must be a FunctionReference");
-    return MethodHandleProxies.asInterfaceInstance((Class<?>) interfaceClass, ((FunctionReference) target).handle());
+  public static <T> T asInterfaceInstance(Class<T> interfaceClass, FunctionReference target) {
+    return MethodHandleProxies.asInterfaceInstance(interfaceClass, target.handle());
   }
 
   /**
@@ -358,15 +357,14 @@ public final class Predefined {
    * @return an instance of {@code type}.
    * @throws Throwable if the adaptation fails.
    * @see gololang.GoloAdapter
+   * @see gololang.AdapterFabric
+   * @see #asInterfaceInstance(Class, FunctionReference)
    */
-  public static Object asFunctionalInterface(Object type, Object func) throws Throwable {
-    require(type instanceof Class, "type must be a Class");
-    require(func instanceof FunctionReference, "func must be a FunctionReference");
-    Class<?> theType = (Class<?>) type;
-    for (Method method : theType.getMethods()) {
+  public static <T> T asFunctionalInterface(Class<T> type, FunctionReference func) throws Throwable {
+    for (Method method : type.getMethods()) {
       if (!method.isDefault() && !isStatic(method.getModifiers())) {
         Map<String, Object> configuration = new HashMap<>();
-        configuration.put("interfaces", new Tuple(theType.getCanonicalName()));
+        configuration.put("interfaces", new Tuple(type.getCanonicalName()));
         Map<String, FunctionReference> implementations = new HashMap<>();
         implementations.put(
             method.getName(),
@@ -376,7 +374,7 @@ public final class Predefined {
                 .map(Parameter::getName)
                 .toArray(String[]::new)));
         configuration.put("implements", implementations);
-        return new AdapterFabric().maker(configuration).newInstance();
+        return type.cast(new AdapterFabric().maker(configuration).newInstance());
       }
     }
     throw new RuntimeException("Could not convert " + func + " to a functional interface of type " + type);

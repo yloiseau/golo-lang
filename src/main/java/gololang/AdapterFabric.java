@@ -56,12 +56,12 @@ public final class AdapterFabric {
   /**
    * An adapter maker can produce instances of Golo adapter objects.
    */
-  public static final class Maker {
+  public static final class Maker<T> {
 
     private final AdapterDefinition adapterDefinition;
-    private final Class<?> adapterClass;
+    private final Class<? extends T> adapterClass;
 
-    private Maker(AdapterDefinition adapterDefinition, Class<?> adapterClass) {
+    private Maker(AdapterDefinition adapterDefinition, Class<? extends T> adapterClass) {
       this.adapterDefinition = adapterDefinition;
       this.adapterClass = adapterClass;
     }
@@ -73,7 +73,7 @@ public final class AdapterFabric {
      * @return an adapter instance.
      * @throws ReflectiveOperationException thrown when no constructor can be found based on the argument types.
      */
-    public Object newInstance(Object... args) throws ReflectiveOperationException {
+    public T newInstance(Object... args) throws ReflectiveOperationException {
       Object[] cargs = new Object[args.length + 1];
       cargs[0] = adapterDefinition;
       System.arraycopy(args, 0, cargs, 1, args.length);
@@ -81,7 +81,7 @@ public final class AdapterFabric {
         Class<?>[] parameterTypes = constructor.getParameterTypes();
         if ((cargs.length == parameterTypes.length) || (constructor.isVarArgs() && (cargs.length >= parameterTypes.length))) {
           if (TypeMatching.canAssign(parameterTypes, cargs, constructor.isVarArgs())) {
-            return constructor.newInstance(cargs);
+            return adapterClass.cast(constructor.newInstance(cargs));
           }
         }
       }
@@ -127,7 +127,7 @@ public final class AdapterFabric {
    * @param configuration the adapter configuration.
    * @return an adapter maker for that configuration.
    */
-  public Maker maker(Map<String, Object> configuration) {
+  public Maker<?> maker(Map<String, Object> configuration) {
     String parent = "java.lang.Object";
     if (configuration.containsKey("extends")) {
       parent = (String) configuration.get("extends");
@@ -158,6 +158,6 @@ public final class AdapterFabric {
     }
     definition.validate();
     Class<?> adapterClass = adapterGenerator.generateIntoDefinitionClassloader(definition);
-    return new Maker(definition, adapterClass);
+    return new Maker<>(definition, adapterClass);
   }
 }
