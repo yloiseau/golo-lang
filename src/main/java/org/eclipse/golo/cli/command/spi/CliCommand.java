@@ -55,7 +55,11 @@ public interface CliCommand {
     } catch (NoSuchMethodException e) {
       throw new NoMainMethodException().initCause(e);
     }
-    main.invoke(arguments);
+    try {
+      main.invoke(arguments);
+    } catch (Throwable t) {
+      handleThrowable(t, true);
+    }
   }
 
   default boolean canRead(File source) {
@@ -151,11 +155,11 @@ public interface CliCommand {
   default void handleThrowable(Throwable e, boolean exit, boolean withStack, String indent) {
     Messages.error(e.getLocalizedMessage(), indent);
     if (e.getCause() != null) {
-      Messages.error(e.getCause().getLocalizedMessage(), "  " + indent);
+      handleThrowable(e.getCause(), false, false, "  " + indent);
     }
     if (withStack) {
       Messages.printStackTrace(e);
-    } else {
+    } else if (indent.isEmpty()) {
       Messages.error(Messages.message("use_debug"));
     }
     if (exit) {
