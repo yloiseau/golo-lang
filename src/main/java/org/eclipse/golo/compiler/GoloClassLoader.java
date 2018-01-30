@@ -13,6 +13,8 @@ package org.eclipse.golo.compiler;
 import java.io.InputStream;
 import java.util.List;
 
+import org.eclipse.golo.compiler.ir.GoloModule;
+
 /**
  * Provides a facility to dynamically load Golo source code and access the generated code from a dedicated class loader.
  * <p>
@@ -24,7 +26,7 @@ import java.util.List;
  */
 public class GoloClassLoader extends ClassLoader {
 
-  private final GoloCompiler compiler = new GoloCompiler();
+  private final GoloCompiler compiler = new GoloCompiler(this);
 
   /**
    * Creates a class loader from a parent.
@@ -43,6 +45,13 @@ public class GoloClassLoader extends ClassLoader {
   }
 
   /**
+   * Returns the golo compiler associated with this loader.
+   */
+  public GoloCompiler getCompiler() {
+    return this.compiler;
+  }
+
+  /**
    * Compiles and loads the resulting JVM bytecode for a Golo source file.
    *
    * @param goloSourceFilename    the source file name.
@@ -50,8 +59,24 @@ public class GoloClassLoader extends ClassLoader {
    * @return the class matching the Golo module defined in the source.
    * @throws GoloCompilationException if either of the compilation phase failed.
    */
-  public synchronized Class<?> load(String goloSourceFilename, InputStream sourceCodeInputStream) throws GoloCompilationException {
-    List<CodeGenerationResult> results = compiler.compile(goloSourceFilename, sourceCodeInputStream);
+  public Class<?> load(String goloSourceFilename, InputStream sourceCodeInputStream) throws GoloCompilationException {
+    return load(compiler.compile(goloSourceFilename, sourceCodeInputStream));
+  }
+
+  /**
+   * Compiles and loads the resulting JVM bytecode for a Golo module IR.
+   *
+   * @param goloSourceFilename    the source file name.
+   * @param module  the Golo module IR to load.
+   * @return the class matching the Golo module defined in the IR.
+   * @throws GoloCompilationException if either of the compilation phase failed.
+   */
+  public Class<?> load(String goloSourceFilename, GoloModule module) {
+    compiler.refine(module);
+    return load(compiler.generate(module, goloSourceFilename));
+  }
+
+  synchronized Class<?> load(List<CodeGenerationResult> results) {
     Class<?> lastClassIsModule = null;
     for (CodeGenerationResult result : results) {
       byte[] bytecode = result.getBytecode();

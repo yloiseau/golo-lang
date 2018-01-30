@@ -39,7 +39,15 @@ public class GoloCompiler {
 
   private GoloParser parser;
   private GoloCompilationException.Builder exceptionBuilder = null;
+  private final ClassLoader classloader;
 
+  public GoloCompiler() {
+    this(gololang.Runtime.classLoader());
+  }
+
+  public GoloCompiler(ClassLoader loader) {
+    this.classloader = loader;
+  }
 
   /**
    * Initializes an ExceptionBuilder to collect errors instead of throwing immediately.
@@ -103,8 +111,7 @@ public class GoloCompiler {
     resetExceptionBuilder();
     ASTCompilationUnit compilationUnit = parse(goloSourceFilename, initParser(goloSourceFilename, sourceCodeInputStream));
     GoloModule goloModule = check(compilationUnit);
-    JavaBytecodeGenerationGoloIrVisitor bytecodeGenerator = new JavaBytecodeGenerationGoloIrVisitor();
-    return bytecodeGenerator.generateBytecode(goloModule, goloSourceFilename);
+    return generate(goloModule, goloSourceFilename);
   }
 
   private void throwIfErrorEncountered() {
@@ -211,8 +218,12 @@ public class GoloCompiler {
    * @throws GoloCompilationException if an error exists in the source represented by the input parse tree.
    */
   public final GoloModule check(ASTCompilationUnit compilationUnit) {
-    GoloModule goloModule = transform(compilationUnit);
-    return refine(goloModule);
+    return refine(transform(compilationUnit));
+  }
+
+  public final List<CodeGenerationResult> generate(GoloModule goloModule, String goloSourceFilename) {
+    JavaBytecodeGenerationGoloIrVisitor bytecodeGenerator = new JavaBytecodeGenerationGoloIrVisitor();
+    return bytecodeGenerator.generateBytecode(goloModule, goloSourceFilename);
   }
 
   public final GoloModule transform(ASTCompilationUnit compilationUnit) {
