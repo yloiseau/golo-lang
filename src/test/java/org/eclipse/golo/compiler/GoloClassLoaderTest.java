@@ -17,6 +17,7 @@ import java.io.FileInputStream;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
+import static org.hamcrest.Matchers.sameInstance;
 
 public class GoloClassLoaderTest {
 
@@ -30,10 +31,12 @@ public class GoloClassLoaderTest {
     assertThat(clazz.getName(), is("golotest.execution.FunctionsWithReturns"));
   }
 
-  @Test(expectedExceptions = LinkageError.class)
-  public void loading_twice_shall_fail() throws Throwable {
+  @Test
+  public void loading_twice_returns_first() throws Throwable {
     GoloClassLoader classLoader = new GoloClassLoader();
-    classLoader.load("returns.golo", new FileInputStream(SRC + "returns.golo"));
-    classLoader.load("returns.golo", new FileInputStream(SRC + "returns.golo"));
+    Class<?> first = classLoader.load("returns.golo", new FileInputStream(SRC + "returns.golo"));
+    assertThat(first, notNullValue());
+    Class<?> other = classLoader.load("returns.golo", new FileInputStream(SRC + "returns.golo"));
+    assertThat(other, sameInstance(first));
   }
 }

@@ -171,12 +171,12 @@ public class GoloCompiler {
   public final void compileToJar(String goloSourceFilename, InputStream sourceCodeInputStream, JarOutputStream jarOutputStream) throws IOException {
     List<CodeGenerationResult> results = compile(goloSourceFilename, sourceCodeInputStream);
     for (CodeGenerationResult result : results) {
-      String entryName = result.getPackageAndClass().packageName().replaceAll("\\.", "/");
-      if (!entryName.isEmpty()) {
-        entryName = entryName + "/";
+      StringBuilder entryName = new StringBuilder(result.getPackageAndClass().packageName().replaceAll("\\.", "/"));
+      if (entryName.length() != 0) {
+        entryName.append("/");
       }
-      entryName = entryName + result.getPackageAndClass().className() + ".class";
-      jarOutputStream.putNextEntry(new ZipEntry(entryName));
+      entryName.append(result.getPackageAndClass().className()).append(".class");
+      jarOutputStream.putNextEntry(new ZipEntry(entryName.toString()));
       jarOutputStream.write(result.getBytecode());
       jarOutputStream.closeEntry();
     }

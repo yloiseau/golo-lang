@@ -11,6 +11,9 @@
 package org.eclipse.golo.compiler;
 
 import java.io.InputStream;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 
 import org.eclipse.golo.compiler.ir.GoloModule;
@@ -76,11 +79,28 @@ public class GoloClassLoader extends ClassLoader {
     return load(compiler.generate(module, goloSourceFilename));
   }
 
+  /**
+   * Compiles and loads the resulting JVM bytecode for a Golo source file.
+   *
+   * @param goloSourcePath the source file path.
+   * @return the class matching the Golo module defined in the source.
+   * @throws GoloCompilationException if either of the compilation phase failed.
+   */
+  public synchronized Class<?> load(Path goloSourcePath) throws GoloCompilationException, IOException {
+    try (InputStream is = Files.newInputStream(goloSourcePath)) {
+      return this.load(goloSourcePath.toString(), is);
+    }
+  }
+
   synchronized Class<?> load(List<CodeGenerationResult> results) {
     Class<?> lastClassIsModule = null;
     for (CodeGenerationResult result : results) {
       byte[] bytecode = result.getBytecode();
-      lastClassIsModule = defineClass(null, bytecode, 0, bytecode.length);
+      try {
+        lastClassIsModule = defineClass(null, bytecode, 0, bytecode.length);
+      } catch (LinkageError e) {
+        lastClassIsModule = findLoadedClass(result.getPackageAndClass().toString());
+      }
     }
     return lastClassIsModule;
   }

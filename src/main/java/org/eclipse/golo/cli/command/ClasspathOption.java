@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.LinkedList;
 import java.util.Collections;
 import java.util.Arrays;
+import java.nio.file.Paths;
 
 import org.eclipse.golo.compiler.GoloClassLoader;
 
@@ -56,7 +57,7 @@ public class ClasspathOption {
   private static URLClassLoader primaryClassLoader(List<String> classpath) throws MalformedURLException {
     URL[] urls = new URL[classpath.size()];
     for (int i = 0; i < classpath.size(); i++) {
-      urls[i] = new File(classpath.get(i)).toURI().toURL();
+      urls[i] = gololang.IO.toURL(Paths.get(classpath.get(i)));
     }
     return new URLClassLoader(urls);
   }
