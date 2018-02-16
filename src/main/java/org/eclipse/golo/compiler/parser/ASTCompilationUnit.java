@@ -10,9 +10,11 @@
 
 package org.eclipse.golo.compiler.parser;
 
+import java.nio.file.Path;
+
 public class ASTCompilationUnit extends GoloASTNode {
 
-  private String filename;
+  private Path filename;
 
   public ASTCompilationUnit(int id) {
     super(id);
@@ -22,11 +24,11 @@ public class ASTCompilationUnit extends GoloASTNode {
     super(p, id);
   }
 
-  public String getFilename() {
+  public Path getFilename() {
     return filename;
   }
 
-  public void setFilename(String filename) {
+  public void setFilename(Path filename) {
     this.filename = filename;
   }
 

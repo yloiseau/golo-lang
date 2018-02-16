@@ -16,6 +16,7 @@ import org.eclipse.golo.compiler.ir.PositionInSourceCode;
 import org.eclipse.golo.compiler.ir.GoloElement;
 
 import java.nio.charset.UnsupportedCharsetException;
+import java.nio.file.Path;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -106,8 +107,8 @@ public class GoloCompilationException extends RuntimeException {
      *
      * @param goloSourceFilename the source file name.
      */
-    public Builder(String goloSourceFilename) {
-      exception = new GoloCompilationException(message("in_module", goloSourceFilename));
+    public Builder(Path goloSourceFilename) {
+      exception = new GoloCompilationException(message("in_module", goloSourceFilename.toString()));
       exception.setSourceCode(goloSourceFilename);
     }
 
@@ -185,7 +186,7 @@ public class GoloCompilationException extends RuntimeException {
 
   private final List<Problem> problems = new LinkedList<>();
 
-  private String sourceCode;
+  private Path sourceCode;
 
   /**
    * @return all reported problems.
@@ -207,7 +208,7 @@ public class GoloCompilationException extends RuntimeException {
    *
    * @return the source code, or {@code null} if none has been specified.
    */
-  public String getSourceCode() {
+  public Path getSourceCode() {
     return sourceCode;
   }
 
@@ -216,7 +217,7 @@ public class GoloCompilationException extends RuntimeException {
    *
    * @param sourceCode the raw source code.
    */
-  public void setSourceCode(String sourceCode) {
+  public void setSourceCode(Path sourceCode) {
     this.sourceCode = sourceCode;
   }
 

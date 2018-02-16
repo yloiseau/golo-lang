@@ -170,7 +170,7 @@ public class ParseTreeToGoloIrVisitor implements GoloParserVisitor {
 
     private GoloCompilationException.Builder getOrCreateExceptionBuilder() {
       if (exceptionBuilder == null) {
-        exceptionBuilder = new GoloCompilationException.Builder(module.getPackageAndClass().toString());
+        exceptionBuilder = new GoloCompilationException.Builder(module.sourceFile());
       }
       return exceptionBuilder;
     }

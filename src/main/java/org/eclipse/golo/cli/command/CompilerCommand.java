@@ -51,11 +51,11 @@ public class CompilerCommand implements CliCommand {
     JarOutputStream jarOutputStream = compilingToJar ? new JarOutputStream(new FileOutputStream(new File(this.output)), manifest()) : null;
     for (String source : this.sources) {
       File file = new File(source);
-      try (FileInputStream in = new FileInputStream(file)) {
+      try {
         if (compilingToJar) {
-          compiler.compileToJar(file.getName(), in, jarOutputStream);
+          compiler.compileToJar(file.toPath(), jarOutputStream);
         } else {
-          compiler.compileTo(file.getName(), in, outputDir);
+          compiler.compileTo(file.toPath(), outputDir);
         }
       } catch (IOException e) {
         error(message("file_not_found", source));

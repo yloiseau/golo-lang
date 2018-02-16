@@ -18,6 +18,8 @@ import org.eclipse.golo.compiler.GoloClassLoader;
 import org.eclipse.golo.compiler.GoloCompilationException;
 
 import java.io.File;
+import java.nio.file.Paths;
+import java.nio.file.Path;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.LinkedList;
@@ -45,7 +47,7 @@ public class GoloGoloCommand implements CliCommand {
     GoloClassLoader loader = classpath.initGoloClassLoader();
     Class<?> lastClass = null;
     for (String goloFile : this.files) {
-      lastClass = loadGoloFile(goloFile, this.module, loader);
+      lastClass = loadGoloFile(Paths.get(goloFile), this.module, loader);
     }
     if (lastClass == null && this.module != null) {
       error(message("module_not_found", this.module));
@@ -61,8 +63,8 @@ public class GoloGoloCommand implements CliCommand {
     }
   }
 
-  private Class<?> loadGoloFile(String goloFile, String module, GoloClassLoader loader) throws Throwable {
-    File file = new File(goloFile);
+  private Class<?> loadGoloFile(Path goloFile, String module, GoloClassLoader loader) throws Throwable {
+    File file = goloFile.toFile();
     if (!file.exists()) {
       error(message("file_not_found", file));
     } else if (file.isDirectory()) {
@@ -70,7 +72,7 @@ public class GoloGoloCommand implements CliCommand {
       if (directoryFiles != null) {
         Class<?> lastClass = null;
         for (File directoryFile : directoryFiles) {
-          Class<?> loadedClass = loadGoloFile(directoryFile.getAbsolutePath(), module, loader);
+          Class<?> loadedClass = loadGoloFile(directoryFile.toPath(), module, loader);
           if (module == null || (loadedClass != null && loadedClass.getCanonicalName().equals(module))) {
             lastClass = loadedClass;
           }
@@ -79,7 +81,7 @@ public class GoloGoloCommand implements CliCommand {
       }
     } else if (file.getName().endsWith(".golo")) {
       try (FileInputStream in = new FileInputStream(file)) {
-        Class<?> loadedClass = loader.load(file.getName(), in);
+        Class<?> loadedClass = loader.load(file.toPath(), in);
         if (module == null || loadedClass.getCanonicalName().equals(module)) {
           return loadedClass;
         }

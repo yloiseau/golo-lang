@@ -91,7 +91,7 @@ public class DiagnoseCommand implements CliCommand {
     } else if (file.getName().endsWith(".golo")) {
       System.out.println(">>> AST: " + goloFile);
       try {
-        ASTCompilationUnit ast = compiler.parse(goloFile);
+        ASTCompilationUnit ast = compiler.parse(file.toPath());
         ast.dump("% ");
         System.out.println();
       } catch (IOException e) {
@@ -119,7 +119,7 @@ public class DiagnoseCommand implements CliCommand {
     } else if (file.getName().endsWith(".golo")) {
       System.out.println(">>> IR: " + file);
       try {
-        GoloModule module = compiler.transform(compiler.parse(goloFile));
+        GoloModule module = compiler.transform(compiler.parse(file.toPath()));
         if ("refined".equals(this.stage)) {
           compiler.refine(module);
         }

@@ -62,7 +62,7 @@ public class GoloClassLoader extends ClassLoader {
    * @return the class matching the Golo module defined in the source.
    * @throws GoloCompilationException if either of the compilation phase failed.
    */
-  public Class<?> load(String goloSourceFilename, InputStream sourceCodeInputStream) throws GoloCompilationException {
+  public Class<?> load(Path goloSourceFilename, InputStream sourceCodeInputStream) throws GoloCompilationException {
     return load(compiler.compile(goloSourceFilename, sourceCodeInputStream));
   }
 
@@ -74,9 +74,9 @@ public class GoloClassLoader extends ClassLoader {
    * @return the class matching the Golo module defined in the IR.
    * @throws GoloCompilationException if either of the compilation phase failed.
    */
-  public Class<?> load(String goloSourceFilename, GoloModule module) {
+  public Class<?> load(GoloModule module) {
     compiler.refine(module);
-    return load(compiler.generate(module, goloSourceFilename));
+    return load(compiler.generate(module));
   }
 
   /**
@@ -88,7 +88,7 @@ public class GoloClassLoader extends ClassLoader {
    */
   public synchronized Class<?> load(Path goloSourcePath) throws GoloCompilationException, IOException {
     try (InputStream is = Files.newInputStream(goloSourcePath)) {
-      return this.load(goloSourcePath.toString(), is);
+      return this.load(goloSourcePath, is);
     }
   }
 

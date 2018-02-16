@@ -13,13 +13,14 @@ package org.eclipse.golo.compiler.ir;
 import org.eclipse.golo.compiler.PackageAndClass;
 
 import java.util.*;
+import java.nio.file.Path;
 
 import static java.util.Collections.unmodifiableSet;
 import static java.util.Collections.unmodifiableCollection;
 
 public final class GoloModule extends GoloElement<GoloModule> implements FunctionContainer {
 
-  private String sourceFile;
+  private Path sourceFile;
   private final PackageAndClass packageAndClass;
   private final ReferenceTable globalReferences;
   private final Set<ModuleImport> imports = new LinkedHashSet<>();
@@ -57,11 +58,11 @@ public final class GoloModule extends GoloElement<GoloModule> implements Functio
     return packageAndClass;
   }
 
-  public String sourceFile() {
+  public Path sourceFile() {
     return this.sourceFile;
   }
 
-  public GoloModule sourceFile(String file) {
+  public GoloModule sourceFile(Path file) {
     this.sourceFile = file;
     return this;
   }

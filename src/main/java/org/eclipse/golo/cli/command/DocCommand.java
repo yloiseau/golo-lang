@@ -78,7 +78,7 @@ public class DocCommand implements CliCommand {
       }
     } else if (file.getName().endsWith(".golo")) {
       try {
-        modules.put(goloFile, ModuleDocumentation.load(goloFile, compiler));
+        modules.put(goloFile, ModuleDocumentation.load(Paths.get(goloFile), compiler));
       } catch (IOException e) {
         error(message("file_not_found", goloFile));
         return;

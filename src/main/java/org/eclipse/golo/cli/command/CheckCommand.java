@@ -14,6 +14,7 @@ import com.beust.jcommander.Parameter;
 import com.beust.jcommander.Parameters;
 
 import java.io.File;
+import java.nio.file.*;
 import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
@@ -39,31 +40,34 @@ public class CheckCommand implements CliCommand {
   @Override
   public void execute() throws Throwable {
     GoloCompiler compiler = new GoloCompiler();
-    for (String file : files) {
-      check(new File(file), compiler);
+    for (String file : this.files) {
+      check(Paths.get(file), compiler);
     }
   }
 
-  private void check(File file, GoloCompiler compiler) {
-    if (file.isDirectory()) {
-      File[] directoryFiles = file.listFiles();
-      if (directoryFiles != null) {
-        for (File directoryFile : directoryFiles) {
-          check(directoryFile, compiler);
-        }
+  private void checkFile(Path file, GoloCompiler compiler) {
+    try {
+      if (verbose) {
+        System.err.println(">>> " + message("check_info", file));
       }
-    } else if (file.getName().endsWith(".golo")) {
-      try {
-        if (verbose) {
-          System.err.println(">>> " + message("check_info", file.getAbsolutePath()));
-        }
-        compiler.resetExceptionBuilder();
-        compiler.check(compiler.parse(file.getAbsolutePath()));
-      } catch (IOException e) {
-        error(message("file_not_found", file));
-      } catch (GoloCompilationException e) {
-        handleCompilationException(e, exit);
-      }
+      compiler.resetExceptionBuilder();
+      compiler.check(compiler.parse(file));
+    } catch (IOException e) {
+      error(message("file_not_found", file));
+    } catch (GoloCompilationException e) {
+      handleCompilationException(e, exit);
+    }
+  }
+
+
+  private void check(Path file, GoloCompiler compiler) throws IOException {
+    if (Files.isDirectory(file)) {
+      PathMatcher goloFiles = FileSystems.getDefault().getPathMatcher("glob:**/*.golo");
+      Files.walk(file)
+          .filter(path -> goloFiles.matches(path))
+          .forEach(path -> checkFile(path, compiler));
+    } else {
+      checkFile(file, compiler);
     }
   }
 }

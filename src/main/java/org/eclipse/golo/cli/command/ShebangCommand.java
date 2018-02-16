@@ -76,10 +76,10 @@ public class ShebangCommand implements CliCommand {
   }
 
   private Class<?> loadGoloFile(GoloClassLoader loader, Path path) {
-    try (InputStream is = Files.newInputStream(path)) {
+    try {
       Path filename = path.getFileName();
       if (filename != null) {
-        return loader.load(filename.toString(), is);
+        return loader.load(path);
       } else {
         throw new RuntimeException(message("not_regular_file", path));
       }

@@ -16,6 +16,8 @@ import org.eclipse.golo.compiler.GoloCompilationException;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Paths;
+import java.nio.file.Path;
 import java.nio.charset.StandardCharsets;
 import java.lang.reflect.InvocationTargetException;
 import java.util.*;
@@ -56,8 +58,8 @@ public class EvaluationEnvironment {
   private final GoloClassLoader goloClassLoader;
   private final List<String> imports = new LinkedList<>();
 
-  private static String anonymousFilename() {
-    return "$Anonymous$_" + System.nanoTime() + ".golo";
+  private static Path anonymousFilename() {
+    return Paths.get("$Anonymous$_" + System.nanoTime() + ".golo");
   }
 
   private static String anonymousModuleName() {
@@ -134,12 +136,13 @@ public class EvaluationEnvironment {
    * @see gololang.Predefined#fun(Class, Object, Object)
    */
   public Object asModule(String source) {
+    Path anon = anonymousFilename();
     try (InputStream in = new ByteArrayInputStream(source.getBytes(StandardCharsets.UTF_8))) {
-      return goloClassLoader.load(anonymousFilename(), in);
+      return goloClassLoader.load(anon, in);
     } catch (IOException e) {
       throw new RuntimeException(e);
     } catch (GoloCompilationException e) {
-      e.setSourceCode(source);
+      e.setSourceCode(anon);
       throw e;
     }
   }

@@ -86,8 +86,8 @@ class JavaBytecodeGenerationGoloIrVisitor implements GoloIrVisitor {
     currentMethodVisitor = visitor;
   }
 
-  public List<CodeGenerationResult> generateBytecode(GoloModule module, String sourceFilename) {
-    this.sourceFilename = sourceFilename;
+  public List<CodeGenerationResult> generateBytecode(GoloModule module) {
+    this.sourceFilename = module.sourceFile().toString();
     this.classWriter = new ClassWriter(COMPUTE_FRAMES | COMPUTE_MAXS);
     this.generationResults = new LinkedList<>();
     this.context = new Context();

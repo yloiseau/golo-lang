@@ -59,7 +59,7 @@ class LocalReferenceAssignmentAndVerificationVisitor extends AbstractGoloIrVisit
 
   private GoloCompilationException.Builder getExceptionBuilder() {
     if (exceptionBuilder == null) {
-      exceptionBuilder = new GoloCompilationException.Builder(module.getPackageAndClass().toString());
+      exceptionBuilder = new GoloCompilationException.Builder(module.sourceFile());
     }
     return exceptionBuilder;
   }
