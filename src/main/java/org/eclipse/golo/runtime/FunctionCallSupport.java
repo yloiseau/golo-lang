@@ -36,10 +36,15 @@ public final class FunctionCallSupport {
 
   static class FunctionCallSite extends MutableCallSite {
 
+    static final int MEGAMORPHIC_THRESHOLD = 5;
+
     final Lookup callerLookup;
     final String name;
     final boolean constant;
     final String[] argumentNames;
+
+    int depth = 0;
+    MethodHandle resetFallback;
 
     FunctionCallSite(MethodHandles.Lookup callerLookup, String name, MethodType type, boolean constant, String... argumentNames) {
       super(type);
@@ -48,9 +53,14 @@ public final class FunctionCallSupport {
       this.constant = constant;
       this.argumentNames = argumentNames;
     }
+
+    boolean isMegaMorphic() {
+      return depth > MEGAMORPHIC_THRESHOLD;
+    }
   }
 
   private static final MethodHandle FALLBACK;
+  private static final MethodHandle RESET_FALLBACK;
   private static final MethodHandle SAM_FILTER;
   private static final MethodHandle FUNCTIONAL_INTERFACE_FILTER;
 
@@ -76,6 +86,11 @@ public final class FunctionCallSupport {
           FunctionCallSupport.class,
           "functionalInterfaceFilter",
           methodType(Object.class, Lookup.class, Class.class, Object.class));
+
+      RESET_FALLBACK = lookup.findStatic(
+          FunctionCallSupport.class,
+          "resetFallback",
+          methodType(Object.class, FunctionCallSite.class, Object[].class));
 
       OVERLOADED_GUARD_GENERIC = lookup.findStatic(
           FunctionCallSupport.class,
@@ -195,6 +210,10 @@ public final class FunctionCallSupport {
         type,
         constant,
         argumentNames);
+    callSite.resetFallback = RESET_FALLBACK
+      .bindTo(callSite)
+      .asCollector(Object[].class, type.parameterCount())
+      .asType(type);
     MethodHandle fallbackHandle = FALLBACK
         .bindTo(callSite)
         .asCollector(Object[].class, type.parameterCount())
@@ -218,7 +237,23 @@ public final class FunctionCallSupport {
     if (result == null) {
       result = findClassWithConstructorFromImports(callerClass, functionName, args);
     }
-    return null;
+    return result;
+  }
+
+  private static boolean isOverloaded(AccessibleObject target) {
+    if (target instanceof Executable) {
+      Executable method = (Executable) target;
+      return Extractors.getMethods(method.getClass())
+        .filter(m ->
+          Extractors.isPublic(m)
+            && Extractors.isConcrete(m)
+            && Extractors.isStatic(m)
+            && Extractors.isNamed(method.getName()).test(m)
+            && TypeMatching.argumentsNumberMatches(m.getParameterCount(), method.getParameterCount(), m.isVarArgs()))
+        .count() > 1;
+
+    }
+    return false;
   }
 
   public static Object fallback(FunctionCallSite callSite, Object[] args) throws Throwable {
@@ -229,7 +264,7 @@ public final class FunctionCallSupport {
     String[] argumentNames = callSite.argumentNames;
 
     MethodHandle handle = null;
-    Object result = findTarget(callerClass, functionName, args);
+    AccessibleObject result = findTarget(callerClass, functionName, args);
     if (result == null) {
       throw new NoSuchMethodError(functionName + type.toMethodDescriptorString());
     }
@@ -268,6 +303,10 @@ public final class FunctionCallSupport {
     }
     handle = insertSAMFilter(handle, callSite.callerLookup, types, 0);
 
+    if (isOverloaded(result)) {
+      handle = guardOnOverloaded(handle, args, callSite.resetFallback);
+    }
+
     if (callSite.constant) {
       Object constantValue = handle.invokeWithArguments(args);
       MethodHandle constant;
@@ -285,7 +324,7 @@ public final class FunctionCallSupport {
     }
   }
 
-  private MethodHandle guardOnOverloaded(MethodHandle handle, Object[] args) {
+  private static MethodHandle guardOnOverloaded(MethodHandle handle, Object[] args, MethodHandle reset) {
     Class<?>[] types = new Class<?>[args.length];
     for (int i = 0; i < types.length; i++) {
       types[i] = (args[i] == null) ? Object.class : args[i].getClass();
@@ -310,7 +349,12 @@ public final class FunctionCallSupport {
       default:
         guard = OVERLOADED_GUARD_GENERIC.bindTo(types).asCollector(Object[].class, types.length);
     }
-    return guardWithTest(guard, target, inlineCache.resetFallback);
+    return guardWithTest(guard, handle, reset);
+  }
+
+  public static Object resetFallback(FunctionCallSite callsite, Object[] args) throws Throwable {
+    callsite.depth = 0;
+    return fallback(callsite, args);
   }
 
   private static boolean isVarargsWithNames(Method method, Class<?>[] types, Object[] args, String[] argumentNames) {
