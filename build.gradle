@@ -34,7 +34,12 @@ repositories {
 
 ext {
   goloCliMain = 'org.eclipse.golo.cli.Main'
-  goloSources = fileTree('src/main/golo').include('**/*.golo')
+  goloMacrosFirst = [
+    file("$rootProject.projectDir/src/main/golo/macros.golo"),
+    file("$rootProject.projectDir/src/main/golo/gololang/ir/Quote.golo")
+  ]
+  goloSources = goloMacrosFirst + (
+    fileTree('src/main/golo').include('**/*.golo') - goloMacrosFirst)
   goloDocs = file("$buildDir/docs/golodoc")
   goloClasses = file("$buildDir/golo-classes")
 }
@@ -114,13 +119,16 @@ jar {
 // .................................................................................................................. //
 
 task goloc(type: JavaExec, dependsOn: [compileJava, processResources]) {
+  group = 'Build'
+  description = 'Compiles Golo source files.'
+
   main = goloCliMain
   args = ['compile', '--output', goloClasses] + goloSources
+  println(args)
   classpath = sourceSets.main.compileClasspath + files(compileJava.outputs) + files(processResources.outputs)
+  systemProperty 'golo.debug.macros', 'true'
   inputs.files goloSources
   outputs.dir goloClasses
-  description = 'Compiles Golo source files.'
-  group = 'Build'
 }
 
 if (!project.hasProperty('bootstrap')) {

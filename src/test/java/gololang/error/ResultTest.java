@@ -336,5 +336,10 @@ public class ResultTest {
     runTests(SRC, "option.golo", loader);
   }
 
+  @Test
+  public void runGoloErrorMacros() throws Throwable {
+    runTests(SRC, "error-macros.golo", loader);
+  }
+
 }
 

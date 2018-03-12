@@ -49,6 +49,7 @@ public class CompilerCommand implements CliCommand {
     File outputDir = compilingToJar ? null : new File(this.output);
     JarOutputStream jarOutputStream = compilingToJar ? new JarOutputStream(new FileOutputStream(new File(this.output)), manifest()) : null;
     for (String source : this.sources) {
+      System.out.println("#### compiling " + source);
       File file = new File(source);
       try (FileInputStream in = new FileInputStream(file)) {
         if (compilingToJar) {

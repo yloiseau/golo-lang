@@ -76,7 +76,7 @@ public class GoloClassLoader extends ClassLoader {
     return load(compiler.generate(module, goloSourceFilename));
   }
 
-  private Class<?> load(List<CodeGenerationResult> results) {
+  synchronized Class<?> load(List<CodeGenerationResult> results) {
     Class<?> lastClassIsModule = null;
     for (CodeGenerationResult result : results) {
       byte[] bytecode = result.getBytecode();

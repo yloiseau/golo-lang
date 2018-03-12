@@ -17,6 +17,7 @@ module gololang.Errors
 
 import java.util.`function
 import java.util.Collections
+import gololang.ir.Quote
 
 # ............................................................................ #
 ## Constructors
@@ -475,3 +476,68 @@ function catcher = |recover| -> |block| {
     }
   }
 }
+
+
+----
+Safe evaluation and Result unwrapping with early return.
+
+This macro evaluate the given expression and matches the given result.
+If the evaluation yields a `Result.ok` variant, the contained value is
+unwrapped. If the results is an error it is immediately returned, exiting the
+function that use the macro. If an exception is raised, it is wrapped in an
+`Result.error` and returned immediatly. Finally, if a regular value is return,
+it is used unchanged.
+
+This macro should therefore be used in function returnig a `Result`. It is a
+somewhat equivalent of exceptions.
+
+
+# Examples
+
+```golo
+import gololang.IO
+import gololang.Errors
+
+function safeRead = |file| -> fileToText(file, defaultCharset())
+
+@result
+function safeWrite = |content, file| -> textToFile(content, file, defaultCharset())
+
+function concat = |origin1, origin2, destination| {
+  let content = StringBuilder()
+  content: append(`try(safeRead(origin1)))
+  content: append(`try(fileToText(origin2, defaultCharset())))
+  return safeWrite(content: toString(), destination)
+}
+```
+
+In this example, if `safeRead` fails, the `concat` function returns immediatly
+the corresponding `Result.error`. Otherwise, `content` will be appended with the
+string in the corresponding `Result.ok`.
+The behavior is similar in the second read, even if the used function does not
+return a result but raises an exception.
+
+This function can thus return either:
+- a `Result.error` containing an exception raised while reading from origin,
+- a `Result.error` containing an exception raised while writing to destination,
+- a `Result.empty` if success.
+----
+macro `try = |expr| -> &quote {
+  var tmp = null
+  var result = null
+  try {
+    tmp = $(expr)
+  } catch (e) {
+    return gololang.error.Result.error(e)
+  }
+  if tmp oftype gololang.error.Result.class {
+    if tmp: isError() {
+      return tmp
+    }
+    result = tmp: orElse(null)
+  } else {
+    result = tmp
+  }
+  result
+}
+

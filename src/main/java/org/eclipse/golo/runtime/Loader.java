@@ -75,8 +75,10 @@ public final class Loader implements Function<String, Class<?>> {
    */
   public Class<?> load(String name) {
     try {
+      System.out.println("### load class " + name);
       return loader.loadClass(name);
     } catch (ClassNotFoundException e) {
+      System.out.println("### class not found");
       return null;
     }
   }

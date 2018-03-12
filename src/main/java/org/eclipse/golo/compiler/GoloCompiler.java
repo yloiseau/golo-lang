@@ -114,7 +114,9 @@ public class GoloCompiler {
     ASTCompilationUnit compilationUnit = parse(goloSourceFilename,
                                           initParser(goloSourceFilename, sourceCodeInputStream));
     GoloModule goloModule = check(compilationUnit);
-    return generate(goloModule, goloSourceFilename);
+    List<CodeGenerationResult> bytecodes = generate(goloModule, goloSourceFilename);
+    gololang.Runtime.classLoader().load(bytecodes);
+    return bytecodes;
   }
 
   private void throwIfErrorEncountered() {
