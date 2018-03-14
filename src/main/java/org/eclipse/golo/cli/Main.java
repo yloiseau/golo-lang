@@ -45,7 +45,7 @@ public final class Main {
     }
   }
 
-  public static void main(String... args) throws Throwable {
+  private static CliCommand parseArguments(String[] args) throws ParameterException {
     GlobalArguments global = new GlobalArguments();
     JCommander cmd = new JCommander(global);
     cmd.setProgramName("golo");
@@ -56,29 +56,35 @@ public final class Main {
     }
     UsageFormatValidator.commandNames = cmd.getCommands().keySet();
 
-    try {
-      cmd.parse(args);
-      if (global.usageCommand != null) {
-        cmd.usage(global.usageCommand);
-      } else if (global.help || cmd.getParsedCommand() == null) {
-        cmd.usage();
+    cmd.parse(args);
+    CliCommand command = null;
+    if (global.usageCommand != null) {
+      cmd.usage(global.usageCommand);
+    } else if (global.help || cmd.getParsedCommand() == null) {
+      cmd.usage();
+    } else {
+      String parsedCommand = cmd.getParsedCommand();
+      JCommander parsedJCommander = cmd.getCommands().get(parsedCommand);
+      Object commandObject = parsedJCommander.getObjects().get(0);
+      if (commandObject instanceof CliCommand) {
+        command = (CliCommand) commandObject;
       } else {
-        String parsedCommand = cmd.getParsedCommand();
-        JCommander parsedJCommander = cmd.getCommands().get(parsedCommand);
-        Object commandObject = parsedJCommander.getObjects().get(0);
-        if (commandObject instanceof CliCommand) {
-          gololang.Runtime.command((CliCommand) commandObject);
-          ((CliCommand) commandObject).execute();
-        } else {
-          throw new AssertionError("WTF?");
-        }
+        throw new AssertionError("WTF?");
+      }
+    }
+    return command;
+  }
+
+  public static void main(String... args) throws Throwable {
+    try {
+      CliCommand cmd = parseArguments(args);
+      if (cmd != null) {
+        gololang.Runtime.command(cmd);
+        cmd.execute();
       }
     } catch (ParameterException exception) {
       System.err.println(exception.getMessage());
       System.out.println();
-      if (cmd.getParsedCommand() != null) {
-        cmd.usage(cmd.getParsedCommand());
-      }
     }
   }
 }
