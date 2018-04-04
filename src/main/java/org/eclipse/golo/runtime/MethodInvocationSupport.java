@@ -58,7 +58,12 @@ public final class MethodInvocationSupport {
     }
 
     public MethodInvocation toMethodInvocation(Object[] args) {
-      return new MethodInvocation(name, type(), args, argumentNames);
+      return new MethodInvocation(
+          this.name,
+          this.type(),
+          args,
+          this.argumentNames,
+          this.callerLookup);
     }
   }
 
@@ -219,13 +224,13 @@ public final class MethodInvocationSupport {
   private static MethodHandle lookupTarget(Class<?> receiverClass, InlineCache inlineCache, Object[] args) {
     MethodInvocation invocation = inlineCache.toMethodInvocation(args);
     if (receiverClass.isArray()) {
-      return new ArrayMethodFinder(invocation, inlineCache.callerLookup).find();
+      return new ArrayMethodFinder(invocation).find();
     }
     if (isCallOnDynamicObject(inlineCache, args[0])) {
       DynamicObject dynamicObject = (DynamicObject) args[0];
       return dynamicObject.invoker(inlineCache.name, inlineCache.type());
     } else {
-      return findTarget(invocation, inlineCache);
+      return findTarget(invocation, inlineCache.resetFallback);
     }
   }
 
@@ -253,23 +258,7 @@ public final class MethodInvocationSupport {
     MethodHandle target = lookupTarget(receiverClass, inlineCache, args);
 
     if (target == null) {
-      // TODO: extract method to look for a `fallback` method on the receiver
-      InlineCache fallbackCallSite = new InlineCache(
-          inlineCache.callerLookup,
-          "fallback",
-          methodType(Object.class, Object.class, Object.class, Object[].class),
-          false);
-      Object[] fallbackArgs = new Object[]{
-        args[0],
-        inlineCache.name,
-        Arrays.copyOfRange(args, 1, args.length)
-      };
-      target = lookupTarget(receiverClass, fallbackCallSite, fallbackArgs);
-      if (target != null) {
-        return fallback(fallbackCallSite, fallbackArgs);
-      } else {
-        throw new NoSuchMethodError(receiverClass + "::" + inlineCache.name);
-      }
+      return callFallbackMethod(inlineCache, args);
     }
 
     MethodHandle guard = CLASS_GUARD.bindTo(receiverClass);
@@ -281,6 +270,45 @@ public final class MethodInvocationSupport {
     inlineCache.setTarget(root);
     inlineCache.depth = inlineCache.depth + 1;
     return target.invokeWithArguments(args);
+  }
+
+  private static Object callFallbackMethod(InlineCache inlineCache, Object[] args) throws Throwable {
+    Class<?> receiverClass = args[0].getClass();
+    InlineCache fallbackCallSite = new InlineCache(
+        inlineCache.callerLookup,
+        "fallback",
+        methodType(Object.class, Object.class, Object.class, Object[].class),
+        false);
+    Object[] fallbackArgs = new Object[]{
+      args[0],
+      inlineCache.name,
+      Arrays.copyOfRange(args, 1, args.length)
+    };
+    MethodHandle target = lookupTarget(receiverClass, fallbackCallSite, fallbackArgs);
+    if (target != null) {
+      return fallback(fallbackCallSite, fallbackArgs);
+    } else {
+      throw new NoSuchMethodError(receiverClass + "::" + inlineCache.name);
+    }
+  }
+
+  static MethodHandle invokeMethodCallSite(Lookup callerLookup, String[] argNames, Object[] args) throws Throwable {
+    MethodType type = methodType(Object.class, Object.class, Object[].class);
+    InlineCache invokeCallSite = new InlineCache(
+        callerLookup,
+        "invoke",
+        type,
+        false,
+        argNames);
+    invokeCallSite.resetFallback = RESET_FALLBACK
+      .bindTo(invokeCallSite)
+      .asCollector(Object[].class, type.parameterCount())
+      .asType(type);
+    Object[] invokeArgs = new Object[]{
+      args[0],
+      Arrays.copyOfRange(args, 1, args.length)
+    };
+    return findTarget(invokeCallSite.toMethodInvocation(invokeArgs), invokeCallSite.resetFallback);
   }
 
   private static MethodHandle makeNullSafeGuarded(MethodHandle root) {
@@ -344,25 +372,24 @@ public final class MethodInvocationSupport {
     return guardWithTest(guard, target, reset);
   }
 
-  private static MethodHandle findTarget(MethodInvocation invocation, InlineCache inlineCache) {
+  private static MethodHandle findTarget(MethodInvocation invocation, MethodHandle resetFallback) {
     MethodHandle target;
-    Lookup lookup = inlineCache.callerLookup;
 
-    RegularMethodFinder regularMethodFinder = new RegularMethodFinder(invocation, lookup);
+    RegularMethodFinder regularMethodFinder = new RegularMethodFinder(invocation);
     target = regularMethodFinder.find();
     if (target != null) {
       if (regularMethodFinder.isOverloaded()) {
-        return guardOnOverloaded(target, invocation, inlineCache.resetFallback);
+        return guardOnOverloaded(target, invocation, resetFallback);
       }
       return target;
     }
 
-    target = new PropertyMethodFinder(invocation, lookup).find();
+    target = new PropertyMethodFinder(invocation).find();
     if (target != null) {
       return target;
     }
 
-    target = new AugmentationMethodFinder(invocation, lookup).find();
+    target = new AugmentationMethodFinder(invocation).find();
     if (target != null) {
       return target;
     }

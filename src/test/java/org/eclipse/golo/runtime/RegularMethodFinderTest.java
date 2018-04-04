@@ -26,8 +26,13 @@ public class RegularMethodFinderTest {
   @Test
   public void toString_resolution() {
     MethodHandles.Lookup lookup = MethodHandles.lookup();
-    MethodInvocation invocation = new MethodInvocation("toString", methodType(String.class, Integer.class), new Object[]{69}, new String[] {});
-    RegularMethodFinder finder = new RegularMethodFinder(invocation, lookup);
+    MethodInvocation invocation = new MethodInvocation(
+        "toString",
+        methodType(String.class, Integer.class),
+        new Object[]{69},
+        null,
+        lookup);
+    RegularMethodFinder finder = new RegularMethodFinder(invocation);
     MethodHandle target = finder.find();
     assertThat(target, notNullValue());
     assertThat(finder.isOverloaded(), is(false));
@@ -40,8 +45,9 @@ public class RegularMethodFinderTest {
         "foo",
         methodType(String.class, ClassWithOverloadedMethods.class, String.class),
         new Object[]{new ClassWithOverloadedMethods(), "Hello"},
-        new String[] {});
-    RegularMethodFinder finder = new RegularMethodFinder(invocation, lookup);
+        null,
+        lookup);
+    RegularMethodFinder finder = new RegularMethodFinder(invocation);
     MethodHandle target = finder.find();
     assertThat(target, notNullValue());
     assertThat(finder.isOverloaded(), is(true));

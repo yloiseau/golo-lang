@@ -28,14 +28,16 @@ public final class ClosureCallSupport {
 
   static class InlineCache extends MutableCallSite {
 
+    final MethodHandles.Lookup lookup;
     MethodHandle fallback;
     final boolean constant;
     final String[] argumentNames;
 
-    InlineCache(MethodType type, boolean constant, String[] argumentNames) {
+    InlineCache(MethodType type, boolean constant, String[] argumentNames, MethodHandles.Lookup lookup) {
       super(type);
       this.constant = constant;
       this.argumentNames = argumentNames;
+      this.lookup = lookup;
     }
   }
 
@@ -66,7 +68,7 @@ public final class ClosureCallSupport {
     for (int i = 0; i < bsmArgs.length - 1; i++) {
       argumentNames[i] = (String) bsmArgs[i + 1];
     }
-    InlineCache callSite = new InlineCache(type, constant, argumentNames);
+    InlineCache callSite = new InlineCache(type, constant, argumentNames, caller);
     MethodHandle fallbackHandle = FALLBACK
         .bindTo(callSite)
         .asCollector(Object[].class, type.parameterCount())
@@ -81,20 +83,39 @@ public final class ClosureCallSupport {
   }
 
   public static Object fallback(InlineCache callSite, Object[] args) throws Throwable {
+    if (args[0] == null) {
+      throw new NullPointerException("Trying to call `null`");
+    }
     if (args[0] instanceof FunctionReference) {
       return callFunctionReference(callSite, args);
     }
-    throw new IllegalArgumentException("not a FunctionReference");
+    if (args[0] instanceof MethodHandle) {
+      return callMethodHandle(callSite, (MethodHandle) args[0], null, args);
+    }
+    // TODO: try to call an `invoke` method on the receiver
+    MethodHandle target = MethodInvocationSupport.invokeMethodCallSite(
+        callSite.lookup,
+        callSite.argumentNames,
+        args);
+    if (target != null) {
+      callSite.setTarget(target);
+      return target.invokeWithArguments(args);
+    }
+    throw new IllegalArgumentException("Not a function");
   }
 
-  public static Object callFunctionReference(InlineCache callSite, Object[] args) throws Throwable {
+  private static Object callFunctionReference(InlineCache callSite, Object[] args) throws Throwable {
     FunctionReference targetFunctionReference = (FunctionReference) args[0];
     MethodHandle target = targetFunctionReference.handle();
-    MethodHandle invoker = MethodHandles.dropArguments(target, 0, FunctionReference.class);
+    return callMethodHandle(callSite, target, targetFunctionReference.parameterNames(), args);
+  }
+
+  private static Object callMethodHandle(InlineCache callSite, MethodHandle target, String[] parameterNames, Object[] args) throws Throwable {
+    MethodHandle invoker = MethodHandles.dropArguments(target, 0, Object.class);
     MethodType type = invoker.type();
     if (callSite.argumentNames.length > 0) {
       invoker = reorderArguments(
-          targetFunctionReference.parameterNames(),
+          parameterNames,
           invoker,
           callSite.argumentNames);
     }
@@ -122,7 +143,7 @@ public final class ClosureCallSupport {
       callSite.setTarget(constant.asType(type));
       return constantValue;
     } else {
-      MethodHandle guard = GUARD.bindTo(targetFunctionReference);
+      MethodHandle guard = GUARD.bindTo(args[0]);
       MethodHandle root = guardWithTest(guard, invoker, callSite.fallback);
       callSite.setTarget(root);
       return invoker.invokeWithArguments(args);
@@ -130,7 +151,7 @@ public final class ClosureCallSupport {
   }
 
   private static MethodHandle reorderArguments(String[] parameterNames, MethodHandle handle, String[] argumentNames) {
-    if (parameterNames.length > 0) {
+    if (parameterNames != null && parameterNames.length > 0) {
       int[] argumentsOrder = new int[parameterNames.length + 1];
       argumentsOrder[0] = 0;
       argumentsOrder[1] = 1;

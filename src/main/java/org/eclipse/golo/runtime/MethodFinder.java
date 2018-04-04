@@ -29,10 +29,10 @@ abstract class MethodFinder {
   protected final Lookup lookup;
   protected final Class<?> callerClass;
 
-  MethodFinder(MethodInvocation invocation, Lookup lookup) {
+  MethodFinder(MethodInvocation invocation) {
     this.invocation = invocation;
-    this.lookup = lookup;
-    this.callerClass = lookup.lookupClass();
+    this.lookup = invocation.lookup();
+    this.callerClass = this.lookup.lookupClass();
   }
 
   public abstract MethodHandle find();

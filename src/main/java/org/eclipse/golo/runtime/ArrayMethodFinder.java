@@ -20,8 +20,8 @@ import static gololang.Messages.message;
 
 class ArrayMethodFinder extends MethodFinder {
 
-  ArrayMethodFinder(MethodInvocation invocation, Lookup lookup) {
-    super(invocation, lookup);
+  ArrayMethodFinder(MethodInvocation invocation) {
+    super(invocation);
   }
 
   private void checkArity(int value) {

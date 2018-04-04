@@ -26,8 +26,8 @@ class AugmentationMethodFinder extends MethodFinder {
 
   private final Loader loader;
 
-  AugmentationMethodFinder(MethodInvocation invocation, Lookup lookup) {
-    super(invocation, lookup);
+  AugmentationMethodFinder(MethodInvocation invocation) {
+    super(invocation);
     this.loader = new Loader(callerClass.getClassLoader());
   }
 

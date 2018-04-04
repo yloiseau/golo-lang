@@ -77,6 +77,9 @@ public class FunctionReference {
    * @return the array of parameter's names
    */
   public String[] parameterNames() {
+    if (parameterNames == null) {
+      return new String[0];
+    }
     return Arrays.copyOf(parameterNames, parameterNames.length);
   }
 

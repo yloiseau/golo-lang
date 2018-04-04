@@ -15,6 +15,7 @@ import java.lang.invoke.MethodHandle;
 import java.lang.reflect.Method;
 
 import static java.lang.reflect.Modifier.*;
+import static java.lang.invoke.MethodHandles.Lookup;
 
 /**
  * Encapsulate informations about a runtime method call.
@@ -27,14 +28,16 @@ public class MethodInvocation {
   private final int arity;
   private final String[] argumentNames;
   private final MethodType type;
+  private final Lookup lookup;
 
-  MethodInvocation(String name, MethodType type, Object[] args, String[] argNames) {
+  MethodInvocation(String name, MethodType type, Object[] args, String[] argNames, Lookup lookup) {
     this.name = name;
     this.receiverClass = args[0].getClass();
     this.arguments = args;
     this.arity = args.length;
     this.type = type;
     this.argumentNames = argNames;
+    this.lookup = lookup;
   }
 
   public String name() {
@@ -54,11 +57,16 @@ public class MethodInvocation {
   }
 
   public String[] argumentNames() {
-    return argumentNames;
+    if (this.argumentNames == null) { return new String[0]; }
+    return this.argumentNames;
   }
 
   public MethodType type() {
     return type;
+  }
+
+  public Lookup lookup() {
+    return this.lookup;
   }
 
   private boolean isLastArgumentAnArray() {
@@ -85,7 +93,7 @@ public class MethodInvocation {
    * returns a new invocation having the given name.
    */
   MethodInvocation withName(String newName) {
-    return new MethodInvocation(newName, type, arguments, argumentNames);
+    return new MethodInvocation(newName, this.type, this.arguments, this.argumentNames, this.lookup);
   }
 
   @Override

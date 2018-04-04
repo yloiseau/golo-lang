@@ -25,8 +25,8 @@ class RegularMethodFinder extends MethodFinder {
 
   private final boolean makeAccessible;
 
-  RegularMethodFinder(MethodInvocation invocation, Lookup lookup) {
-    super(invocation, lookup);
+  RegularMethodFinder(MethodInvocation invocation) {
+    super(invocation);
     this.makeAccessible = !isPublic(invocation.receiverClass().getModifiers());
   }
 

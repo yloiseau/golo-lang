@@ -39,8 +39,8 @@ public class PropertyMethodFinder extends MethodFinder {
 
   private String propertyName;
 
-  public PropertyMethodFinder(MethodInvocation invocation, Lookup lookup) {
-    super(invocation, lookup);
+  public PropertyMethodFinder(MethodInvocation invocation) {
+    super(invocation);
     this.propertyName = capitalize(invocation.name());
   }
 
@@ -48,18 +48,12 @@ public class PropertyMethodFinder extends MethodFinder {
     if (Union.class.isAssignableFrom(invocation.receiverClass())) {
       return null;
     }
-    MethodHandle target = new RegularMethodFinder(
-        invocation.withName("get" + propertyName),
-        lookup
-    ).find();
+    MethodHandle target = new RegularMethodFinder(invocation.withName("get" + propertyName)).find();
 
     if (target != null) {
       return target;
     }
-    return new RegularMethodFinder(
-        invocation.withName("is" + propertyName),
-        lookup
-    ).find();
+    return new RegularMethodFinder(invocation.withName("is" + propertyName)).find();
   }
 
   private MethodHandle fluentMethodHandle(Method candidate) {
@@ -76,9 +70,7 @@ public class PropertyMethodFinder extends MethodFinder {
   }
 
   private MethodHandle findMethodForSetter() {
-    return new RegularMethodFinder(
-        invocation.withName("set" + propertyName),
-        lookup)
+    return new RegularMethodFinder(invocation.withName("set" + propertyName))
         .findInMethods()
         .filter(method -> !Union.class.isAssignableFrom(method.getDeclaringClass()))
         .map(this::fluentMethodHandle)
