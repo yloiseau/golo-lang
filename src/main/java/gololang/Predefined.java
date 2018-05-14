@@ -175,11 +175,12 @@ public final class Predefined {
    * Requires that an object is not the <code>null</code> reference.
    *
    * @param obj the object to test against <code>null</code>.
+   * @return the object itself it not null.
    * @throws AssertionError if <code>obj</code> is <code>null</code>.
    */
-  public static void requireNotNull(Object obj) throws AssertionError {
+  public static Object requireNotNull(Object obj) throws AssertionError {
     if (obj != null) {
-      return;
+      return obj;
     }
     throw new AssertionError("null reference encountered");
   }
@@ -192,7 +193,7 @@ public final class Predefined {
    * @throws IllegalArgumentException if the arguments are of the wrong type.
    * @throws AssertionError           if <code>condition</code> is <code>false</code>.
    */
-  public static void require(Object condition, Object errorMessage) throws IllegalArgumentException, AssertionError {
+  public static void require(Object condition, Object errorMessage) throws AssertionError {
     requireNotNull(condition);
     requireNotNull(errorMessage);
     if ((condition instanceof Boolean) && (errorMessage instanceof String)) {
@@ -612,6 +613,7 @@ public final class Predefined {
 
   // ...................................................................................................................
   // These are generated methods, see src/main/ruby/generate_type_conversions.rb
+  // BEGIN GENERATED
   /**
    * Gives the Character value of some number or String object.
    *

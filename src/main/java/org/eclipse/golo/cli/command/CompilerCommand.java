@@ -45,26 +45,39 @@ public class CompilerCommand implements CliCommand {
   public void execute() throws Throwable {
     // TODO: recurse into directories
     GoloCompiler compiler = classpath.initGoloClassLoader().getCompiler();
-    final boolean compilingToJar = this.output.endsWith(".jar");
-    File outputDir = compilingToJar ? null : new File(this.output);
-    JarOutputStream jarOutputStream = compilingToJar ? new JarOutputStream(new FileOutputStream(new File(this.output)), manifest()) : null;
+    try {
+      if (this.output.endsWith(".jar")) {
+        compileJar(compiler);
+      } else {
+        compileClasses(compiler);
+      }
+    } catch (GoloCompilationException e) {
+      handleCompilationException(e);
+    }
+  }
+
+  private void compileClasses(GoloCompiler compiler) throws Throwable {
+    File outputDir = new File(this.output);
     for (String source : this.sources) {
       File file = new File(source);
       try (FileInputStream in = new FileInputStream(file)) {
-        if (compilingToJar) {
-          compiler.compileToJar(file.getName(), in, jarOutputStream);
-        } else {
-          compiler.compileTo(file.getName(), in, outputDir);
-        }
+        compiler.compileTo(file.getName(), in, outputDir);
       } catch (IOException e) {
         error(message("file_not_found", source));
-        return;
-      } catch (GoloCompilationException e) {
-        handleCompilationException(e);
       }
     }
-    if (compilingToJar) {
-      jarOutputStream.close();
+  }
+
+  private void compileJar(GoloCompiler compiler) throws Throwable {
+    try (JarOutputStream jarOutputStream = new JarOutputStream(new FileOutputStream(new File(this.output)), manifest())) {
+      for (String source : this.sources) {
+        File file = new File(source);
+        try (FileInputStream in = new FileInputStream(file)) {
+          compiler.compileToJar(file.getName(), in, jarOutputStream);
+        } catch (IOException e) {
+          error(message("file_not_found", source));
+        }
+      }
     }
   }
 

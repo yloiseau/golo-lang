@@ -21,6 +21,7 @@ import java.nio.file.*;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static gololang.Messages.message;
 
@@ -59,17 +60,21 @@ public class ShebangCommand implements CliCommand {
 
   private List<String> classpath(Path basedir) throws IOException {
     PathMatcher jarFiles = FileSystems.getDefault().getPathMatcher("glob:**/*.jar");
-    return Files.walk(basedir)
-        .filter(jarFiles::matches)
-        .map(path -> path.toAbsolutePath().toString())
-        .collect(Collectors.toList());
+    try (Stream<Path> files = Files.walk(basedir)) {
+      return files
+          .filter(jarFiles::matches)
+          .map(path -> path.toAbsolutePath().toString())
+          .collect(Collectors.toList());
+    }
   }
 
   private void loadOtherGoloFiles(GoloClassLoader loader, Path basedir, Path script) throws IOException {
     PathMatcher goloFiles = FileSystems.getDefault().getPathMatcher("glob:**/*.golo");
-    Files.walk(basedir)
+    try (Stream<Path> files = Files.walk(basedir)) {
+      files
         .filter(path -> goloFiles.matches(path) && !sameFile(path, script))
         .forEach(path -> loadGoloFile(loader, path));
+    }
   }
 
   private Class<?> loadGoloFile(GoloClassLoader loader, Path path) {

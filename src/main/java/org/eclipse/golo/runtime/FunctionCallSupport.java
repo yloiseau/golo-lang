@@ -79,7 +79,7 @@ public final class FunctionCallSupport {
           "functionalInterfaceFilter",
           methodType(Object.class, Lookup.class, Class.class, Object.class));
     } catch (NoSuchMethodException | IllegalAccessException e) {
-      throw new Error("Could not bootstrap the required method handles", e);
+      throw BootstrapError.becauseOf(e);
     }
   }
 

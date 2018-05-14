@@ -10,6 +10,7 @@
 package gololang;
 
 import java.util.Iterator;
+import java.util.NoSuchElementException;
 
 /**
  * Wraps a {@code Headtail} into an iterator
@@ -28,6 +29,9 @@ public class HeadTailIterator<T> implements Iterator<T> {
 
   @Override
   public T next() {
+    if (data.isEmpty()) {
+      throw new NoSuchElementException();
+    }
     T h = data.head();
     data = data.tail();
     return h;

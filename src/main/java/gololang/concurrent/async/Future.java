@@ -13,11 +13,14 @@ package gololang.concurrent.async;
 /**
  * A future is an abstraction over the eventual result of a possibly asynchronous computation.
  *
- * This interface is intended to be used in conjunction with {@code Promise}. A future is a read-only view over a
+ * This interface is intended to be used in conjunction with {@link Promise}. A future is a read-only view over a
  * promise.
  *
- * {@code Future} objects are made composable in Golo through a set of augmentations: {@code filter}, {@code map}, etc.
- * You should consult the "golodoc" of the {@code gololang.Async} module.
+ * {@code Future} objects are made composable in Golo through a set of augmentations:
+ * <a href="../../../../golodoc/gololang/Async.html#augment.gololang.concurrent.async.Future.filter_2">{@code filter}</a>,
+ * <a href="../../../../golodoc/gololang/Async.html#augment.gololang.concurrent.async.Future.map_2">{@code map}</a>,
+ * etc.
+ * You should consult the "golodoc" of the <a href="../../../../golodoc/gololang/Async.html">{@code gololang.Async}</a> module.
  */
 public interface Future {
 

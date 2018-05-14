@@ -47,7 +47,7 @@ public abstract class GoloElement<T extends GoloElement<T>> {
     return self();
   }
 
-  private void setParentNode(GoloElement<?> parentElement) {
+  protected void setParentNode(GoloElement<?> parentElement) {
     this.parent = parentElement;
   }
 
@@ -238,14 +238,14 @@ public abstract class GoloElement<T extends GoloElement<T>> {
 
   protected final <C extends GoloElement<?>> C makeParentOf(C childElement) {
     if (childElement != null && childElement.parent() != this) {
-      ((GoloElement<?>) childElement).setParentNode(this);
+      childElement.setParentNode(this);
       relinkChild(childElement);
     }
     return childElement;
   }
 
   private void relinkChild(GoloElement<?> child) {
-    this.getLocalReferenceTable().ifPresent((rt) -> child.accept(new RelinkIrVisitor(rt)));
+    this.getLocalReferenceTable().ifPresent(rt -> child.accept(new RelinkIrVisitor(rt)));
   }
 
   /**
@@ -300,7 +300,9 @@ public abstract class GoloElement<T extends GoloElement<T>> {
    */
   public final void replaceInParentBy(GoloElement<?> newElement) {
     if (newElement == this) { return; }
-    if (this.parent != null) {
+    if (newElement == null) {
+      replaceInParentBy(Noop.of("replaced by null"));
+    } else if (this.parent != null) {
       this.parent.replaceElement(this, newElement);
       this.parent.makeParentOf(newElement);
       if (newElement.position == null) {

@@ -15,7 +15,7 @@ import java.util.HashSet;
 /**
  * A promise object is used to abstract over possibly asynchronous computations.
  *
- * You should consult the "golodoc" of the {@code gololang.Async} module.
+ * You should consult the "golodoc" of the <a href="../../../../golodoc/gololang/Async.html">{@code gololang.Async}</a> module.
  *
  * @see gololang.concurrent.async.Future
  * @see gololang.concurrent.async.AssignedFuture

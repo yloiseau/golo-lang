@@ -24,6 +24,7 @@ import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 
 import static gololang.Predefined.require;
+import static gololang.Predefined.requireNotNull;
 
 /**
  * Module providing IO related utility functions.
@@ -66,7 +67,7 @@ public final class IO {
    * @param encoding the file encoding as a {@link String} or {@link Charset}.
    * @return the content as a {@link String}.
    */
-  public static String fileToText(Object file, Object encoding) throws Throwable {
+  public static String fileToText(Object file, Object encoding) throws IOException {
     return new String(Files.readAllBytes(toPath(file)), toCharset(encoding));
   }
 
@@ -121,7 +122,7 @@ public final class IO {
    * @param text the text to write.
    * @param file the file to write to as an instance of either {@link String}, {@link File} or {@link Path}.
    */
-  public static void textToFile(Object text, Object file) throws Throwable {
+  public static void textToFile(Object text, Object file) throws IOException {
     textToFile(text, file, null);
   }
 
@@ -134,12 +135,13 @@ public final class IO {
    * @param file the file to write to as an instance of either {@link String}, {@link File} or {@link Path}.
    * @param charset the charset to encode the text in.
    */
-  public static void textToFile(Object text, Object file, Object charset) throws Throwable {
+  public static void textToFile(Object text, Object file, Object charset) throws IOException {
     require(text instanceof String, "text must be a string");
+    requireNotNull(file);
     Charset encoding = toCharset(charset);
     String str = (String) text;
     if ("-".equals(file.toString())) {
-      System.out.write(str.getBytes(encoding));
+      System.console().printf(str);
     } else {
       Path path = toPath(file);
       if (path.getParent() != null) {
@@ -161,7 +163,8 @@ public final class IO {
    * @return true if the file exists, false if it doesn't
    */
   public static boolean fileExists(Object file) {
-    return Files.exists(toPath(file));
+    if (file == null) { return false; }
+    return toPath(file).toFile().exists();
   }
 
   /**
@@ -170,7 +173,7 @@ public final class IO {
    * @return a String.
    */
   public static String readln() throws IOException {
-    return System.console().readLine();
+    return readln("");
   }
 
   /**
@@ -180,8 +183,7 @@ public final class IO {
    * @return a String.
    */
   public static String readln(String message) throws IOException {
-    System.out.print(message);
-    return readln();
+    return System.console().readLine(message);
   }
 
   /**
@@ -190,7 +192,7 @@ public final class IO {
    * @return a String.
    */
   public static String readPassword() throws IOException {
-    return String.valueOf(System.console().readPassword());
+    return readPassword("");
   }
 
   /**
@@ -200,8 +202,7 @@ public final class IO {
    * @return a String.
    */
   public static String readPassword(String message) throws IOException {
-    System.out.print(message);
-    return readPassword();
+    return String.valueOf(secureReadPassword(message));
   }
 
   /**
@@ -210,7 +211,7 @@ public final class IO {
    * @return a character array.
    */
   public static char[] secureReadPassword() throws IOException {
-    return System.console().readPassword();
+    return secureReadPassword("");
   }
 
   /**
@@ -219,9 +220,8 @@ public final class IO {
    * @param message displays a prompt message.
    * @return a character array.
    */
-  public static char[] secureReadPassword(String message) throws IOException {
-    System.out.print(message);
-    return secureReadPassword();
+  public static char[] secureReadPassword(String message) {
+    return System.console().readPassword(message);
   }
 
   /**
@@ -253,7 +253,7 @@ public final class IO {
    * @see #toCharset(Object)
    */
   public static PrintStream printStreamFrom(Object output, Object charset) throws IOException {
-    if ("-".equals(output)) {
+    if ("-".equals(output) || output == null) {
       return System.out;
     }
     if (output instanceof PrintStream) {
@@ -274,6 +274,4 @@ public final class IO {
         true,
         toCharset(charset).name());
   }
-
-
 }

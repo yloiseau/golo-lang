@@ -16,11 +16,8 @@ import static gololang.Messages.message;
  * You can explicitly create objects of this exception type by
  * calling the method generateParseException in the generated
  * parser.
- *
- * You can modify this class to customize your error reporting
- * mechanisms so long as you retain the public fields.
  */
-public class ParseException extends Exception {
+public final class ParseException extends Exception {
 
   /**
    * The version identifier for this Serializable class.
@@ -32,7 +29,7 @@ public class ParseException extends Exception {
   /**
    * The end of line string for this machine.
    */
-  protected static String EOL = System.getProperty("line.separator", "\n");
+  private static final String EOL = System.getProperty("line.separator", "\n");
 
   /**
    * This constructor is used by the method "generateParseException"
@@ -100,11 +97,9 @@ public class ParseException extends Exception {
    * from the parser) the correct error message
    * gets displayed.
    */
-  private static String initialise(Token currentToken,
-                                   int[][] expectedTokenSequences,
-                                   String[] tokenImage) {
+  private static String initialise(Token currentToken, int[][] expectedTokenSequences, String[] tokenImage) {
 
-    StringBuffer expected = new StringBuffer();
+    StringBuilder expected = new StringBuilder();
     int maxSize = 0;
     for (int[] expectedTokenSequence : expectedTokenSequences) {
       if (maxSize < expectedTokenSequence.length) {
@@ -143,7 +138,7 @@ public class ParseException extends Exception {
    * string literal.
    */
   static String addEscapes(String str) {
-    StringBuffer retval = new StringBuffer();
+    StringBuilder retval = new StringBuilder();
     char ch;
     for (int i = 0; i < str.length(); i++) {
       switch (str.charAt(i)) {

@@ -69,9 +69,10 @@ class LocalReferenceAssignmentAndVerificationVisitor extends AbstractGoloIrVisit
       position = node.positionInSourceCode();
     }
     String errorMessage = message + ' ' + (
-        (position != null || position.isUndefined())
-        ? message("source_position", position.getStartLine(), position.getStartColumn())
-        : message("generated_code")) + ".";
+        (position == null || position.isUndefined())
+          ? message("generated_code")
+          : message("source_position", position.getStartLine(), position.getStartColumn())
+        ) + ".";
 
     getExceptionBuilder().report(type, node, errorMessage);
   }

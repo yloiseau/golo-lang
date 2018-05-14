@@ -24,20 +24,26 @@ import static gololang.Messages.message;
 
 public class ParseTreeToGoloIrVisitor implements GoloParserVisitor {
 
-  public ParseTreeToGoloIrVisitor() { }
-
   @Override
   public Object visit(ASTerror node, Object data) {
     return null;
   }
 
   private static final class Context {
-    public GoloModule module;
+    GoloModule module;
     private final Deque<FunctionContainer> functionContainersStack = new LinkedList<>();
     private final Deque<Deque<Object>> objectStack = new LinkedList<>();
     private final Deque<ReferenceTable> referenceTableStack = new LinkedList<>();
-    public boolean inLocalDeclaration = false;
+    private boolean inLocalDeclaration = false;
     private GoloCompilationException.Builder exceptionBuilder;
+
+    public boolean isInLocalDeclaration() {
+      return inLocalDeclaration;
+    }
+
+    public void inLocalDeclaration(boolean v) {
+      this.inLocalDeclaration = v;
+    }
 
     public void newObjectStack() {
       objectStack.push(new LinkedList<>());
@@ -118,7 +124,7 @@ public class ParseTreeToGoloIrVisitor implements GoloParserVisitor {
         errorMessage(AMBIGUOUS_DECLARATION, function,
             message("ambiguous_function_declaration",
                 function.getName(),
-                firstDeclaration == null ? "unknown" : firstDeclaration.positionInSourceCode()));
+                firstDeclaration.positionInSourceCode()));
       } else if (function.isInAugment() && function.getArity() == 0) {
         errorMessage(AUGMENT_FUNCTION_NO_ARGS, function,
             message("augment_function_no_args",
@@ -794,15 +800,9 @@ public class ParseTreeToGoloIrVisitor implements GoloParserVisitor {
   }
 
   private BinaryOperation assembleBinaryOperation(List<ExpressionStatement<?>> statements, List<OperatorType> operators) {
-    BinaryOperation current = null;
-    int i = 2;
-    for (OperatorType operator : operators) {
-      if (current == null) {
-        current = BinaryOperation.create(operator, statements.get(0), statements.get(1));
-      } else {
-        current = BinaryOperation.create(operator, current, statements.get(i));
-        i++;
-      }
+    BinaryOperation current = BinaryOperation.create(operators.get(0), statements.get(0), statements.get(1));
+    for (int j = 1; j < operators.size(); j++) {
+      current = BinaryOperation.create(operators.get(j), current, statements.get(j + 1));
     }
     return current;
   }
@@ -889,8 +889,8 @@ public class ParseTreeToGoloIrVisitor implements GoloParserVisitor {
   public Object visit(ASTLocalDeclaration node, Object data) {
     Context context = (Context) data;
     ExpressionStatement<?> expr = (ExpressionStatement<?>) context.peek();
-    boolean oldState = context.inLocalDeclaration;
-    context.inLocalDeclaration = true;
+    boolean oldState = context.isInLocalDeclaration();
+    context.inLocalDeclaration(true);
     for (int i = 0; i < node.jjtGetNumChildren(); i++) {
       node.jjtGetChild(i).jjtAccept(this, data);
       try {
@@ -899,7 +899,7 @@ public class ParseTreeToGoloIrVisitor implements GoloParserVisitor {
         context.errorMessage(PARSING, node, ex.getMessage());
       }
     }
-    context.inLocalDeclaration = oldState;
+    context.inLocalDeclaration(oldState);
     return data;
   }
 }

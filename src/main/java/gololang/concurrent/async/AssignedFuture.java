@@ -41,26 +41,41 @@ public final class AssignedFuture implements Future {
     return new AssignedFuture(throwable);
   }
 
+  /**
+   * {@inheritDoc}
+   */
   @Override
   public Object get() {
     return value;
   }
 
+  /**
+   * {@inheritDoc}
+   */
   @Override
   public Object blockingGet() throws InterruptedException {
     return value;
   }
 
+  /**
+   * {@inheritDoc}
+   */
   @Override
   public boolean isResolved() {
     return true;
   }
 
+  /**
+   * {@inheritDoc}
+   */
   @Override
   public boolean isFailed() {
     return value instanceof Throwable;
   }
 
+  /**
+   * {@inheritDoc}
+   */
   @Override
   public Future onSet(Observer observer) {
     if (!isFailed()) {
@@ -69,6 +84,9 @@ public final class AssignedFuture implements Future {
     return this;
   }
 
+  /**
+   * {@inheritDoc}
+   */
   @Override
   public Future onFail(Observer observer) {
     if (isFailed()) {
@@ -77,6 +95,9 @@ public final class AssignedFuture implements Future {
     return this;
   }
 
+  /**
+   * {@inheritDoc}
+   */
   @Override
   public String toString() {
     return String.format("AssignedFuture{value=%s}", value);

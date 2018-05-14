@@ -57,7 +57,7 @@ public final class ClosureCallSupport {
           "fallback",
           methodType(Object.class, InlineCache.class, Object[].class));
     } catch (NoSuchMethodException | IllegalAccessException e) {
-      throw new Error("Could not bootstrap the required method handles", e);
+      throw BootstrapError.becauseOf(e);
     }
   }
 

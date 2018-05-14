@@ -41,49 +41,44 @@ public final class OperatorSupport {
     }
   }
 
-  private static final MethodHandle FALLBACK_1;
-
   private static final MethodHandle GUARD_2;
+  private static final MethodHandle FALLBACK_1;
   private static final MethodHandle FALLBACK_2;
-
-  private static final Set<String> NO_GUARD_OPERATORS = new HashSet<String>() {
-    {
-      add("is");
-      add("isnt");
-      add("oftype");
-    }
-  };
+  private static final Set<String> NO_GUARD_OPERATORS = new HashSet<>();
 
   static {
+    NO_GUARD_OPERATORS.add("is");
+    NO_GUARD_OPERATORS.add("isnt");
+    NO_GUARD_OPERATORS.add("oftype");
     try {
       Lookup lookup = MethodHandles.lookup();
 
       FALLBACK_1 = lookup.findStatic(
           OperatorSupport.class,
-          "fallback_1",
+          "fallback1",
           methodType(Object.class, MonomorphicInlineCache.class, Object[].class));
 
       GUARD_2 = lookup.findStatic(
           OperatorSupport.class,
-          "guard_2",
+          "guard2",
           methodType(boolean.class, Class.class, Class.class, Object.class, Object.class));
 
       FALLBACK_2 = lookup.findStatic(
           OperatorSupport.class,
-          "fallback_2",
+          "fallback2",
           methodType(Object.class, MonomorphicInlineCache.class, Object[].class));
     } catch (NoSuchMethodException | IllegalAccessException e) {
-      throw new Error("Could not bootstrap the required method handles", e);
+      throw BootstrapError.becauseOf(e);
     }
   }
 
-  public static boolean guard_2(Class<?> expected1, Class<?> expected2, Object arg1, Object arg2) {
+  public static boolean guard2(Class<?> expected1, Class<?> expected2, Object arg1, Object arg2) {
     Class<?> t1 = (arg1 == null) ? Object.class : arg1.getClass();
     Class<?> t2 = (arg2 == null) ? Object.class : arg2.getClass();
     return (t1 == expected1) && (t2 == expected2);
   }
 
-  public static Object fallback_1(MonomorphicInlineCache inlineCache, Object[] args) throws Throwable {
+  public static Object fallback1(MonomorphicInlineCache inlineCache, Object[] args) throws Throwable {
 
     Class<?> argClass = (args[0] == null) ? Object.class : args[0].getClass();
     MethodHandle target;
@@ -91,11 +86,11 @@ public final class OperatorSupport {
     try {
       target = inlineCache.callerLookup.findStatic(
           OperatorSupport.class, inlineCache.name, methodType(Object.class, argClass));
-    } catch (Throwable t1) {
+    } catch (NoSuchMethodException | IllegalAccessException t1) {
       try {
         target = inlineCache.callerLookup.findStatic(
-            OperatorSupport.class, inlineCache.name + "_fallback", methodType(Object.class, Object.class));
-      } catch (Throwable t2) {
+            OperatorSupport.class, inlineCache.name + "Fallback", methodType(Object.class, Object.class));
+      } catch (NoSuchMethodException | IllegalAccessException t2) {
         return reject(args[0], inlineCache.name);
       }
     }
@@ -107,7 +102,7 @@ public final class OperatorSupport {
     return target.invokeWithArguments(args);
   }
 
-  public static Object fallback_2(MonomorphicInlineCache inlineCache, Object[] args) throws Throwable {
+  public static Object fallback2(MonomorphicInlineCache inlineCache, Object[] args) throws Throwable {
 
     Class<?> arg1Class = (args[0] == null) ? Object.class : args[0].getClass();
     Class<?> arg2Class = (args[1] == null) ? Object.class : args[1].getClass();
@@ -116,11 +111,11 @@ public final class OperatorSupport {
     try {
       target = inlineCache.callerLookup.findStatic(
           OperatorSupport.class, inlineCache.name, methodType(Object.class, arg1Class, arg2Class));
-    } catch (Throwable t1) {
+    } catch (NoSuchMethodException | IllegalAccessException t1) {
       try {
         target = inlineCache.callerLookup.findStatic(
-            OperatorSupport.class, inlineCache.name + "_fallback", methodType(Object.class, Object.class, Object.class));
-      } catch (Throwable t2) {
+            OperatorSupport.class, inlineCache.name + "Fallback", methodType(Object.class, Object.class, Object.class));
+      } catch (NoSuchMethodException | IllegalAccessException t2) {
         return reject(args[0], args[1], inlineCache.name);
       }
     }
@@ -140,7 +135,7 @@ public final class OperatorSupport {
   public static CallSite bootstrap(Lookup caller, String name, MethodType type, int arity) throws NoSuchMethodException, IllegalAccessException {
 
     if (NO_GUARD_OPERATORS.contains(name)) {
-      MethodHandle target = caller.findStatic(OperatorSupport.class, name + "_noguard",
+      MethodHandle target = caller.findStatic(OperatorSupport.class, name + "NoGuard",
           methodType(Object.class, Object.class, Object.class));
       return new ConstantCallSite(target);
     }
@@ -2152,14 +2147,14 @@ public final class OperatorSupport {
     return a + b;
   }
 
-  public static Object plus_fallback(Object a, Object b) {
+  public static Object plusFallback(Object a, Object b) {
     if (isNotNullAndString(a) || isNotNullAndString(b)) {
       return String.valueOf(a) + b;
     }
     return reject(a, b, "+");
   }
 
-  public static Object times_fallback(Object a, Object b) {
+  public static Object timesFallback(Object a, Object b) {
     if (isInteger(a) && isString(b)) {
       return repeat((String) b, (Integer) a);
     }
@@ -2179,16 +2174,16 @@ public final class OperatorSupport {
 
   // comparisons fallback .............................................................................................
 
-  public static Object equals_fallback(Object a, Object b) {
+  public static Object equalsFallback(Object a, Object b) {
     return Objects.equals(a, b);
   }
 
-  public static Object notequals_fallback(Object a, Object b) {
+  public static Object notequalsFallback(Object a, Object b) {
     return !Objects.equals(a, b);
   }
 
   @SuppressWarnings("unchecked")
-  public static Object less_fallback(Object a, Object b) {
+  public static Object lessFallback(Object a, Object b) {
     if (bothNotNull(a, b) && isComparable(a) && isComparable(b)) {
       return ((Comparable) a).compareTo(b) < 0;
     }
@@ -2196,7 +2191,7 @@ public final class OperatorSupport {
   }
 
   @SuppressWarnings("unchecked")
-  public static Object lessorequals_fallback(Object a, Object b) {
+  public static Object lessorequalsFallback(Object a, Object b) {
     if (bothNotNull(a, b) && isComparable(a) && isComparable(b)) {
       return ((Comparable) a).compareTo(b) <= 0;
     }
@@ -2204,7 +2199,7 @@ public final class OperatorSupport {
   }
 
   @SuppressWarnings("unchecked")
-  public static Object more_fallback(Object a, Object b) {
+  public static Object moreFallback(Object a, Object b) {
     if (bothNotNull(a, b) && isComparable(a) && isComparable(b)) {
       return ((Comparable) a).compareTo(b) > 0;
     }
@@ -2212,7 +2207,7 @@ public final class OperatorSupport {
   }
 
   @SuppressWarnings("unchecked")
-  public static Object moreorequals_fallback(Object a, Object b) {
+  public static Object moreorequalsFallback(Object a, Object b) {
     if (bothNotNull(a, b) && isComparable(a) && isComparable(b)) {
       return ((Comparable) a).compareTo(b) >= 0;
     }
@@ -2225,23 +2220,22 @@ public final class OperatorSupport {
     return !a;
   }
 
-  public static Object oftype_noguard(Object a, Object b) {
+  public static Object oftypeNoGuard(Object a, Object b) {
     if (isClass(b)) {
       return ((Class<?>) b).isInstance(a);
     }
     return reject(a, b, "oftype");
   }
 
-  public static Object is_noguard(Object a, Object b) {
+  public static Object isNoGuard(Object a, Object b) {
     return a == b;
   }
 
-  public static Object isnt_noguard(Object a, Object b) {
+  public static Object isntNoGuard(Object a, Object b) {
     return a != b;
   }
 
   // helpers ..........................................................................................................
-
   private static boolean isNotNullAndString(Object obj) {
     return (obj != null) && (obj.getClass() == String.class);
   }
@@ -2268,11 +2262,14 @@ public final class OperatorSupport {
 
   private static Object reject(Object a, String symbol) throws IllegalArgumentException {
     throw new IllegalArgumentException(
-        message("invalid_unary_operator", symbol, a.getClass().getName()));
+        message("invalid_unary_operator", symbol,
+          a == null ? "null" : a.getClass().getName()));
   }
 
   private static Object reject(Object a, Object b, String symbol) throws IllegalArgumentException {
     throw new IllegalArgumentException(
-        message("invalid_binary_operator", symbol, a.getClass().getName(), b.getClass().getName()));
+        message("invalid_binary_operator", symbol,
+          a == null ? "null" : a.getClass().getName(),
+          b == null ? "null" : b.getClass().getName()));
   }
 }

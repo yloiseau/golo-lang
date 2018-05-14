@@ -23,7 +23,6 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.eclipse.golo.internal.testing.TestUtils.runTests;
 import static org.eclipse.golo.internal.testing.TestUtils.classLoader;
-import static org.eclipse.golo.internal.testing.TestUtils.compileAndLoadGoloModule;
 
 public class ResultTest {
 
@@ -55,8 +54,12 @@ public class ResultTest {
     assertThat(r.isValue(), is(false));
     assertThat(r.isError(), is(false));
 
-    assertThat(Result.option(null).isEmpty(), is(true));
     assertThat(Result.option(Optional.empty()).isEmpty(), is(true));
+  }
+
+  @Test(expectedExceptions = java.lang.NullPointerException.class)
+  public void optionOnNull() {
+    Result.option(null);
   }
 
   @Test

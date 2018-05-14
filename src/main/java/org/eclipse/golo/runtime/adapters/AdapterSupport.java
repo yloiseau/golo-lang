@@ -15,6 +15,7 @@ import gololang.FunctionReference;
 import java.lang.invoke.*;
 import java.lang.invoke.MethodHandles.Lookup;
 import java.util.Map;
+import org.eclipse.golo.runtime.BootstrapError;
 
 import static java.lang.invoke.MethodType.genericMethodType;
 
@@ -34,7 +35,7 @@ public final class AdapterSupport {
       FALLBACK = lookup.findStatic(AdapterSupport.class, "fallback",
           MethodType.methodType(Object.class, AdapterCallSite.class, Object[].class));
     } catch (NoSuchMethodException | IllegalAccessException e) {
-      throw new Error("Could not bootstrap the required method handles", e);
+      throw BootstrapError.becauseOf(e);
     }
   }
 

@@ -29,7 +29,7 @@ class PropertyMethodFinder extends MethodFinder {
           "fluentSetter",
           methodType(Object.class, Object.class, Object.class));
     } catch (NoSuchMethodException | IllegalAccessException e) {
-      throw new Error("Could not bootstrap the required fluent method handles", e);
+      throw BootstrapError.becauseOf(e);
     }
   }
 

@@ -349,8 +349,7 @@ public final class DynamicObject {
       DISPATCH_GET = lookup.findStatic(DynamicObject.class, "dispatchGetterStyle", methodType(Object.class, String.class, DynamicObject.class));
       DISPATCH_SET = lookup.findStatic(DynamicObject.class, "dispatchSetterStyle", methodType(Object.class, String.class, DynamicObject.class, Object.class));
     } catch (NoSuchMethodException | IllegalAccessException e) {
-      e.printStackTrace();
-      throw new Error("Could not bootstrap the required method handles");
+      throw org.eclipse.golo.runtime.BootstrapError.becauseOf(e);
     }
   }
 

@@ -27,7 +27,7 @@ import gololang.FunctionReference;
  * <p>This object is used when chaining computations (e.g. using map-filter operations) that can
  * produce an error. Instead of raising an exception, the operation can use this object to
  * encapsulate the result. This is similar to {@code Optional}, but also encapsulate the type of
- * error in the form of a {@code Throwable} instance that can be raised later.
+ * error in the form of a {@code Exception} instance that can be raised later.
  *
  * <p>This is similar to the {@code Either} or {@code Result} type in other functional languages (e.g.
  * <a href="https://hackage.haskell.org/package/base/docs/Data-Either.html">Haskell</a>,
@@ -36,12 +36,12 @@ import gololang.FunctionReference;
  *
  * <p>Typical usage:<ul>
  * <li>return {@link #empty()} instead of returning {@code null},
- * <li>use {@link #error(java.lang.Throwable)} or {@link #fail(java.lang.String)} instead of
+ * <li>use {@link #error(java.lang.Exception)} or {@link #fail(java.lang.String)} instead of
  * throwing an exception,
  * <li>use {@link #ok(java.lang.Object)} to return a normal value.
  * </ul>
  */
-public final class Result<T, E extends Throwable> implements Iterable<T> {
+public final class Result<T, E extends Exception> implements Iterable<T> {
 
   private static final Result<?, ?> EMPTY = new Result<>();
   private final T value;
@@ -52,27 +52,27 @@ public final class Result<T, E extends Throwable> implements Iterable<T> {
     this.error = null;
   }
 
-  private Result(T value, E throwable) {
+  private Result(T value, E error) {
     this.value = value;
-    this.error = throwable;
+    this.error = error;
   }
 
   /**
    * Dynamic polymorphic constructor.
    *
-   * <p>Dynamically dispatch on {@link #empty()}, {@link #error(java.lang.Throwable)},
+   * <p>Dynamically dispatch on {@link #empty()}, {@link #error(java.lang.Exception)},
    * {@link #option(java.util.Optional)} or {@link #ok(java.lang.Object)} depending on the
    * {@code value} type. This is mainly useful in Golo code.
    *
    * @param value the value to encapsulate
    * @return a {@code Result} representing the value
    */
-  public static Result<Object, Throwable> of(Object value) {
+  public static Result<Object, Exception> of(Object value) {
     if (value == null) {
       return empty();
     }
-    if (value instanceof Throwable) {
-      return error((Throwable) value);
+    if (value instanceof Exception) {
+      return error((Exception) value);
     }
     if (value instanceof Optional) {
       @SuppressWarnings("unchecked")
@@ -89,7 +89,7 @@ public final class Result<T, E extends Throwable> implements Iterable<T> {
    *
    * @return an empty {@code Result}
    */
-  public static <T, E extends Throwable> Result<T, E> empty() {
+  public static <T, E extends Exception> Result<T, E> empty() {
     @SuppressWarnings("unchecked")
     Result<T, E> r = (Result<T, E>) EMPTY;
     return r;
@@ -105,7 +105,7 @@ public final class Result<T, E extends Throwable> implements Iterable<T> {
    * @return a {@code Result} containing the value if the specified value is non-null,
    * otherwise an empty {@code Result}
    */
-  public static <T, E extends Throwable> Result<T, E> ok(T value) {
+  public static <T, E extends Exception> Result<T, E> ok(T value) {
     return value == null ? empty() : new Result<>(value, null);
   }
 
@@ -118,7 +118,7 @@ public final class Result<T, E extends Throwable> implements Iterable<T> {
    * @param throwable the error that occurred
    * @return a {@code Result} containing the throwable
    */
-  public static <T, E extends Throwable> Result<T, E> error(E throwable) {
+  public static <T, E extends Exception> Result<T, E> error(E throwable) {
     return throwable == null ? empty() : new Result<>(null, throwable);
   }
 
@@ -130,8 +130,8 @@ public final class Result<T, E extends Throwable> implements Iterable<T> {
    * @return a {@code Result} containing the value if {@code isPresent()} is {@code true},
    * otherwise an empty {@code Result}
    */
-  public static <T, E extends Throwable> Result<T, E> option(Optional<T> opt) {
-    return opt == null || !opt.isPresent() ? empty() : new Result<>(opt.get(), null);
+  public static <T, E extends Exception> Result<T, E> option(Optional<T> opt) {
+    return !opt.isPresent() ? empty() : new Result<>(opt.get(), null);
   }
 
     /**
@@ -144,7 +144,7 @@ public final class Result<T, E extends Throwable> implements Iterable<T> {
    * otherwise an error containing {@code NoSuchElementException}
    */
   public static <T> Result<T, NoSuchElementException> option(Optional<T> opt, String message) {
-    return (opt == null || !opt.isPresent())
+    return !opt.isPresent()
       ? new Result<>(null, new NoSuchElementException(message))
       : new Result<>(opt.get(), null);
   }
@@ -152,7 +152,7 @@ public final class Result<T, E extends Throwable> implements Iterable<T> {
   /**
    * Returns a failed {@code Result}.
    *
-   * <p>Represent a computation that failed. This is similar to {@link #error(java.lang.Throwable)}
+   * <p>Represent a computation that failed. This is similar to {@link #error(java.lang.Exception)}
    * but only the message is provided, and a {@code RuntimeException} is automatically created.
    *
    * @param message the message representing the error
@@ -170,7 +170,7 @@ public final class Result<T, E extends Throwable> implements Iterable<T> {
    * @throws NoSuchElementException if the {@code Result} is empty
    * @throws E if the {@code Result} is an error
    */
-  public T get() throws E, NoSuchElementException {
+  public T get() throws E {
     if (value != null) {
       return value;
     }
@@ -305,7 +305,7 @@ public final class Result<T, E extends Throwable> implements Iterable<T> {
    * If a value is present, apply the provided mapping function to it, otherwise return the
    * {@code Result} itself. If the application succeed with a value, return a {@code Result}
    * containing it, if the result is null, return an empty {@code Result}, otherwise return a
-   * {@code Result} capturing the {@code Throwable} that was thrown.
+   * {@code Result} capturing the {@code Exception} that was thrown.
    *
    * @param <U> The type of the result of the mapping function
    * @param mapper a mapping function to apply to the value, if present
@@ -313,7 +313,7 @@ public final class Result<T, E extends Throwable> implements Iterable<T> {
    * this {@code Result}
    * @throws NullPointerException if the mapping function is null
    */
-  public <U, X extends Throwable> Result<U, X> map(Function<? super T, ? extends U> mapper) {
+  public <U, X extends Exception> Result<U, X> map(Function<? super T, ? extends U> mapper) {
     Objects.requireNonNull(mapper);
     if (value == null) {
       @SuppressWarnings("unchecked")
@@ -322,7 +322,7 @@ public final class Result<T, E extends Throwable> implements Iterable<T> {
     }
     try {
       return ok(mapper.apply(value));
-    } catch (Throwable e) {
+    } catch (Exception e) {
       @SuppressWarnings("unchecked")
       Result<U, X> r = (Result<U, X>) error(e);
       return r;
@@ -334,7 +334,7 @@ public final class Result<T, E extends Throwable> implements Iterable<T> {
    * otherwise return the {@code Result} itself.
    * If the application succeed with a value, return a {@code Result}
    * containing it, if the result is null, return an empty {@code Result}, otherwise return a
-   * {@code Result} capturing the {@code Throwable} that was thrown.
+   * {@code Result} capturing the {@code Exception} that was thrown.
    *
    * @param <X> The type of the result of the mapping function
    * @param mapper a mapping function to apply to the error, if present
@@ -342,7 +342,7 @@ public final class Result<T, E extends Throwable> implements Iterable<T> {
    * this {@code Result}
    * @throws NullPointerException if the mapping function is null
    */
-  public <X extends Throwable> Result<T, X> mapError(Function<? super E, ? extends X> mapper) {
+  public <X extends Exception> Result<T, X> mapError(Function<? super E, ? extends X> mapper) {
     Objects.requireNonNull(mapper);
     if (error == null) {
       @SuppressWarnings("unchecked")
@@ -351,7 +351,7 @@ public final class Result<T, E extends Throwable> implements Iterable<T> {
     }
     try {
       return error(mapper.apply(error));
-    } catch (Throwable e) {
+    } catch (Exception e) {
       @SuppressWarnings("unchecked")
       Result<T, X> r = (Result<T, X>) error(e);
       return r;
@@ -364,14 +364,14 @@ public final class Result<T, E extends Throwable> implements Iterable<T> {
    * If a value is present, apply the provided {@code Result}-bearing mapping function to it,
    * otherwise return the {@code Result} itself.
    * If the application succeed, return its result, otherwise return a
-   * {@code Result} capturing the {@code Throwable} that was thrown.
+   * {@code Result} capturing the {@code Exception} that was thrown.
    *
    * @param <U> The type of the value of the {@code Result} returned by the mapping function
    * @param mapper a mapping function to apply to the value, if present
    * @return the result of applying the mapping function to the value of this {@code Result}
    * @throws NullPointerException if the mapping function is {@code null} or if it returns {@code null}
    */
-  public <U, X extends Throwable> Result<U, X> flatMap(Function<? super T, Result<U, X>> mapper) {
+  public <U, X extends Exception> Result<U, X> flatMap(Function<? super T, Result<U, X>> mapper) {
     Objects.requireNonNull(mapper);
     if (isEmpty() || isError()) {
       @SuppressWarnings("unchecked")
@@ -381,7 +381,7 @@ public final class Result<T, E extends Throwable> implements Iterable<T> {
     Result<U, X> result;
     try {
       result = mapper.apply(value);
-    } catch (Throwable e) {
+    } catch (Exception e) {
       @SuppressWarnings("unchecked")
       Result<U, X> err = (Result<U, X>) error(e);
       return err;
@@ -394,9 +394,9 @@ public final class Result<T, E extends Throwable> implements Iterable<T> {
    *
    * See <a href="https://github.com/eclipse/golo-lang/issues/277">issue 277</a>
    */
-  public Result<Object, Throwable> flatMap(FunctionReference mapper) {
+  public Result<Object, Exception> flatMap(FunctionReference mapper) {
     @SuppressWarnings("unchecked")
-    Result<Object, Throwable> result = (Result<Object, Throwable>) flatMap((Function) mapper.to(Function.class));
+    Result<Object, Exception> result = (Result<Object, Exception>) flatMap((Function) mapper.to(Function.class));
     return result;
   }
 
@@ -421,9 +421,6 @@ public final class Result<T, E extends Throwable> implements Iterable<T> {
       return this;
     }
     return (Result) value;
-    // }
-    // throw new ClassCastException(String.format("%s cannot be cast to %s",
-    //       value.getClass(), Result.class));
   }
 
   /**
@@ -438,7 +435,7 @@ public final class Result<T, E extends Throwable> implements Iterable<T> {
    * Ok(21): andThen(|x| -> x + 1): andThen(|x| -> Ok(2 * x)) == Ok(42)
    * </code></pre>
    */
-  public Result<?, ? extends Throwable> andThen(FunctionReference mapper) {
+  public Result<?, ? extends Exception> andThen(FunctionReference mapper) throws Throwable {
     Objects.requireNonNull(mapper);
     if (isEmpty() || isError()) {
       return this;
@@ -446,7 +443,7 @@ public final class Result<T, E extends Throwable> implements Iterable<T> {
     Object result;
     try {
       result = mapper.invoke(value);
-    } catch (Throwable e) {
+    } catch (Exception e) {
       return error(e);
     }
     if (result instanceof Result) {
@@ -501,9 +498,9 @@ public final class Result<T, E extends Throwable> implements Iterable<T> {
    *
    * See <a href="https://github.com/eclipse/golo-lang/issues/277">issue 277</a>
    */
-  public Result<Object, Throwable> map(FunctionReference mapper) {
+  public Result<Object, Exception> map(FunctionReference mapper) {
     @SuppressWarnings("unchecked")
-    Result<Object, Throwable> result = (Result<Object, Throwable>) map((Function) mapper.to(Function.class));
+    Result<Object, Exception> result = (Result<Object, Exception>) map((Function) mapper.to(Function.class));
     return result;
   }
 
@@ -556,7 +553,7 @@ public final class Result<T, E extends Throwable> implements Iterable<T> {
       return this;
     }
     if (!(value instanceof FunctionReference)) {
-      throw new RuntimeException("The result must contain a function to be applied");
+      throw new IllegalStateException("The result must contain a function to be applied");
     }
     FunctionReference f = (FunctionReference) value;
     if (f.arity() > 1) {

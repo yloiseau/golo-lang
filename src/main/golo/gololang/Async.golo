@@ -16,12 +16,12 @@ and futures. The provided APIs are orthogonal to the execution strategy: it is u
 code from the same thread, from a separate thread, or by pushing new tasks to a service executor.
 
 The functions and augmentations in this module often delegate to Java classes from
-`gololang.concurrent.async`.
+[`gololang.concurrent.async`](../../javadoc/gololang/concurrent/async/package-summary.html).
 ----
 module gololang.Async
 
 ----
-Returns a new promise. Promise objects have the following useful methods.
+Returns a new promise. [`Promise`](../../javadoc/gololang/concurrent/async/Promise.html) objects have the following useful methods.
 
 * `set(value)`: sets the promise value. The value is ignored if the promise has already been set.
 * `fail(exception)`: set the value to an exception.
@@ -31,7 +31,7 @@ Returns a new promise. Promise objects have the following useful methods.
 * `future()`: returns a new future object on a promise.
 * `isResolved()` and `isFailed()` query the promise status.
 
-Future objects have the following methods.
+[`Future`](../../javadoc/gololang/concurrent/async/Future.html) objects have the following methods.
 
 * `onSet(|v| {...})`: registers a callback when the value is set, or executes it right now if it
   has already been set.
@@ -42,8 +42,8 @@ function promise = ->
   gololang.concurrent.async.Promise()
 
 ----
-Augmentation on the base `Promise` objects provided by the `gololang.concurrent.async.Promise` Java
-class.
+Augmentation on the base `Promise` objects provided by the
+[`gololang.concurrent.async.Promise`](../../javadoc/gololang/concurrent/async/Promise.html) Java class.
 
 The promise initialize method takes one argument, a callback with two parameters, resolve and reject.
 Do something within the callback, then call resolve if everything worked, otherwise call reject:
@@ -94,8 +94,8 @@ function failedFuture = |throwable| ->
   gololang.concurrent.async.AssignedFuture.failedFuture(throwable)
 
 ----
-Augmentation on the base `Future` objects provided by the `gololang.concurrent.async.Future` Java
-class.
+Augmentation on the base `Future` objects provided by the
+[`gololang.concurrent.async.Future`](../../javadoc/gololang/concurrent/async/Future.html) Java class.
 ----
 augment gololang.concurrent.async.Future {
 
@@ -247,14 +247,17 @@ function reduce = |futures, init, reducer| {
 }
 
 ----
-Bridge structure to hold a reference to a Golo future and a Java future.
+Bridge structure to hold a reference to a
+[Golo future](../../javadoc/gololang/concurrent/async/Future.html)
+and a
+[Java future](https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/Future.html).
 
 Instances of this struct are being returned by the
 [`enqueue`](#java.util.concurrent.ExecutorService.enqueue_2) augmentation
 on `ExecutorService` instances. This essentially adds the ability to:
 
 * use the Golo future for its composability, and
-* use tha Java future to cancel a job.
+* use the Java future to cancel a job.
 ----
 struct FutureBridge = {
   _goloFuture,
@@ -293,7 +296,7 @@ augment gololang.Async.types.FutureBridge {
 }
 
 ----
-Augmentations for `ExecutorService`.
+Augmentations for [`ExecutorService`](https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/ExecutorService.html)
 ----
 augment java.util.concurrent.ExecutorService {
 
