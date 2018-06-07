@@ -50,6 +50,7 @@ public class Generator implements Iterator<Object>, AutoCloseable, Supplier<Opti
   private FunctionReference onClose;
   private Object currentSeed;
   private Object currentValue;
+  private boolean started = false;
   private boolean isClosed = false;
 
   private Generator(FunctionReference unspool, FunctionReference finished, Object seed, Object value, boolean closed) {
@@ -82,19 +83,36 @@ public class Generator implements Iterator<Object>, AutoCloseable, Supplier<Opti
     }
   };
 
-  /**
-   * Creates a new generator.
-   *
-   * @param unspool function used to generate values, of the type {@code |currentSeed| -> [nextValue, nextSeed]}.
-   * @param finished predicate function used to test if the generator is exhausted or not, of the type {@code |currentSeed| -> isFinised}
-   * @param seed the initial seed to use.
-   */
-  public static Generator generator(FunctionReference unspool, FunctionReference finished, Object seed) {
+  private static void checkFunctions(FunctionReference unspool, FunctionReference finished) {
     requireNotNull(unspool);
     requireNotNull(finished);
     require(unspool.acceptArity(1), "`unspool` must take the seed as parameter");
     require(finished.acceptArity(1), "`finished` must take the seed as parameter");
+  }
+
+  /**
+   * Creates a new generator.
+   *
+   * @param unspool function used to generate values, with type {@code |currentSeed| -> [nextValue, nextSeed]}.
+   * @param finished predicate function used to test if the generator is exhausted or not, with type {@code |currentSeed| -> isFinised}
+   * @param seed the initial seed to use.
+   */
+  public static Generator generator(FunctionReference unspool, FunctionReference finished, Object seed) {
+    checkFunctions(unspool, finished);
     return new Generator(unspool, finished, seed, null, false);
+  }
+
+  /**
+   * Creates a new iterable.
+   *
+   * <p>This basically returns an {@code Iterable} instance whose {@code iterator} methods returns a new
+   * {@code Generator} described by the given parameters.
+   *
+   * @see #generator(FunctionReference, FunctionReference, Object)
+   */
+  public static Iterable<Object> iterable(FunctionReference unspool, FunctionReference finished, Object seed) {
+    checkFunctions(unspool, finished);
+    return () -> new Generator(unspool, finished, seed, null, false);
   }
 
   /**
@@ -105,12 +123,19 @@ public class Generator implements Iterator<Object>, AutoCloseable, Supplier<Opti
   }
 
   /**
+   * Alias for {@link #emptyGenerator()}
+   */
+  public static Generator empty() {
+    return EMPTY;
+  }
+
+  /**
    * Fork this generator.
    *
    * <p>Creates a new generator in the same state such that they raise the same values but can now be advanced independently.
    * For instance:
    * <pre class="listing"><code class="lang-golo" data-lang="golo">
-   * let g = generator(|seed| -> [seed, seed + 1], -> false, 0)
+   * let g = generator(|seed| -> [seed, seed + 1], |s| -> false, 0)
    *
    * require(g: next() == 0, "err")
    * require(g: next() == 1, "err")
@@ -123,10 +148,25 @@ public class Generator implements Iterator<Object>, AutoCloseable, Supplier<Opti
    * require(g: next() == 4, "err")
    * </code></pre>
    *
+   * <p><strong>Warning</strong>: the underlying function are not cloned, but shared between the two generators.
+   * If the {@code unspool} function mutate a closed variable (e.g. use another iterator internally), the two generator
+   * states will not be independent.
+   * For instance:
+   * <pre class="listing"><code class="lang-golo" data-lang="golo">
+   * let g = generator(|it| -> [it: next(), it], |it| -> not it: hasNext(), range(10): iterator())
+   * let h = g: fork()
+   *
+   * require(g: next() == 0, "err")
+   * require(g: next() == 1, "err")
+   * require(h: next() == 2, "err")
+   * </code></pre>
+   *
    * @return an independent generator in the same state as this one.
    */
   public Generator fork() {
-    return new Generator(this.unspool, this.finished, this.currentSeed, this.currentValue, this.isClosed);
+    Generator forked = new Generator(this.unspool, this.finished, this.currentSeed, this.currentValue, this.isClosed);
+    forked.started = this.started;
+    return forked;
   }
 
   /**
@@ -153,7 +193,7 @@ public class Generator implements Iterator<Object>, AutoCloseable, Supplier<Opti
   }
 
   /**
-   * @inheritDoc
+   * {@inheritDoc}
    *
    * <p>This method calls the {@code finished} function on the current seed.
    * <p>If {@code finished} raises an exception, this method returns
@@ -171,12 +211,16 @@ public class Generator implements Iterator<Object>, AutoCloseable, Supplier<Opti
     }
   }
 
+  /**
+   * {@inheritDoc}
+   */
+  @Override
   public boolean isEmpty() {
     return !hasNext();
   }
 
   /**
-   * @inheritDoc
+   * {@inheritDoc}
    *
    * <p>This method calls the {@code unspool} function on the current seed, store the second element of the returned
    * tuple, and return the first one.
@@ -193,11 +237,33 @@ public class Generator implements Iterator<Object>, AutoCloseable, Supplier<Opti
     }
     this.currentValue = res.get(0);
     this.currentSeed = res.get(1);
+    this.started = true;
     return currentValue;
   }
 
   /**
-   * @inheritDoc
+   * Like {@link #next()} but returns the generator itself.
+   * <p>
+   * This allows to chain method to skip some values. For instance, use:
+   * <pre class="listing"><code class="lang-golo" data-lang="golo">
+   * let value = gen: skip(): skip(): skip(): current()
+   * </code/></pre>
+   * instead of
+   * <pre class="listing"><code class="lang-golo" data-lang="golo">
+   * gen: next()
+   * gen: next()
+   * let value = gen: next()
+   * </code></pre>
+   */
+  public Generator skip() {
+    next();
+    return this;
+  }
+
+  /**
+   * {@inheritDoc}
+   *
+   * <p>TODO: doc
    */
   @Override
   public Optional<Object> get() {
@@ -212,9 +278,10 @@ public class Generator implements Iterator<Object>, AutoCloseable, Supplier<Opti
   }
 
   /**
-   * @inheritDoc
+   * {@inheritDoc}
    *
    * The function defined by {@link #onClose(FunctionReference)} is called with the current seed.
+   * Moreover, the seed and current value are set to {@code null}.
    */
   @Override
   public void close() {
@@ -237,7 +304,7 @@ public class Generator implements Iterator<Object>, AutoCloseable, Supplier<Opti
    *
    * <p>For instance:
    * <pre class="listing"><code class="lang-golo" data-lang="golo">
-   * let g = generator(|seed| -> [seed, seed + 1], -> false, 0)
+   * let g = generator(|seed| -> [seed, seed + 1], |s| -> false, 0)
    *
    * require(g: next() == 0, "err")
    * require(g: next() == 1, "err")
@@ -264,6 +331,8 @@ public class Generator implements Iterator<Object>, AutoCloseable, Supplier<Opti
 
   /**
    * Returns the current value.
+   * <p>
+   * If the generator is not started, returns {@code null}.
    */
   public Object current() {
     return this.currentValue;

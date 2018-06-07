@@ -11,12 +11,7 @@ local function assertRaises = |f, ex| {
     f()
     raise("must fail")
   } catch (e) {
-    if not (e oftype ex) {
-      throw AssertionError(
-        "expected a " + ex: name()
-        + " but got a " + e: class(): name(),
-        e)
-    }
+    MatcherAssert.assertThat(e, Matchers.isA(ex))
   }
 }
 
@@ -52,7 +47,7 @@ function test_send = {
 }
 
 function test_iterable = {
-  let g = gololang.Generators.iterable(
+  let g = gololang.Generator.iterable(
     |seed| -> [seed, seed + 1],
     |seed| -> seed >= 5,
     0)
