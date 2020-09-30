@@ -122,6 +122,10 @@ public class HtmlProcessor extends AbstractProcessor {
       .map(Paths::get)
       .flatMap(p -> packageDocumentation(p, name))
       .distinct()
+      .map(p -> {
+        System.err.println(">>> pkg doc candidate: " + p);
+        return p;
+      })
       .filter(Files::exists)
       .collect(Collectors.toList());
     if (docs.size() > 1) {
@@ -139,11 +143,13 @@ public class HtmlProcessor extends AbstractProcessor {
   }
 
   private static Stream<Path> packageDocumentation(Path mod, String name) {
+    System.err.println(">>> package doc for " + mod);
     String basename = PackageAndClass.of(name).className();
     Stream.Builder<Path> docs = Stream.builder();
     Path parent = mod.getParent();
     if (parent != null) {
       if (parent.getFileName().toString().equals(name)) {
+        System.out.println(">>> trying in " + parent + " vs " + name);
         docs.add(mod.resolveSibling("README.md"));
         docs.add(mod.resolveSibling("package.md"));
       } else {
