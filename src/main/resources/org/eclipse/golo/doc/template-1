@@ -1,0 +1,77 @@
+<%@params doc %>
+<%@import org.eclipse.golo.doc.ManProcessor %>
+.TH "<%= doc: moduleName(): toUpperCase() %>" "2020-10-08" "\ \&" "\ \&"
+.nh
+.sp
+<%= adaptSections(doc: moduleDocumentation(), 1) %>
+<% if not doc: structs(): isEmpty() { %>
+.SH STRUCTS
+<% foreach structDoc in doc: structs() { %>
+### `<%= structDoc: name() %>`
+
+<%= adaptSections(structDoc: documentation(), 3) %>
+
+##### Members
+<% foreach member in structDoc: members() { %>
+* `<%= member: name() %>`
+  <%= adaptSections(member: documentation(), 5) %>
+<%}%>
+<%}}%>
+
+<% if not doc: unions(): isEmpty() { %>
+.SH UNIONS
+<% foreach unionDoc in doc: unions() { %>
+### `<%= unionDoc: name() %>`
+<%= adaptSections(unionDoc: documentation(), 3) %>
+<% foreach unionValueDoc in unionDoc: values() { %>
+#### `<%= unionValueDoc: name() %>`
+
+<%= adaptSections(unionValueDoc: documentation(), 3) %>
+
+##### Members
+<% foreach member in unionValueDoc: members() { %>
+* `<%= member: name() %>`
+  <%= adaptSections(member: documentation(), 5) %>
+<%}%>
+<%}%>
+<%}%>
+<%}%>
+<%if not doc: namedAugmentations(): isEmpty() {%>
+.SH NAMED AUGMENTATIONS
+<%foreach namedAugmentationDoc in doc: namedAugmentations() {%>
+### <%= namedAugmentationDoc: name()%>
+<%= adaptSections(namedAugmentationDoc: documentation(), 3) %>
+<%foreach funcDoc in namedAugmentationDoc {%>
+#### <%= funcDoc: label()%>
+<%= adaptSections(funcDoc: documentation(), 4) %>
+<%}}}%>
+<% if not doc: augmentations(): isEmpty() { %>
+.SH AUGMENTATIONS
+<% foreach augmentDoc in doc: augmentations() { %>
+### `<%= augmentDoc: target() %>`
+<%= adaptSections(augmentDoc: documentation(), 3) %>
+<%if not augmentDoc: augmentationNames(): isEmpty() {%>
+##### Named augmentations applied
+<%foreach name in augmentDoc: augmentationNames() {%>
+- <%= name %>
+<%}}%>
+<% foreach funcDoc in augmentDoc { %>
+#### `<%= funcDoc: label() %>`
+<%= adaptSections(funcDoc: documentation(), 4) %>
+<% }}} %>
+<% if not doc: macros(): isEmpty() { %>
+.SH MACROS
+<% foreach funcDoc in doc: macros() { %>
+<%if funcDoc: varargs() {%>
+#### `<%= funcDoc: name() %>(<%= funcDoc: arguments(): join(", ") %>...)`
+<%} else {%>
+#### `<%= funcDoc: name() %>(<%= funcDoc: arguments(): join(", ") %>)`
+<%}%>
+<%= funcDoc: documentation() %>
+<%}}%>
+<% if not doc: functions(): isEmpty() { %>
+.SH FUNCTIONS
+<% foreach funcDoc in doc: functions() { %>
+### `<%= funcDoc: label() %>`
+<%= adaptSections(funcDoc: documentation(), 3) %>
+<%}}%>

@@ -22,6 +22,7 @@ import org.eclipse.golo.doc.AbstractProcessor;
 import org.eclipse.golo.doc.CtagsProcessor;
 import org.eclipse.golo.doc.HtmlProcessor;
 import org.eclipse.golo.doc.MarkdownProcessor;
+import org.eclipse.golo.doc.ManProcessor;
 import org.eclipse.golo.doc.ModuleDocumentation;
 
 import java.io.File;
@@ -52,6 +53,7 @@ public class DocCommand implements CliCommand {
     FORMATS.put("markdown", MarkdownProcessor::new);
     FORMATS.put("html", HtmlProcessor::new);
     FORMATS.put("ctags", CtagsProcessor::new);
+    FORMATS.put("man", ManProcessor::new);
   }
 
   private GoloCompiler compiler;
