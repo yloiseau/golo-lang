@@ -36,4 +36,3 @@ function simple = |suites| -> suites: map(runPartWith(^simple, ^gololang.Errors:
 Lazy (but sequential) runner
 ----
 function lazy = |suites| -> suites: asLazyList(): map(runPartWith(^lazy, ^gololang.Errors::trying))
-

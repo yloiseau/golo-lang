@@ -81,8 +81,8 @@ Otherwise, a `java.nio.file.Path` is created with the predefined `pathFrom`.
 The returned `PrintStream` is buffered and uses the default charset.
 Parent directory is created. If the file exists, it is overwritten.
 
-- *param* `output` the file to use; "-" means standard output
-- *return* a buffered `PrintStream` or `java.lang.System.out`
+- *param* `output`: the file to use; "-" means standard output
+- *returns* a buffered `PrintStream` or `java.lang.System.out`
 
 See `java.nio.charset.Charset.defaultCharset`
 ----
@@ -99,7 +99,7 @@ Parent directory is created. If the file exists, it is overwritten.
 - *param* `output` the file to use; can be a `PrintStream`, a `OutputStream`, or
   any argument to `gololang.Predefined.pathFrom`, "-" means standard output
 - *param* `charset` the charset to use, as a `String` or a `java.nio.charset.Charset`
-- *return* a buffered `PrintStream` or `java.lang.System.out`
+- *returns* a buffered `PrintStream` or `java.lang.System.out`
 ----
 function printStreamFrom = |output, charset| {
   if output == "-" {
@@ -131,7 +131,7 @@ Create a function colorizing text, if supported.
 The color is supported on non-Windows platforms consoles.
 
 - *param* `color`: the color to use
-- *return* a function accepting a value and returning a colorized string if
+- *returns* a function accepting a value and returning a colorized string if
   supported, or a string representation of the value otherwise
 ----
 function colorizer = |color| -> match {
@@ -184,7 +184,7 @@ to [`resultWalker`](#resultWalker_4).
 - *param* `onOk`: function used to print a valid test result
 - *param* `onFail`: function used to print a failed test result
 - *param* `onError`: function used to print a test in error
-- *return* a function to report a test as needed by
+- *returns* a function to report a test as needed by
   [`resultWalker`](#resultWalker_4)
 ----
 function testReporter = |testDescPrinter, onOk, onFail, onError| ->
@@ -242,7 +242,7 @@ return the total number of failed tests.
 - *param* `reportTest`: function to report a test, as returned by
   [`testReporter`](#testReporter_4) for instance
 - *param* `footer`: function used to print a global footer
-- *return* a function that can be used as a reporter
+- *returns* a function that can be used as a reporter
 ----
 function resultWalker = |header, suiteDescPrinter, reportTest, footer| {
   let reportElement = |printer, level, desc, result, counts| {

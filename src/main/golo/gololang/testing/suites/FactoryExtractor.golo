@@ -35,7 +35,6 @@ function $suites = -> list[
   ]]
 ]
 ```
-
 ----
 module gololang.testing.suites.FactoryExtractor
 
@@ -54,6 +53,7 @@ function extractor = |suitesFactoryName| -> |path, loader| {
       suites: addAll(fun(suitesFactoryName, mod, 0, false)())
     } catch (e) {
       if not (e oftype NoSuchMethodException.class) {
+        # XXX: use handleThrowable or rethrow ?
         Messages.warning(e)
         e: printStackTrace()
       }

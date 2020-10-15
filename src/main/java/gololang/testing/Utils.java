@@ -43,6 +43,14 @@ public final class Utils {
       .map(Path::toAbsolutePath);
   }
 
+  /**
+   * Compile and load all golo modules found under the given path.
+   *
+   * @param rootPath the path to search for golo files
+   * @param loader the classloader to use to compile the files
+   * @return a list of golo modules
+   * @see goloFiles(Object)
+   */
   public static List<Class<?>> getModulesFrom(Object rootPath, GoloClassLoader loader) throws IOException {
     return goloFiles(rootPath)
       .map(path -> {
